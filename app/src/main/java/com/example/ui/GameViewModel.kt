@@ -5,7 +5,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.audio.SoundEngine
+import com.example.audio.SoundManager
 import com.example.data.GameRepository
 import com.example.game.BlockColor
 import com.example.game.Board
@@ -131,7 +131,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository = GameRepository(application.applicationContext)
     private val pieceGenerator = PieceGenerator(Random.Default)
-    val soundEngine = SoundEngine()
+    val soundManager = SoundManager(application.applicationContext)
 
     private var nextIdCounter: Long = 100L
     private var bannerCounter: Long = 1L
@@ -146,8 +146,8 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     init {
         viewModelScope.launch {
             val saved = repository.loadInitialProgress()
-            soundEngine.soundEnabled = saved.settings.soundEnabled
-            soundEngine.musicEnabled = saved.settings.musicEnabled
+            soundManager.soundEnabled = saved.settings.soundEnabled
+            soundManager.musicEnabled = saved.settings.musicEnabled
 
             val restored = saved.savedClassicGame
             val validSaved = if (restored != null && !isClassicGameOver(restored.board, restored.trayPieces)) {
@@ -201,11 +201,11 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun setAppForeground(inForeground: Boolean) {
-        soundEngine.setAppForeground(inForeground)
+        soundManager.setAppForeground(inForeground)
     }
 
     fun playUiClick() {
-        soundEngine.playUiClick()
+        soundManager.playUiClick()
     }
 
     fun updateBoardBounds(rect: Rect, liftPx: Float) {
@@ -400,12 +400,12 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun toggleSound(enabled: Boolean) {
-        soundEngine.soundEnabled = enabled
+        soundManager.soundEnabled = enabled
         updateSettings { it.copy(soundEnabled = enabled) }
     }
 
     fun toggleMusic(enabled: Boolean) {
-        soundEngine.musicEnabled = enabled
+        soundManager.musicEnabled = enabled
         updateSettings { it.copy(musicEnabled = enabled) }
     }
 
@@ -669,7 +669,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         ) ?: return
         nextIdCounter = placement.nextBlockId
 
-        soundEngine.playPlace()
+        soundManager.playBlockDrop()
 
         val placementPoints = ScoringEngine.scorePlacement(piece.shape.cellCount)
         val updatedTray = state.traySlots.map { slot ->
@@ -741,7 +741,11 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             val waveLines = wave.clearedRows.size + wave.clearedCols.size
             totalLinesInTurn += waveLines
 
-            soundEngine.playLineClear(wave.waveIndex)
+            if (wave.waveIndex >= 2) {
+                soundManager.playComboComplete(comboDepth = wave.waveIndex)
+            } else {
+                soundManager.playLineClear(linesCleared = waveLines)
+            }
 
             val banner = buildBannerForWave(
                 waveIndex = wave.waveIndex,
@@ -848,6 +852,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                         latestParticles = dustParticles
                     )
                 }
+                soundManager.playBlockDrop(volume = 0.5f, rate = 0.88f)
 
                 animateStep(durationMs = 95L) { progress ->
                     _uiState.update {
@@ -872,6 +877,10 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 visualPhase = BoardVisualPhase.Idle,
                 currentCascadeWave = 0
             )
+        }
+
+        if (resolution.maxCascadeDepth >= 2) {
+            soundManager.playComboComplete(comboDepth = resolution.maxCascadeDepth)
         }
 
         val lastBannerId = resolution.waves.lastOrNull()?.let { _uiState.value.floatingBanner?.id }
@@ -974,9 +983,9 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         if (nextStatus == GameStatus.CHALLENGE_WON) {
-            soundEngine.playLevelComplete()
+            soundManager.playLevelComplete()
         } else if (nextStatus == GameStatus.GAME_OVER || nextStatus == GameStatus.CHALLENGE_LOST) {
-            soundEngine.playGameOver()
+            soundManager.playGameOver()
         }
 
         val nextUnlockedLevel = if (
@@ -1119,7 +1128,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     override fun onCleared() {
         super.onCleared()
-        soundEngine.release()
+        soundManager.release()
     }
 
     companion object {

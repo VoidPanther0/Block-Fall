@@ -237,6 +237,26 @@ class CascadeRobolectricTest {
         composeRule.onNodeWithTag("home_screen").assertIsDisplayed()
     }
 
+    @Test
+    fun `15_sound_manager_loads_and_triggers_drop_clear_and_combo_effects_safely`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val manager = com.example.audio.SoundManager(context)
+        assertTrue(manager.isReady)
+
+        manager.soundEnabled = true
+        manager.playBlockDrop()
+        manager.playLineClear(linesCleared = 2)
+        manager.playComboComplete(comboDepth = 3)
+        manager.playLevelComplete()
+        manager.playGameOver()
+        manager.playUiClick()
+
+        manager.soundEnabled = false
+        manager.playBlockDrop()
+        manager.release()
+        assertFalse(manager.isReady)
+    }
+
     private fun navigatePastSplashToHome() {
         composeRule.waitForIdle()
         if (composeRule.onAllNodesWithTag("splash_screen").fetchSemanticsNodes().isNotEmpty()) {
