@@ -1,0 +1,327 @@
+package com.example.ui
+
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.game.Board
+import com.example.game.GameStatus
+import com.example.ui.components.EndGameDialog
+import com.example.ui.components.GameBoard
+import com.example.ui.components.GravityRulesDialog
+import com.example.ui.components.PieceTray
+import com.example.ui.components.ScorePanel
+import com.example.ui.components.TopGameBar
+import com.example.ui.components.PauseDialog
+import com.example.ui.components.drawBevelBlock
+import com.example.ui.theme.ObsidianBg
+import com.example.ui.theme.ObsidianGlow
+import com.example.ui.theme.TextSecondary
+
+@Composable
+fun CascadeGameScreen(
+    viewModel: GameViewModel = viewModel()
+) {
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val density = LocalDensity.current
+    val haptics = LocalHapticFeedback.current
+    val dragLiftPx = remember(density) { with(density) { 52.dp.toPx() } }
+
+    var rootOrigin by remember { mutableStateOf(Offset.Zero) }
+    var boardBoundsInRoot by remember { mutableStateOf(Rect.Zero) }
+
+    LaunchedEffect(state.currentCascadeWave) {
+        if (state.hapticsEnabled && state.currentCascadeWave >= 2) {
+            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+        }
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                Brush.radialGradient(
+                    colors = listOf(ObsidianGlow, ObsidianBg),
+                    radius = 1200f
+                )
+            )
+            .onGloballyPositioned { rootOrigin = it.positionInRoot() }
+    ) {
+        BoxWithConstraints(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .fillMaxSize()
+                .windowInsetsPadding(WindowInsets.safeDrawing)
+                .padding(horizontal = 16.dp, vertical = 10.dp)
+        ) {
+            val isWideLayout = maxWidth >= 660.dp && maxWidth > maxHeight
+
+            if (isWideLayout) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .widthIn(max = 1060.dp),
+                    horizontalArrangement = Arrangement.spacedBy(24.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Left Hero: 8x8 Board
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier
+                            .weight(1.1f)
+                            .fillMaxHeight()
+                    ) {
+                        GameBoard(
+                            board = state.board,
+                            visualPhase = state.visualPhase,
+                            dragState = state.dragState,
+                            floatingBanner = state.floatingBanner,
+                            particleTriggerId = state.particleTriggerId,
+                            latestParticles = state.latestParticles,
+                            hasSelectedSlot = state.selectedSlotIndex != null,
+                            onCellTapped = { r, c ->
+                                if (state.hapticsEnabled) {
+                                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                }
+                                viewModel.onBoardCellTapped(r, c)
+                            },
+                            onBoardBoundsChanged = { rect ->
+                                boardBoundsInRoot = rect
+                                viewModel.updateBoardBounds(rect, dragLiftPx)
+                            },
+                            modifier = Modifier.widthIn(max = 520.dp)
+                        )
+                    }
+
+                    // Right Controls: Bar, Score HUD, 3-Piece Tray
+                    Column(
+                        modifier = Modifier
+                            .weight(0.9f)
+                            .widthIn(max = 420.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        TopGameBar(
+                            mode = state.mode,
+                            onSwitchMode = viewModel::switchMode,
+                            onShowRules = { viewModel.toggleRulesDialog(true) },
+                            onRestart = viewModel::restartCurrentGame,
+                            onPause = viewModel::pauseGame
+                        )
+                        ScorePanel(state = state)
+                        PieceTray(
+                            slots = state.traySlots,
+                            selectedSlotIndex = state.selectedSlotIndex,
+                            draggingSlotIndex = state.dragState?.slotIndex,
+                            status = state.status,
+                            onSlotTapped = { idx ->
+                                if (state.hapticsEnabled) {
+                                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                }
+                                viewModel.selectTraySlot(idx)
+                            },
+                            onDragStart = { idx, pos ->
+                                if (state.hapticsEnabled) {
+                                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                }
+                                viewModel.startDrag(idx, pos)
+                            },
+                            onDragMove = viewModel::updateDrag,
+                            onDragEnd = viewModel::endDrag,
+                            onDragCancel = viewModel::cancelDrag
+                        )
+                        HintFooter(hasSelectedPiece = state.selectedSlotIndex != null)
+                    }
+                }
+            } else {
+                // Compact / Mobile Portrait Layout
+                val boardMaxWidth = (maxHeight * 0.50f).coerceAtMost(500.dp)
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .widthIn(max = 520.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        TopGameBar(
+                            mode = state.mode,
+                            onSwitchMode = viewModel::switchMode,
+                            onShowRules = { viewModel.toggleRulesDialog(true) },
+                            onRestart = viewModel::restartCurrentGame,
+                            onPause = viewModel::pauseGame
+                        )
+                        ScorePanel(state = state)
+                    }
+
+                    GameBoard(
+                        board = state.board,
+                        visualPhase = state.visualPhase,
+                        dragState = state.dragState,
+                        floatingBanner = state.floatingBanner,
+                        particleTriggerId = state.particleTriggerId,
+                        latestParticles = state.latestParticles,
+                        hasSelectedSlot = state.selectedSlotIndex != null,
+                        onCellTapped = { r, c ->
+                            if (state.hapticsEnabled) {
+                                haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            }
+                            viewModel.onBoardCellTapped(r, c)
+                        },
+                        onBoardBoundsChanged = { rect ->
+                            boardBoundsInRoot = rect
+                            viewModel.updateBoardBounds(rect, dragLiftPx)
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .widthIn(max = boardMaxWidth)
+                    )
+
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        PieceTray(
+                            slots = state.traySlots,
+                            selectedSlotIndex = state.selectedSlotIndex,
+                            draggingSlotIndex = state.dragState?.slotIndex,
+                            status = state.status,
+                            onSlotTapped = { idx ->
+                                if (state.hapticsEnabled) {
+                                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                }
+                                viewModel.selectTraySlot(idx)
+                            },
+                            onDragStart = { idx, pos ->
+                                if (state.hapticsEnabled) {
+                                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                }
+                                viewModel.startDrag(idx, pos)
+                            },
+                            onDragMove = viewModel::updateDrag,
+                            onDragEnd = viewModel::endDrag,
+                            onDragCancel = viewModel::cancelDrag
+                        )
+                        HintFooter(hasSelectedPiece = state.selectedSlotIndex != null)
+                        Spacer(Modifier.height(2.dp))
+                    }
+                }
+            }
+        }
+
+        // Full-scale floating piece overlay during drag
+        val activeDrag = state.dragState
+        if (activeDrag != null && boardBoundsInRoot.width > 1f) {
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                val cellSize = boardBoundsInRoot.width / Board.SIZE.toFloat()
+                val gap = (cellSize * 0.09f).coerceAtLeast(2.5f)
+                val tileSize = cellSize - gap
+
+                val pieceW = activeDrag.piece.shape.widthCells * cellSize
+                val pieceH = activeDrag.piece.shape.heightCells * cellSize
+                val localPointer = activeDrag.pointerRootOffset - rootOrigin
+                val startX = localPointer.x - pieceW / 2f
+                val startY = localPointer.y - dragLiftPx - pieceH / 2f
+
+                for (cell in activeDrag.piece.shape.offsets) {
+                    drawBevelBlock(
+                        left = startX + cell.col * cellSize + gap / 2f,
+                        top = startY + cell.row * cellSize + gap / 2f,
+                        cellSize = tileSize,
+                        color = activeDrag.piece.color,
+                        alpha = 0.94f,
+                        glowBoost = 0.65f
+                    )
+                }
+            }
+        }
+
+        // Modal Dialogs
+        if (state.status == GameStatus.PAUSED) {
+            PauseDialog(
+                state = state,
+                onResume = viewModel::resumeGame,
+                onRestart = viewModel::restartCurrentGame,
+                onSelectChallengeLevel = { lvl ->
+                    viewModel.resumeGame()
+                    viewModel.startChallengeLevel(lvl)
+                },
+                onSwitchMode = viewModel::switchMode,
+                onToggleHaptics = viewModel::toggleHaptics,
+                onOpenRules = { viewModel.toggleRulesDialog(true) }
+            )
+        }
+
+        if (state.status == GameStatus.GAME_OVER ||
+            state.status == GameStatus.CHALLENGE_WON ||
+            state.status == GameStatus.CHALLENGE_LOST
+        ) {
+            EndGameDialog(
+                state = state,
+                onPlayAgain = viewModel::restartCurrentGame,
+                onNextLevel = {
+                    viewModel.startChallengeLevel(state.currentChallengeLevel.levelNumber + 1)
+                },
+                onSwitchMode = viewModel::switchMode
+            )
+        }
+
+        if (state.showRulesDialog) {
+            GravityRulesDialog(onDismiss = { viewModel.toggleRulesDialog(false) })
+        }
+    }
+}
+
+@Composable
+private fun HintFooter(hasSelectedPiece: Boolean) {
+    Text(
+        text = if (hasSelectedPiece) {
+            "Tap any board square to drop the selected piece"
+        } else {
+            "Drag any piece onto the board · Clear lines to trigger gravity"
+        },
+        style = MaterialTheme.typography.bodyMedium.copy(fontSize = 12.sp),
+        color = TextSecondary.copy(alpha = 0.78f),
+        textAlign = TextAlign.Center
+    )
+}

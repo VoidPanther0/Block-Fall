@@ -1,0 +1,23 @@
+<resources>
+    <string name="app_name">Cascade</string>
+    <string name="game_subtitle">Gravity Block Puzzle</string>
+    <string name="mode_classic">Classic</string>
+    <string name="mode_challenge">Challenge</string>
+    <string name="score_label">SCORE</string>
+    <string name="best_label">BEST</string>
+    <string name="target_label">TARGET</string>
+    <string name="moves_label">MOVES</string>
+    <string name="level_label">LEVEL</string>
+    <string name="pause">Pause</string>
+    <string name="restart">Restart</string>
+    <string name="resume">Resume</string>
+    <string name="play_again">Play Again</string>
+    <string name="next_level">Next Level</string>
+    <string name="retry_level">Retry Level</string>
+    <string name="game_over_title">No Moves Left</string>
+    <string name="challenge_complete_title">Level Cleared!</string>
+    <string name="challenge_failed_title">Out of Moves</string>
+    <string name="new_best_badge">NEW BEST</string>
+    <string name="how_to_play">How Gravity Works</string>
+    <string name="haptics_label">Tactile Haptics</string>
+</resources>
