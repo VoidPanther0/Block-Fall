@@ -106,14 +106,14 @@ jobs:
       - name: Upload Debug APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: cascade-debug-apk
+          name: block-falls-debug-apk
           path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
 
       - name: Upload Release APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: cascade-release-apk
+          name: block-falls-release-apk
           path: app/build/outputs/apk/release/*.apk
           if-no-files-found: error
 
@@ -122,7 +122,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || format('build-{0}', github.run_number) }}
-          name: Cascade ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || format('Build #{0}', github.run_number) }}
+          name: Block Falls ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || format('Build #{0}', github.run_number) }}
           generate_release_notes: true
           files: |
             app/build/outputs/apk/release/*.apk

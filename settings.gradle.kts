@@ -22,6 +22,6 @@ dependencyResolutionManagement {
   }
 }
 
-rootProject.name = "Cascade"
+rootProject.name = "Block Falls"
 
 include(":app")

@@ -8,7 +8,8 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,6 +24,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -87,7 +89,11 @@ fun GameBoard(
     onBoardBoundsChanged: (Rect) -> Unit,
     modifier: Modifier = Modifier,
     visualEffectsEnabled: Boolean = true,
-    placementPreviewEnabled: Boolean = true
+    placementPreviewEnabled: Boolean = true,
+    onBoardTouchStart: ((Offset) -> Unit)? = null,
+    onBoardTouchMove: ((Offset) -> Unit)? = null,
+    onBoardTouchEnd: (() -> Unit)? = null,
+    onBoardTouchCancel: (() -> Unit)? = null
 ) {
     val activeParticles = remember { mutableStateListOf<ActiveParticle>() }
 
@@ -158,20 +164,60 @@ fun GameBoard(
                 contentDescription = "8 by 8 Cascade puzzle board"
             }
     ) {
+        val currentHasSelectedSlot by rememberUpdatedState(hasSelectedSlot)
+        val currentOnCellTapped by rememberUpdatedState(onCellTapped)
+        val currentOnBoardTouchStart by rememberUpdatedState(onBoardTouchStart)
+        val currentOnBoardTouchMove by rememberUpdatedState(onBoardTouchMove)
+        val currentOnBoardTouchEnd by rememberUpdatedState(onBoardTouchEnd)
+        val currentOnBoardTouchCancel by rememberUpdatedState(onBoardTouchCancel)
+
         Canvas(
             modifier = Modifier
                 .fillMaxSize()
                 .onGloballyPositioned { coords ->
                     onBoardBoundsChanged(coords.boundsInRoot())
                 }
-                .pointerInput(hasSelectedSlot) {
-                    detectTapGestures { offset ->
-                        if (!hasSelectedSlot) return@detectTapGestures
-                        val cellSize = size.width / Board.SIZE.toFloat()
-                        if (cellSize > 0f) {
-                            val col = (offset.x / cellSize).toInt().coerceIn(0, Board.SIZE - 1)
-                            val row = (offset.y / cellSize).toInt().coerceIn(0, Board.SIZE - 1)
-                            onCellTapped(row, col)
+                .pointerInput(Unit) {
+                    awaitEachGesture {
+                        val down = awaitFirstDown(requireUnconsumed = false)
+                        if (!currentHasSelectedSlot) return@awaitEachGesture
+                        down.consume()
+                        val touchStart = currentOnBoardTouchStart
+                        val touchMove = currentOnBoardTouchMove
+                        val touchEnd = currentOnBoardTouchEnd
+                        if (touchStart != null && touchMove != null && touchEnd != null) {
+                            touchStart(down.position)
+                            while (true) {
+                                val event = awaitPointerEvent()
+                                val change = event.changes.firstOrNull { it.id == down.id }
+                                if (change == null) {
+                                    currentOnBoardTouchCancel?.invoke()
+                                    break
+                                }
+                                if (!change.pressed) {
+                                    change.consume()
+                                    touchEnd()
+                                    break
+                                }
+                                change.consume()
+                                touchMove(change.position)
+                            }
+                        } else {
+                            var lastPos = down.position
+                            while (true) {
+                                val event = awaitPointerEvent()
+                                val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                                lastPos = change.position
+                                if (!change.pressed) {
+                                    val cellSize = size.width / Board.SIZE.toFloat()
+                                    if (cellSize > 0f) {
+                                        val col = (lastPos.x / cellSize).toInt().coerceIn(0, Board.SIZE - 1)
+                                        val row = (lastPos.y / cellSize).toInt().coerceIn(0, Board.SIZE - 1)
+                                        currentOnCellTapped(row, col)
+                                    }
+                                    break
+                                }
+                            }
                         }
                     }
                 }

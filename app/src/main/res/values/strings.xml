@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Cascade</string>
+    <string name="app_name">Block Falls</string>
     <string name="game_subtitle">Gravity Block Puzzle</string>
     <string name="mode_classic">Classic</string>
     <string name="mode_challenge">Challenge</string>

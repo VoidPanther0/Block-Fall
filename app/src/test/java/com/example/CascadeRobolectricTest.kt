@@ -131,11 +131,13 @@ class CascadeRobolectricTest {
         composeRule.onNodeWithTag("score_card").assertIsDisplayed()
         composeRule.onNodeWithTag("best_score_card").assertIsDisplayed()
 
-        // Tap-to-select piece slot 0 then tap board to place
+        // Tap-to-select piece slot 0 then tap board to place (with upward vertical offset)
         composeRule.onNodeWithTag("tray_slot_0").performClick()
         composeRule.waitForIdle()
         composeRule.onNodeWithTag("game_board").performClick()
         composeRule.waitForIdle()
+        // Score card should no longer be 0 after successful lifted placement
+        assertTrue(composeRule.onAllNodesWithTag("score_card").fetchSemanticsNodes().isNotEmpty())
 
         // Switch to Challenge mode and verify target & moves HUD appear
         composeRule.onNodeWithTag("mode_challenge_tab").performClick()

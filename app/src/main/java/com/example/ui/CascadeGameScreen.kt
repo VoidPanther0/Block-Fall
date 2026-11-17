@@ -69,7 +69,7 @@ fun CascadeGameScreen(
     val density = LocalDensity.current
     val haptics = LocalHapticFeedback.current
     // Clearance between pointer finger and bottom edge of lifted floating piece
-    val dragLiftPx = remember(density) { with(density) { 64.dp.toPx() } }
+    val dragLiftPx = remember(density) { with(density) { 72.dp.toPx() } }
 
     var rootOrigin by remember { mutableStateOf(Offset.Zero) }
     var boardBoundsInRoot by remember { mutableStateOf(Rect.Zero) }
@@ -145,6 +145,15 @@ fun CascadeGameScreen(
                                 }
                                 viewModel.onBoardCellTapped(r, c)
                             },
+                            onBoardTouchStart = { localOffset ->
+                                if (state.settings.hapticsEnabled) {
+                                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                }
+                                viewModel.startBoardTouch(localOffset)
+                            },
+                            onBoardTouchMove = viewModel::updateBoardTouch,
+                            onBoardTouchEnd = viewModel::endDrag,
+                            onBoardTouchCancel = viewModel::cancelDrag,
                             onBoardBoundsChanged = { rect ->
                                 boardBoundsInRoot = rect
                                 viewModel.updateBoardBounds(rect, dragLiftPx)
@@ -239,6 +248,15 @@ fun CascadeGameScreen(
                             }
                             viewModel.onBoardCellTapped(r, c)
                         },
+                        onBoardTouchStart = { localOffset ->
+                            if (state.settings.hapticsEnabled) {
+                                haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            }
+                            viewModel.startBoardTouch(localOffset)
+                        },
+                        onBoardTouchMove = viewModel::updateBoardTouch,
+                        onBoardTouchEnd = viewModel::endDrag,
+                        onBoardTouchCancel = viewModel::cancelDrag,
                         onBoardBoundsChanged = { rect ->
                             boardBoundsInRoot = rect
                             viewModel.updateBoardBounds(rect, dragLiftPx)

@@ -481,13 +481,55 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         val slotIdx = state.selectedSlotIndex ?: return
         val piece = state.traySlots.getOrNull(slotIdx)?.piece ?: return
 
-        val anchorRow = (row - piece.shape.heightCells / 2).coerceIn(0, Board.SIZE - 1)
-        val anchorCol = (col - piece.shape.widthCells / 2).coerceIn(0, Board.SIZE - 1)
+        // Lift placement above the touched row so the user's finger does not obscure the piece
+        val liftRows = 2
+        val maxAnchorRow = (Board.SIZE - piece.shape.heightCells).coerceAtLeast(0)
+        val maxAnchorCol = (Board.SIZE - piece.shape.widthCells).coerceAtLeast(0)
+        val liftedBottomRow = (row - liftRows).coerceAtLeast(piece.shape.heightCells - 1)
+        val anchorRow = (liftedBottomRow - (piece.shape.heightCells - 1)).coerceIn(0, maxAnchorRow)
+        val anchorCol = (col - piece.shape.widthCells / 2).coerceIn(0, maxAnchorCol)
 
         if (PlacementValidator.canPlace(state.board, piece, anchorRow, anchorCol)) {
             placePiece(slotIdx, anchorRow, anchorCol)
         } else if (PlacementValidator.canPlace(state.board, piece, row, col)) {
             placePiece(slotIdx, row, col)
+        }
+    }
+
+    fun startBoardTouch(localOffset: Offset) {
+        val state = _uiState.value
+        if (state.status != GameStatus.PLAYING) return
+        val slotIdx = state.selectedSlotIndex ?: return
+        val piece = state.traySlots.getOrNull(slotIdx)?.piece ?: return
+        val pointerRootOffset = boardBoundsInRoot.topLeft + localOffset
+        _uiState.update {
+            it.copy(
+                dragState = computeDragState(
+                    board = state.board,
+                    slotIndex = slotIdx,
+                    piece = piece,
+                    pointerRootOffset = pointerRootOffset,
+                    clampToBoard = true
+                )
+            )
+        }
+    }
+
+    fun updateBoardTouch(localOffset: Offset) {
+        val state = _uiState.value
+        val activeDrag = state.dragState ?: return
+        if (state.status != GameStatus.PLAYING) return
+        val pointerRootOffset = boardBoundsInRoot.topLeft + localOffset
+        _uiState.update {
+            it.copy(
+                dragState = computeDragState(
+                    board = state.board,
+                    slotIndex = activeDrag.slotIndex,
+                    piece = activeDrag.piece,
+                    pointerRootOffset = pointerRootOffset,
+                    clampToBoard = true
+                )
+            )
         }
     }
 
@@ -538,7 +580,8 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         board: Board,
         slotIndex: Int,
         piece: GamePiece,
-        pointerRootOffset: Offset
+        pointerRootOffset: Offset,
+        clampToBoard: Boolean = false
     ): DragState {
         if (boardBoundsInRoot.width <= 1f || boardBoundsInRoot.height <= 1f) {
             return DragState(
@@ -556,31 +599,39 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         val pieceW = piece.shape.widthCells * cellSize
         val pieceH = piece.shape.heightCells * cellSize
 
-        // Keep the bottom edge of the dragged piece lifted comfortably above the finger
+        // Keep the bottom edge of the dragged/touched piece lifted comfortably above the finger
         val topLeftX = pointerRootOffset.x - pieceW / 2f
         val topLeftY = pointerRootOffset.y - dragLiftPx - pieceH
 
         val rawCol = ((topLeftX - boardBoundsInRoot.left) / cellSize).roundToInt()
         val rawRow = ((topLeftY - boardBoundsInRoot.top) / cellSize).roundToInt()
 
-        val nearBoard = topLeftX >= boardBoundsInRoot.left - cellSize * 1.1f &&
-            topLeftX <= boardBoundsInRoot.right + cellSize * 0.4f &&
-            topLeftY >= boardBoundsInRoot.top - cellSize * 1.1f &&
-            topLeftY <= boardBoundsInRoot.bottom + cellSize * 0.4f
+        if (!clampToBoard) {
+            val nearBoard = topLeftX >= boardBoundsInRoot.left - cellSize * 1.1f &&
+                topLeftX <= boardBoundsInRoot.right + cellSize * 0.4f &&
+                topLeftY >= boardBoundsInRoot.top - cellSize * 1.1f &&
+                topLeftY <= boardBoundsInRoot.bottom + cellSize * 0.4f
 
-        if (!nearBoard) {
-            return DragState(
-                slotIndex = slotIndex,
-                piece = piece,
-                pointerRootOffset = pointerRootOffset,
-                hoverAnchor = null,
-                isHoverValid = false,
-                predictedClearRows = emptyList(),
-                predictedClearCols = emptyList()
-            )
+            if (!nearBoard) {
+                return DragState(
+                    slotIndex = slotIndex,
+                    piece = piece,
+                    pointerRootOffset = pointerRootOffset,
+                    hoverAnchor = null,
+                    isHoverValid = false,
+                    predictedClearRows = emptyList(),
+                    predictedClearCols = emptyList()
+                )
+            }
         }
 
-        val anchor = GridCoord(rawRow, rawCol)
+        val anchor = if (clampToBoard) {
+            val maxRow = (Board.SIZE - piece.shape.heightCells).coerceAtLeast(0)
+            val maxCol = (Board.SIZE - piece.shape.widthCells).coerceAtLeast(0)
+            GridCoord(rawRow.coerceIn(0, maxRow), rawCol.coerceIn(0, maxCol))
+        } else {
+            GridCoord(rawRow, rawCol)
+        }
         val valid = PlacementValidator.canPlace(board, piece, anchor.row, anchor.col)
         var predRows = emptyList<Int>()
         var predCols = emptyList<Int>()
