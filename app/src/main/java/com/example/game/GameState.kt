@@ -28,3 +28,28 @@ data class SavedClassicGame(
     val totalLinesCleared: Int,
     val nextIdCounter: Long
 )
+
+data class GameSettings(
+    val soundEnabled: Boolean = true,
+    val musicEnabled: Boolean = true,
+    val hapticsEnabled: Boolean = true,
+    val visualEffectsEnabled: Boolean = true,
+    val placementPreviewEnabled: Boolean = true
+)
+
+data class GameStatistics(
+    val totalGamesPlayed: Int = 0,
+    val totalLinesCleared: Int = 0,
+    val totalCascadesTriggered: Int = 0,
+    val maxCascadeDepth: Int = 0,
+    val totalBlocksPlaced: Int = 0,
+    val classicBestScore: Int = 0
+)
+
+data class ChallengeLevelProgress(
+    val levelNumber: Int,
+    val bestScore: Int = 0,
+    val stars: Int = 0,
+    val completed: Boolean = false
+)
+

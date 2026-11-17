@@ -6,7 +6,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import com.example.ui.CascadeGameScreen
+import com.example.ui.CascadeApp
 import com.example.ui.theme.CascadeTheme
 
 class MainActivity : ComponentActivity() {
@@ -18,7 +18,7 @@ class MainActivity : ComponentActivity() {
         )
         setContent {
             CascadeTheme {
-                CascadeGameScreen()
+                CascadeApp()
             }
         }
     }

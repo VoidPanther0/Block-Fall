@@ -5,15 +5,19 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.audio.SoundEngine
 import com.example.data.GameRepository
 import com.example.game.BlockColor
 import com.example.game.Board
 import com.example.game.CascadeResolver
 import com.example.game.ChallengeLevel
+import com.example.game.ChallengeLevelProgress
 import com.example.game.ChallengeLevels
 import com.example.game.FallingBlockMove
 import com.example.game.GameMode
 import com.example.game.GamePiece
+import com.example.game.GameSettings
+import com.example.game.GameStatistics
 import com.example.game.GameStatus
 import com.example.game.GridCoord
 import com.example.game.LineClearEngine
@@ -101,6 +105,11 @@ data class GameUiState(
     val currentChallengeLevel: ChallengeLevel = ChallengeLevels.getLevel(1),
     val unlockedChallengeLevel: Int = 1,
     val hapticsEnabled: Boolean = true,
+    val settings: GameSettings = GameSettings(),
+    val statistics: GameStatistics = GameStatistics(),
+    val challengeProgress: Map<Int, ChallengeLevelProgress> = emptyMap(),
+    val lastChallengeStarsEarned: Int = 0,
+    val savedClassicSummary: SavedClassicGame? = null,
     val visualPhase: BoardVisualPhase = BoardVisualPhase.Idle,
     val dragState: DragState? = null,
     val floatingBanner: FloatingBanner? = null,
@@ -113,12 +122,17 @@ data class GameUiState(
 
     val selectedPiece: GamePiece?
         get() = selectedSlotIndex?.let { idx -> traySlots.getOrNull(idx)?.piece }
+
+    val hasSavedClassicGame: Boolean
+        get() = savedClassicSummary != null
 }
 
 class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository = GameRepository(application.applicationContext)
     private val pieceGenerator = PieceGenerator(Random.Default)
+    val soundEngine = SoundEngine()
+
     private var nextIdCounter: Long = 100L
     private var bannerCounter: Long = 1L
     private var particleCounter: Long = 1L
@@ -127,40 +141,71 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     val uiState: StateFlow<GameUiState> = _uiState.asStateFlow()
 
     private var boardBoundsInRoot: Rect = Rect.Zero
-    private var dragLiftPx: Float = 140f
+    private var dragLiftPx: Float = 176f
 
     init {
         viewModelScope.launch {
             val saved = repository.loadInitialProgress()
+            soundEngine.soundEnabled = saved.settings.soundEnabled
+            soundEngine.musicEnabled = saved.settings.musicEnabled
+
             val restored = saved.savedClassicGame
-            if (restored != null && !isClassicGameOver(restored.board, restored.trayPieces)) {
-                nextIdCounter = restored.nextIdCounter.coerceAtLeast(100L)
+            val validSaved = if (restored != null && !isClassicGameOver(restored.board, restored.trayPieces)) {
+                restored
+            } else {
+                null
+            }
+
+            if (validSaved != null) {
+                nextIdCounter = validSaved.nextIdCounter.coerceAtLeast(100L)
                 _uiState.update {
                     it.copy(
                         mode = GameMode.CLASSIC,
                         status = GameStatus.PLAYING,
-                        board = restored.board,
-                        traySlots = restored.trayPieces.mapIndexed { i, p -> TraySlot(i, p) },
-                        score = restored.score,
-                        classicBestScore = maxOf(saved.classicBestScore, restored.score),
-                        movesPlayed = restored.movesPlayed,
-                        bestCascadeDepth = restored.bestCascadeDepth,
-                        totalLinesCleared = restored.totalLinesCleared,
+                        board = validSaved.board,
+                        traySlots = validSaved.trayPieces.mapIndexed { i, p -> TraySlot(i, p) },
+                        score = validSaved.score,
+                        classicBestScore = maxOf(saved.classicBestScore, validSaved.score),
+                        movesPlayed = validSaved.movesPlayed,
+                        bestCascadeDepth = validSaved.bestCascadeDepth,
+                        totalLinesCleared = validSaved.totalLinesCleared,
                         unlockedChallengeLevel = saved.unlockedChallengeLevel,
-                        hapticsEnabled = saved.hapticsEnabled
+                        hapticsEnabled = saved.settings.hapticsEnabled,
+                        settings = saved.settings,
+                        statistics = saved.statistics.copy(classicBestScore = maxOf(saved.classicBestScore, validSaved.score)),
+                        challengeProgress = saved.challengeProgress,
+                        savedClassicSummary = validSaved
                     )
                 }
             } else {
+                val emptyBoard = Board.empty()
+                val (trayPieces, updatedId) = pieceGenerator.generateTray(emptyBoard, nextIdCounter)
+                nextIdCounter = updatedId
                 _uiState.update {
                     it.copy(
+                        mode = GameMode.CLASSIC,
+                        status = GameStatus.PLAYING,
+                        board = emptyBoard,
+                        traySlots = trayPieces.mapIndexed { i, p -> TraySlot(i, p) },
                         classicBestScore = saved.classicBestScore,
                         unlockedChallengeLevel = saved.unlockedChallengeLevel,
-                        hapticsEnabled = saved.hapticsEnabled
+                        hapticsEnabled = saved.settings.hapticsEnabled,
+                        settings = saved.settings,
+                        statistics = saved.statistics,
+                        challengeProgress = saved.challengeProgress,
+                        savedClassicSummary = null
                     )
                 }
-                startNewClassicGame()
             }
         }
+    }
+
+    fun setAppForeground(inForeground: Boolean) {
+        soundEngine.setAppForeground(inForeground)
+    }
+
+    fun playUiClick() {
+        soundEngine.playUiClick()
     }
 
     fun updateBoardBounds(rect: Rect, liftPx: Float) {
@@ -168,7 +213,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         dragLiftPx = liftPx
     }
 
-    fun startNewClassicGame() {
+    fun startNewClassicGame(countAsNewGame: Boolean = true) {
         val emptyBoard = Board.empty()
         val (trayPieces, updatedId) = pieceGenerator.generateTray(emptyBoard, nextIdCounter)
         nextIdCounter = updatedId
@@ -187,16 +232,53 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 totalLinesCleared = 0,
                 currentCascadeWave = 0,
                 bestCascadeDepth = 0,
+                lastChallengeStarsEarned = 0,
                 visualPhase = BoardVisualPhase.Idle,
                 dragState = null,
                 floatingBanner = null,
-                latestParticles = emptyList()
+                latestParticles = emptyList(),
+                statistics = if (countAsNewGame) {
+                    it.statistics.copy(totalGamesPlayed = it.statistics.totalGamesPlayed + 1)
+                } else {
+                    it.statistics
+                }
             )
+        }
+        if (countAsNewGame) {
+            viewModelScope.launch { repository.incrementGamesPlayed() }
         }
         persistClassicSnapshot()
     }
 
-    fun startChallengeLevel(levelNumber: Int) {
+    fun continueSavedClassicGame(): Boolean {
+        val snapshot = _uiState.value.savedClassicSummary
+        if (snapshot != null && !isClassicGameOver(snapshot.board, snapshot.trayPieces)) {
+            nextIdCounter = snapshot.nextIdCounter.coerceAtLeast(nextIdCounter)
+            _uiState.update {
+                it.copy(
+                    mode = GameMode.CLASSIC,
+                    status = GameStatus.PLAYING,
+                    board = snapshot.board,
+                    traySlots = snapshot.trayPieces.mapIndexed { i, p -> TraySlot(i, p) },
+                    selectedSlotIndex = null,
+                    tapHoverAnchor = null,
+                    score = snapshot.score,
+                    isNewBest = false,
+                    movesPlayed = snapshot.movesPlayed,
+                    bestCascadeDepth = snapshot.bestCascadeDepth,
+                    totalLinesCleared = snapshot.totalLinesCleared,
+                    visualPhase = BoardVisualPhase.Idle,
+                    dragState = null,
+                    floatingBanner = null,
+                    latestParticles = emptyList()
+                )
+            }
+            return true
+        }
+        return false
+    }
+
+    fun startChallengeLevel(levelNumber: Int, countAsNewGame: Boolean = true) {
         val level = ChallengeLevels.getLevel(levelNumber)
         val board = level.buildBoard(startId = nextIdCounter)
         nextIdCounter += 100L
@@ -217,12 +299,21 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 totalLinesCleared = 0,
                 currentCascadeWave = 0,
                 bestCascadeDepth = 0,
+                lastChallengeStarsEarned = 0,
                 currentChallengeLevel = level,
                 visualPhase = BoardVisualPhase.Idle,
                 dragState = null,
                 floatingBanner = null,
-                latestParticles = emptyList()
+                latestParticles = emptyList(),
+                statistics = if (countAsNewGame) {
+                    it.statistics.copy(totalGamesPlayed = it.statistics.totalGamesPlayed + 1)
+                } else {
+                    it.statistics
+                }
             )
+        }
+        if (countAsNewGame) {
+            viewModelScope.launch { repository.incrementGamesPlayed() }
         }
     }
 
@@ -245,6 +336,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                                 movesPlayed = saved.movesPlayed,
                                 bestCascadeDepth = saved.bestCascadeDepth,
                                 totalLinesCleared = saved.totalLinesCleared,
+                                savedClassicSummary = saved,
                                 visualPhase = BoardVisualPhase.Idle,
                                 dragState = null,
                                 floatingBanner = null
@@ -285,13 +377,91 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun exitToHome() {
+        val state = _uiState.value
+        if (state.mode == GameMode.CLASSIC && state.status != GameStatus.GAME_OVER) {
+            persistClassicSnapshot()
+        }
+        _uiState.update {
+            it.copy(
+                dragState = null,
+                selectedSlotIndex = null,
+                status = if (it.status == GameStatus.PAUSED) GameStatus.PLAYING else it.status
+            )
+        }
+    }
+
     fun toggleRulesDialog(show: Boolean) {
         _uiState.update { it.copy(showRulesDialog = show) }
     }
 
     fun toggleHaptics(enabled: Boolean) {
-        _uiState.update { it.copy(hapticsEnabled = enabled) }
-        viewModelScope.launch { repository.setHapticsEnabled(enabled) }
+        updateSettings { it.copy(hapticsEnabled = enabled) }
+    }
+
+    fun toggleSound(enabled: Boolean) {
+        soundEngine.soundEnabled = enabled
+        updateSettings { it.copy(soundEnabled = enabled) }
+    }
+
+    fun toggleMusic(enabled: Boolean) {
+        soundEngine.musicEnabled = enabled
+        updateSettings { it.copy(musicEnabled = enabled) }
+    }
+
+    fun toggleVisualEffects(enabled: Boolean) {
+        updateSettings { it.copy(visualEffectsEnabled = enabled) }
+    }
+
+    fun togglePlacementPreview(enabled: Boolean) {
+        updateSettings { it.copy(placementPreviewEnabled = enabled) }
+    }
+
+    private fun updateSettings(transform: (GameSettings) -> GameSettings) {
+        val updated = transform(_uiState.value.settings)
+        _uiState.update {
+            it.copy(
+                hapticsEnabled = updated.hapticsEnabled,
+                settings = updated
+            )
+        }
+        viewModelScope.launch { repository.updateSettings(updated) }
+    }
+
+    fun resetAllProgress() {
+        viewModelScope.launch {
+            repository.resetAllProgress()
+            val emptyBoard = Board.empty()
+            val (trayPieces, updatedId) = pieceGenerator.generateTray(emptyBoard, nextIdCounter)
+            nextIdCounter = updatedId
+            _uiState.update {
+                it.copy(
+                    mode = GameMode.CLASSIC,
+                    status = GameStatus.PLAYING,
+                    board = emptyBoard,
+                    traySlots = trayPieces.mapIndexed { i, p -> TraySlot(i, p) },
+                    selectedSlotIndex = null,
+                    tapHoverAnchor = null,
+                    score = 0,
+                    classicBestScore = 0,
+                    isNewBest = false,
+                    movesPlayed = 0,
+                    totalLinesCleared = 0,
+                    currentCascadeWave = 0,
+                    bestCascadeDepth = 0,
+                    currentChallengeLevel = ChallengeLevels.getLevel(1),
+                    unlockedChallengeLevel = 1,
+                    statistics = GameStatistics(),
+                    challengeProgress = emptyMap(),
+                    lastChallengeStarsEarned = 0,
+                    savedClassicSummary = null,
+                    visualPhase = BoardVisualPhase.Idle,
+                    dragState = null,
+                    floatingBanner = null,
+                    latestParticles = emptyList()
+                )
+            }
+        }
     }
 
     fun selectTraySlot(slotIndex: Int) {
@@ -311,7 +481,6 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         val slotIdx = state.selectedSlotIndex ?: return
         val piece = state.traySlots.getOrNull(slotIdx)?.piece ?: return
 
-        // Center the piece around tapped cell for comfortable tap-to-place ergonomics
         val anchorRow = (row - piece.shape.heightCells / 2).coerceIn(0, Board.SIZE - 1)
         val anchorCol = (col - piece.shape.widthCells / 2).coerceIn(0, Board.SIZE - 1)
 
@@ -387,8 +556,9 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         val pieceW = piece.shape.widthCells * cellSize
         val pieceH = piece.shape.heightCells * cellSize
 
+        // Keep the bottom edge of the dragged piece lifted comfortably above the finger
         val topLeftX = pointerRootOffset.x - pieceW / 2f
-        val topLeftY = pointerRootOffset.y - dragLiftPx - pieceH / 2f
+        val topLeftY = pointerRootOffset.y - dragLiftPx - pieceH
 
         val rawCol = ((topLeftX - boardBoundsInRoot.left) / cellSize).roundToInt()
         val rawRow = ((topLeftY - boardBoundsInRoot.top) / cellSize).roundToInt()
@@ -448,6 +618,8 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         ) ?: return
         nextIdCounter = placement.nextBlockId
 
+        soundEngine.playPlace()
+
         val placementPoints = ScoringEngine.scorePlacement(piece.shape.cellCount)
         val updatedTray = state.traySlots.map { slot ->
             if (slot.index == slotIndex) slot.copy(piece = null) else slot
@@ -487,6 +659,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 trayAfterPlacement = updatedTray,
                 scoreAfterTurn = initialScore,
                 movesPlayed = nextMovesPlayed,
+                blocksPlaced = piece.shape.cellCount,
                 linesAdded = 0,
                 maxDepthInTurn = 0
             )
@@ -496,7 +669,8 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                     resolution = resolution,
                     startingScore = initialScore,
                     trayAfterPlacement = updatedTray,
-                    movesPlayed = nextMovesPlayed
+                    movesPlayed = nextMovesPlayed,
+                    blocksPlaced = piece.shape.cellCount
                 )
             }
         }
@@ -506,7 +680,8 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         resolution: com.example.game.CascadeResolution,
         startingScore: Int,
         trayAfterPlacement: List<TraySlot>,
-        movesPlayed: Int
+        movesPlayed: Int,
+        blocksPlaced: Int
     ) {
         var runningScore = startingScore
         var totalLinesInTurn = 0
@@ -515,6 +690,8 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             val waveLines = wave.clearedRows.size + wave.clearedCols.size
             totalLinesInTurn += waveLines
 
+            soundEngine.playLineClear(wave.waveIndex)
+
             val banner = buildBannerForWave(
                 waveIndex = wave.waveIndex,
                 linesCount = waveLines,
@@ -522,16 +699,20 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 isFullClear = wave.isFullClear
             )
 
-            // Spawn shatter particles on cleared cells
-            val clearParticles = wave.clearedCoords.mapNotNull { coord ->
-                val color = wave.boardBeforeClear.get(coord.row, coord.col)?.color ?: return@mapNotNull null
-                ParticleBurst(
-                    id = particleCounter++,
-                    row = coord.row + 0.5f,
-                    col = coord.col + 0.5f,
-                    color = color,
-                    isLandingDust = false
-                )
+            val showParticles = _uiState.value.settings.visualEffectsEnabled
+            val clearParticles = if (showParticles) {
+                wave.clearedCoords.mapNotNull { coord ->
+                    val color = wave.boardBeforeClear.get(coord.row, coord.col)?.color ?: return@mapNotNull null
+                    ParticleBurst(
+                        id = particleCounter++,
+                        row = coord.row + 0.5f,
+                        col = coord.col + 0.5f,
+                        color = color,
+                        isLandingDust = false
+                    )
+                }
+            } else {
+                emptyList()
             }
 
             _uiState.update {
@@ -539,12 +720,11 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                     currentCascadeWave = wave.waveIndex,
                     bestCascadeDepth = maxOf(it.bestCascadeDepth, wave.waveIndex),
                     floatingBanner = banner,
-                    particleTriggerId = particleCounter++,
+                    particleTriggerId = if (showParticles) particleCounter++ else it.particleTriggerId,
                     latestParticles = clearParticles
                 )
             }
 
-            // Phase 1: Line clear flash & shrink
             animateStep(durationMs = 210L) { progress ->
                 _uiState.update {
                     it.copy(
@@ -560,7 +740,6 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 }
             }
 
-            // Update score right as wave clears
             runningScore += wave.scoreBreakdown.totalPoints
             _uiState.update { state ->
                 val updatedBest = if (state.mode == GameMode.CLASSIC && runningScore > state.classicBestScore) {
@@ -579,7 +758,6 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 )
             }
 
-            // Phase 2: Vertical gravity fall (only if blocks actually moved)
             if (wave.movements.isNotEmpty()) {
                 val maxDist = wave.movements.maxOf { it.distance }
                 val fallDuration = (190L + maxDist * 30L).coerceAtMost(360L)
@@ -598,25 +776,28 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 }
 
                 val landedCoords = wave.movements.map { GridCoord(it.toRow, it.col) }.toSet()
-                val dustParticles = wave.movements.map { move ->
-                    ParticleBurst(
-                        id = particleCounter++,
-                        row = move.toRow + 0.92f,
-                        col = move.col + 0.5f,
-                        color = move.cell.color,
-                        isLandingDust = true
-                    )
+                val dustParticles = if (_uiState.value.settings.visualEffectsEnabled) {
+                    wave.movements.map { move ->
+                        ParticleBurst(
+                            id = particleCounter++,
+                            row = move.toRow + 0.92f,
+                            col = move.col + 0.5f,
+                            color = move.cell.color,
+                            isLandingDust = true
+                        )
+                    }
+                } else {
+                    emptyList()
                 }
 
                 _uiState.update {
                     it.copy(
                         board = wave.boardAfterGravity,
-                        particleTriggerId = particleCounter++,
+                        particleTriggerId = if (dustParticles.isNotEmpty()) particleCounter++ else it.particleTriggerId,
                         latestParticles = dustParticles
                     )
                 }
 
-                // Phase 3: Subtle landing squash feedback
                 animateStep(durationMs = 95L) { progress ->
                     _uiState.update {
                         it.copy(
@@ -649,11 +830,11 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             trayAfterPlacement = trayAfterPlacement,
             scoreAfterTurn = runningScore,
             movesPlayed = movesPlayed,
+            blocksPlaced = blocksPlaced,
             linesAdded = totalLinesInTurn,
             maxDepthInTurn = resolution.maxCascadeDepth
         )
 
-        // Clear floating banner gently after a beat
         if (lastBannerId != null) {
             delay(1100L)
             _uiState.update { current ->
@@ -709,6 +890,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         trayAfterPlacement: List<TraySlot>,
         scoreAfterTurn: Int,
         movesPlayed: Int,
+        blocksPlaced: Int,
         linesAdded: Int,
         maxDepthInTurn: Int
     ) {
@@ -740,6 +922,12 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
 
+        if (nextStatus == GameStatus.CHALLENGE_WON) {
+            soundEngine.playLevelComplete()
+        } else if (nextStatus == GameStatus.GAME_OVER || nextStatus == GameStatus.CHALLENGE_LOST) {
+            soundEngine.playGameOver()
+        }
+
         val nextUnlockedLevel = if (
             state.mode == GameMode.CHALLENGE &&
             nextStatus == GameStatus.CHALLENGE_WON
@@ -752,26 +940,103 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             state.unlockedChallengeLevel
         }
 
+        val earnedStars = if (state.mode == GameMode.CHALLENGE && nextStatus == GameStatus.CHALLENGE_WON) {
+            calculateChallengeStars(
+                score = scoreAfterTurn,
+                targetScore = state.currentChallengeLevel.targetScore,
+                movesRemaining = (state.currentChallengeLevel.moveLimit - movesPlayed).coerceAtLeast(0)
+            )
+        } else {
+            0
+        }
+
+        val cascadesInTurn = if (maxDepthInTurn >= 2) 1 else 0
+        val updatedChallengeMap = if (state.mode == GameMode.CHALLENGE && nextStatus == GameStatus.CHALLENGE_WON) {
+            val lvlNum = state.currentChallengeLevel.levelNumber
+            val prev = state.challengeProgress[lvlNum]
+            state.challengeProgress + (
+                lvlNum to ChallengeLevelProgress(
+                    levelNumber = lvlNum,
+                    bestScore = maxOf(prev?.bestScore ?: 0, scoreAfterTurn),
+                    stars = maxOf(prev?.stars ?: 0, earnedStars),
+                    completed = true
+                )
+            )
+        } else if (state.mode == GameMode.CHALLENGE && nextStatus == GameStatus.CHALLENGE_LOST) {
+            val lvlNum = state.currentChallengeLevel.levelNumber
+            val prev = state.challengeProgress[lvlNum]
+            if (scoreAfterTurn > (prev?.bestScore ?: 0)) {
+                state.challengeProgress + (
+                    lvlNum to ChallengeLevelProgress(
+                        levelNumber = lvlNum,
+                        bestScore = scoreAfterTurn,
+                        stars = prev?.stars ?: 0,
+                        completed = prev?.completed == true
+                    )
+                )
+            } else {
+                state.challengeProgress
+            }
+        } else {
+            state.challengeProgress
+        }
+
+        val updatedStats = state.statistics.copy(
+            totalBlocksPlaced = state.statistics.totalBlocksPlaced + blocksPlaced,
+            totalLinesCleared = state.statistics.totalLinesCleared + linesAdded,
+            totalCascadesTriggered = state.statistics.totalCascadesTriggered + cascadesInTurn,
+            maxCascadeDepth = maxOf(state.statistics.maxCascadeDepth, maxDepthInTurn),
+            classicBestScore = maxOf(
+                state.statistics.classicBestScore,
+                if (state.mode == GameMode.CLASSIC) scoreAfterTurn else 0
+            )
+        )
+
         _uiState.update {
             it.copy(
                 board = finalBoard,
                 traySlots = nextTraySlots,
                 status = nextStatus,
                 unlockedChallengeLevel = nextUnlockedLevel,
-                bestCascadeDepth = maxOf(it.bestCascadeDepth, maxDepthInTurn)
+                bestCascadeDepth = maxOf(it.bestCascadeDepth, maxDepthInTurn),
+                lastChallengeStarsEarned = earnedStars,
+                challengeProgress = updatedChallengeMap,
+                statistics = updatedStats
             )
         }
 
         viewModelScope.launch {
+            repository.recordTurnStatistics(
+                blocksPlaced = blocksPlaced,
+                linesCleared = linesAdded,
+                cascadesTriggered = cascadesInTurn,
+                maxDepthInTurn = maxDepthInTurn
+            )
+
             if (state.mode == GameMode.CLASSIC) {
                 repository.updateClassicBestScore(scoreAfterTurn)
                 if (nextStatus == GameStatus.GAME_OVER) {
+                    _uiState.update { it.copy(savedClassicSummary = null) }
                     repository.saveClassicGame(null)
                 } else {
                     persistClassicSnapshot()
                 }
             } else if (nextStatus == GameStatus.CHALLENGE_WON) {
-                repository.unlockChallengeLevel(nextUnlockedLevel)
+                repository.saveChallengeLevelResult(
+                    levelNumber = state.currentChallengeLevel.levelNumber,
+                    score = scoreAfterTurn,
+                    stars = earnedStars,
+                    completed = true,
+                    nextUnlockedLevel = nextUnlockedLevel
+                )
+            } else if (nextStatus == GameStatus.CHALLENGE_LOST) {
+                repository.saveChallengeLevelResult(
+                    levelNumber = state.currentChallengeLevel.levelNumber,
+                    score = scoreAfterTurn,
+                    stars = 0,
+                    completed = false,
+                    nextUnlockedLevel = nextUnlockedLevel
+                )
             }
         }
     }
@@ -788,6 +1053,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             totalLinesCleared = s.totalLinesCleared,
             nextIdCounter = nextIdCounter
         )
+        _uiState.update { it.copy(savedClassicSummary = snapshot) }
         viewModelScope.launch {
             repository.saveClassicGame(snapshot)
             repository.updateClassicBestScore(s.score)
@@ -798,5 +1064,21 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         val available = tray.filterNotNull()
         if (available.isEmpty()) return false
         return !PlacementValidator.hasAnyValidMove(board, available)
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        soundEngine.release()
+    }
+
+    companion object {
+        fun calculateChallengeStars(score: Int, targetScore: Int, movesRemaining: Int): Int {
+            if (score < targetScore) return 0
+            return when {
+                score >= (targetScore * 1.5f).toInt() || movesRemaining >= 5 -> 3
+                score >= (targetScore * 1.25f).toInt() || movesRemaining >= 3 -> 2
+                else -> 1
+            }
+        }
     }
 }

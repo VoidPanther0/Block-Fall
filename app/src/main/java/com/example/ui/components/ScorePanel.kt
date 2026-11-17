@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.Refresh
@@ -59,31 +60,48 @@ fun TopGameBar(
     onShowRules: () -> Unit,
     onRestart: () -> Unit,
     onPause: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onBack: (() -> Unit)? = null
 ) {
     Row(
         modifier = modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        // Brand mark + Title
+        // Back (optional) + Brand mark + Title
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
+            if (onBack != null) {
+                IconButton(
+                    onClick = onBack,
+                    modifier = Modifier
+                        .size(48.dp)
+                        .testTag("gameplay_back_button")
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = stringResource(R.string.back_label),
+                        tint = MaterialTheme.colorScheme.onBackground
+                    )
+                }
+            }
             Box(
                 modifier = Modifier
-                    .size(12.dp)
-                    .clip(RoundedCornerShape(4.dp))
+                    .size(10.dp)
+                    .clip(RoundedCornerShape(3.dp))
                     .background(
                         Brush.linearGradient(listOf(AccentCyan, AccentGold))
                     )
             )
+            Spacer(Modifier.width(4.dp))
             Text(
                 text = stringResource(R.string.app_name).uppercase(),
                 style = MaterialTheme.typography.titleLarge.copy(
                     fontWeight = FontWeight.ExtraBold,
-                    letterSpacing = 1.6.sp
+                    letterSpacing = 1.2.sp,
+                    fontSize = 17.sp
                 ),
                 color = MaterialTheme.colorScheme.onBackground,
                 maxLines = 1,

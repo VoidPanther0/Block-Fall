@@ -85,12 +85,14 @@ fun GameBoard(
     hasSelectedSlot: Boolean,
     onCellTapped: (Int, Int) -> Unit,
     onBoardBoundsChanged: (Rect) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    visualEffectsEnabled: Boolean = true,
+    placementPreviewEnabled: Boolean = true
 ) {
     val activeParticles = remember { mutableStateListOf<ActiveParticle>() }
 
-    LaunchedEffect(particleTriggerId) {
-        if (latestParticles.isEmpty()) return@LaunchedEffect
+    LaunchedEffect(particleTriggerId, visualEffectsEnabled) {
+        if (!visualEffectsEnabled || latestParticles.isEmpty()) return@LaunchedEffect
         val rng = Random(particleTriggerId)
         for (burst in latestParticles) {
             val baseColor = burst.color.toPalette().glow
@@ -201,7 +203,7 @@ fun GameBoard(
             }
 
             // 2. Predictive line-clear highlight while hovering a valid placement
-            if (dragState != null && dragState.isHoverValid) {
+            if (placementPreviewEnabled && dragState != null && dragState.isHoverValid) {
                 for (rowIdx in dragState.predictedClearRows) {
                     drawRoundRect(
                         color = AccentGold.copy(alpha = 0.22f),
@@ -361,7 +363,7 @@ fun GameBoard(
             }
 
             // 4. Ghost placement preview during drag
-            if (dragState != null && dragState.hoverAnchor != null) {
+            if (placementPreviewEnabled && dragState != null && dragState.hoverAnchor != null) {
                 val anchor = dragState.hoverAnchor
                 val coords = dragState.piece.cellsAt(anchor.row, anchor.col)
                 for (coord in coords) {
@@ -375,7 +377,7 @@ fun GameBoard(
                             cellSize = tileSize,
                             color = dragState.piece.color,
                             alpha = 0.45f,
-                            glowBoost = 0.5f
+                            glowBoost = if (visualEffectsEnabled) 0.5f else 0f
                         )
                     } else {
                         drawRoundRect(
@@ -396,15 +398,17 @@ fun GameBoard(
             }
 
             // 5. Render active particles (clear sparks + gravity landing dust)
-            for (particle in activeParticles) {
-                val px = particle.col * cellSize
-                val py = particle.row * cellSize
-                val radius = cellSize * particle.radiusFactor * particle.life.coerceIn(0.2f, 1f)
-                drawCircle(
-                    color = particle.color.copy(alpha = particle.life.coerceIn(0f, 1f)),
-                    radius = radius,
-                    center = Offset(px, py)
-                )
+            if (visualEffectsEnabled) {
+                for (particle in activeParticles) {
+                    val px = particle.col * cellSize
+                    val py = particle.row * cellSize
+                    val radius = cellSize * particle.radiusFactor * particle.life.coerceIn(0.2f, 1f)
+                    drawCircle(
+                        color = particle.color.copy(alpha = particle.life.coerceIn(0f, 1f)),
+                        radius = radius,
+                        center = Offset(px, py)
+                    )
+                }
             }
         }
 

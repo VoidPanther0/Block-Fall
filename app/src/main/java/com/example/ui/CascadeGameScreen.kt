@@ -1,5 +1,6 @@
 package com.example.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -35,6 +36,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -42,13 +44,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.game.Board
 import com.example.game.GameStatus
-import com.example.ui.components.EndGameDialog
+import com.example.ui.components.ExitConfirmationDialog
 import com.example.ui.components.GameBoard
 import com.example.ui.components.GravityRulesDialog
 import com.example.ui.components.PieceTray
+import com.example.ui.components.RestartConfirmationDialog
 import com.example.ui.components.ScorePanel
 import com.example.ui.components.TopGameBar
-import com.example.ui.components.PauseDialog
 import com.example.ui.components.drawBevelBlock
 import com.example.ui.theme.ObsidianBg
 import com.example.ui.theme.ObsidianGlow
@@ -56,19 +58,39 @@ import com.example.ui.theme.TextSecondary
 
 @Composable
 fun CascadeGameScreen(
-    viewModel: GameViewModel = viewModel()
+    viewModel: GameViewModel = viewModel(),
+    onOpenPause: () -> Unit = { viewModel.pauseGame() },
+    onOpenHowToPlay: () -> Unit = { viewModel.toggleRulesDialog(true) },
+    onLevelComplete: () -> Unit = {},
+    onGameOver: () -> Unit = {},
+    onExitToHome: () -> Unit = {}
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val density = LocalDensity.current
     val haptics = LocalHapticFeedback.current
-    val dragLiftPx = remember(density) { with(density) { 52.dp.toPx() } }
+    // Clearance between pointer finger and bottom edge of lifted floating piece
+    val dragLiftPx = remember(density) { with(density) { 64.dp.toPx() } }
 
     var rootOrigin by remember { mutableStateOf(Offset.Zero) }
     var boardBoundsInRoot by remember { mutableStateOf(Rect.Zero) }
+    var showRestartConfirm by remember { mutableStateOf(false) }
+    var showExitConfirm by remember { mutableStateOf(false) }
+
+    BackHandler(enabled = state.status == GameStatus.PLAYING) {
+        showExitConfirm = true
+    }
 
     LaunchedEffect(state.currentCascadeWave) {
-        if (state.hapticsEnabled && state.currentCascadeWave >= 2) {
+        if (state.settings.hapticsEnabled && state.currentCascadeWave >= 2) {
             haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+        }
+    }
+
+    LaunchedEffect(state.status) {
+        when (state.status) {
+            GameStatus.CHALLENGE_WON -> onLevelComplete()
+            GameStatus.GAME_OVER, GameStatus.CHALLENGE_LOST -> onGameOver()
+            else -> Unit
         }
     }
 
@@ -82,6 +104,7 @@ fun CascadeGameScreen(
                 )
             )
             .onGloballyPositioned { rootOrigin = it.positionInRoot() }
+            .testTag("gameplay_screen")
     ) {
         BoxWithConstraints(
             contentAlignment = Alignment.Center,
@@ -100,7 +123,6 @@ fun CascadeGameScreen(
                     horizontalArrangement = Arrangement.spacedBy(24.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Left Hero: 8x8 Board
                     Box(
                         contentAlignment = Alignment.Center,
                         modifier = Modifier
@@ -115,8 +137,10 @@ fun CascadeGameScreen(
                             particleTriggerId = state.particleTriggerId,
                             latestParticles = state.latestParticles,
                             hasSelectedSlot = state.selectedSlotIndex != null,
+                            visualEffectsEnabled = state.settings.visualEffectsEnabled,
+                            placementPreviewEnabled = state.settings.placementPreviewEnabled,
                             onCellTapped = { r, c ->
-                                if (state.hapticsEnabled) {
+                                if (state.settings.hapticsEnabled) {
                                     haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 }
                                 viewModel.onBoardCellTapped(r, c)
@@ -129,7 +153,6 @@ fun CascadeGameScreen(
                         )
                     }
 
-                    // Right Controls: Bar, Score HUD, 3-Piece Tray
                     Column(
                         modifier = Modifier
                             .weight(0.9f)
@@ -139,9 +162,13 @@ fun CascadeGameScreen(
                         TopGameBar(
                             mode = state.mode,
                             onSwitchMode = viewModel::switchMode,
-                            onShowRules = { viewModel.toggleRulesDialog(true) },
-                            onRestart = viewModel::restartCurrentGame,
-                            onPause = viewModel::pauseGame
+                            onShowRules = onOpenHowToPlay,
+                            onRestart = { showRestartConfirm = true },
+                            onPause = {
+                                viewModel.pauseGame()
+                                onOpenPause()
+                            },
+                            onBack = { showExitConfirm = true }
                         )
                         ScorePanel(state = state)
                         PieceTray(
@@ -150,13 +177,13 @@ fun CascadeGameScreen(
                             draggingSlotIndex = state.dragState?.slotIndex,
                             status = state.status,
                             onSlotTapped = { idx ->
-                                if (state.hapticsEnabled) {
+                                if (state.settings.hapticsEnabled) {
                                     haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 }
                                 viewModel.selectTraySlot(idx)
                             },
                             onDragStart = { idx, pos ->
-                                if (state.hapticsEnabled) {
+                                if (state.settings.hapticsEnabled) {
                                     haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 }
                                 viewModel.startDrag(idx, pos)
@@ -169,7 +196,6 @@ fun CascadeGameScreen(
                     }
                 }
             } else {
-                // Compact / Mobile Portrait Layout
                 val boardMaxWidth = (maxHeight * 0.50f).coerceAtMost(500.dp)
 
                 Column(
@@ -186,9 +212,13 @@ fun CascadeGameScreen(
                         TopGameBar(
                             mode = state.mode,
                             onSwitchMode = viewModel::switchMode,
-                            onShowRules = { viewModel.toggleRulesDialog(true) },
-                            onRestart = viewModel::restartCurrentGame,
-                            onPause = viewModel::pauseGame
+                            onShowRules = onOpenHowToPlay,
+                            onRestart = { showRestartConfirm = true },
+                            onPause = {
+                                viewModel.pauseGame()
+                                onOpenPause()
+                            },
+                            onBack = { showExitConfirm = true }
                         )
                         ScorePanel(state = state)
                     }
@@ -201,8 +231,10 @@ fun CascadeGameScreen(
                         particleTriggerId = state.particleTriggerId,
                         latestParticles = state.latestParticles,
                         hasSelectedSlot = state.selectedSlotIndex != null,
+                        visualEffectsEnabled = state.settings.visualEffectsEnabled,
+                        placementPreviewEnabled = state.settings.placementPreviewEnabled,
                         onCellTapped = { r, c ->
-                            if (state.hapticsEnabled) {
+                            if (state.settings.hapticsEnabled) {
                                 haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             }
                             viewModel.onBoardCellTapped(r, c)
@@ -227,13 +259,13 @@ fun CascadeGameScreen(
                             draggingSlotIndex = state.dragState?.slotIndex,
                             status = state.status,
                             onSlotTapped = { idx ->
-                                if (state.hapticsEnabled) {
+                                if (state.settings.hapticsEnabled) {
                                     haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 }
                                 viewModel.selectTraySlot(idx)
                             },
                             onDragStart = { idx, pos ->
-                                if (state.hapticsEnabled) {
+                                if (state.settings.hapticsEnabled) {
                                     haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 }
                                 viewModel.startDrag(idx, pos)
@@ -249,7 +281,7 @@ fun CascadeGameScreen(
             }
         }
 
-        // Full-scale floating piece overlay during drag
+        // Full-scale floating piece overlay lifted above the player's finger
         val activeDrag = state.dragState
         if (activeDrag != null && boardBoundsInRoot.width > 1f) {
             Canvas(modifier = Modifier.fillMaxSize()) {
@@ -261,7 +293,7 @@ fun CascadeGameScreen(
                 val pieceH = activeDrag.piece.shape.heightCells * cellSize
                 val localPointer = activeDrag.pointerRootOffset - rootOrigin
                 val startX = localPointer.x - pieceW / 2f
-                val startY = localPointer.y - dragLiftPx - pieceH / 2f
+                val startY = localPointer.y - dragLiftPx - pieceH
 
                 for (cell in activeDrag.piece.shape.offsets) {
                     drawBevelBlock(
@@ -270,39 +302,31 @@ fun CascadeGameScreen(
                         cellSize = tileSize,
                         color = activeDrag.piece.color,
                         alpha = 0.94f,
-                        glowBoost = 0.65f
+                        glowBoost = if (state.settings.visualEffectsEnabled) 0.65f else 0.1f
                     )
                 }
             }
         }
 
-        // Modal Dialogs
-        if (state.status == GameStatus.PAUSED) {
-            PauseDialog(
-                state = state,
-                onResume = viewModel::resumeGame,
-                onRestart = viewModel::restartCurrentGame,
-                onSelectChallengeLevel = { lvl ->
-                    viewModel.resumeGame()
-                    viewModel.startChallengeLevel(lvl)
+        if (showRestartConfirm) {
+            RestartConfirmationDialog(
+                onConfirm = {
+                    showRestartConfirm = false
+                    viewModel.restartCurrentGame()
                 },
-                onSwitchMode = viewModel::switchMode,
-                onToggleHaptics = viewModel::toggleHaptics,
-                onOpenRules = { viewModel.toggleRulesDialog(true) }
+                onDismiss = { showRestartConfirm = false }
             )
         }
 
-        if (state.status == GameStatus.GAME_OVER ||
-            state.status == GameStatus.CHALLENGE_WON ||
-            state.status == GameStatus.CHALLENGE_LOST
-        ) {
-            EndGameDialog(
-                state = state,
-                onPlayAgain = viewModel::restartCurrentGame,
-                onNextLevel = {
-                    viewModel.startChallengeLevel(state.currentChallengeLevel.levelNumber + 1)
+        if (showExitConfirm) {
+            ExitConfirmationDialog(
+                mode = state.mode,
+                onConfirm = {
+                    showExitConfirm = false
+                    viewModel.exitToHome()
+                    onExitToHome()
                 },
-                onSwitchMode = viewModel::switchMode
+                onDismiss = { showExitConfirm = false }
             )
         }
 
