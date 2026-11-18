@@ -155,9 +155,13 @@ fun GameBoard(
     Box(
         modifier = modifier
             .aspectRatio(1f)
-            .clip(RoundedCornerShape(20.dp))
-            .background(BoardWellBg)
-            .border(1.5.dp, BoardRim, RoundedCornerShape(20.dp))
+            .clip(RoundedCornerShape(22.dp))
+            .background(
+                Brush.verticalGradient(
+                    listOf(Color(0xFF1A367D), BoardWellBg)
+                )
+            )
+            .border(2.dp, BoardRim, RoundedCornerShape(22.dp))
             .padding(10.dp)
             .testTag("game_board")
             .semantics {

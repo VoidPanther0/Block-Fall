@@ -1,35 +1,24 @@
 package com.example.ui.components
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.example.R
 import com.example.game.GameMode
-import com.example.ui.theme.AccentCoral
-import com.example.ui.theme.AccentCyan
-import com.example.ui.theme.AccentGold
-import com.example.ui.theme.BoardRim
-import com.example.ui.theme.SurfaceCard
+import com.example.ui.theme.OutfitFontFamily
 import com.example.ui.theme.TextSecondary
 
 @Composable
@@ -41,8 +30,7 @@ fun RestartConfirmationDialog(
         title = stringResource(R.string.confirm_restart_title),
         message = stringResource(R.string.confirm_restart_body),
         confirmLabel = stringResource(R.string.restart),
-        confirmColor = AccentGold,
-        confirmTextColor = Color(0xFF261900),
+        confirmStyle = ArcadeButtonStyle.GOLD,
         dialogTag = "restart_confirmation_dialog",
         confirmTag = "confirm_restart_button",
         cancelTag = "cancel_restart_button",
@@ -65,9 +53,8 @@ fun ExitConfirmationDialog(
     ConfirmationDialogShell(
         title = stringResource(R.string.confirm_exit_title),
         message = message,
-        confirmLabel = "Exit to Home",
-        confirmColor = AccentCyan,
-        confirmTextColor = Color(0xFF002026),
+        confirmLabel = "Exit Home",
+        confirmStyle = ArcadeButtonStyle.BLUE,
         dialogTag = "exit_confirmation_dialog",
         confirmTag = "confirm_exit_button",
         cancelTag = "cancel_exit_button",
@@ -84,9 +71,8 @@ fun ResetProgressConfirmationDialog(
     ConfirmationDialogShell(
         title = stringResource(R.string.confirm_reset_title),
         message = stringResource(R.string.confirm_reset_body),
-        confirmLabel = "Reset Progress",
-        confirmColor = AccentCoral,
-        confirmTextColor = Color.White,
+        confirmLabel = "Reset",
+        confirmStyle = ArcadeButtonStyle.RED,
         dialogTag = "reset_progress_confirmation_dialog",
         confirmTag = "confirm_reset_button",
         cancelTag = "cancel_reset_button",
@@ -100,8 +86,7 @@ private fun ConfirmationDialogShell(
     title: String,
     message: String,
     confirmLabel: String,
-    confirmColor: Color,
-    confirmTextColor: Color,
+    confirmStyle: ArcadeButtonStyle,
     dialogTag: String,
     confirmTag: String,
     cancelTag: String,
@@ -109,53 +94,54 @@ private fun ConfirmationDialogShell(
     onDismiss: () -> Unit
 ) {
     Dialog(onDismissRequest = onDismiss) {
-        Column(
+        FrostedGlassCard(
+            cornerRadius = 24.dp,
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(22.dp))
-                .background(SurfaceCard)
-                .border(1.5.dp, BoardRim, RoundedCornerShape(22.dp))
-                .padding(20.dp)
-                .testTag(dialogTag),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+                .padding(4.dp)
+                .testTag(dialogTag)
         ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.headlineMedium,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                text = message,
-                style = MaterialTheme.typography.bodyMedium,
-                color = TextSecondary
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            androidx.compose.foundation.layout.Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+                modifier = Modifier.padding(22.dp)
             ) {
-                OutlinedButton(
-                    onClick = onDismiss,
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(48.dp)
-                        .testTag(cancelTag)
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.headlineMedium.copy(
+                        fontFamily = OutfitFontFamily,
+                        fontWeight = FontWeight.ExtraBold
+                    ),
+                    color = Color.White,
+                    textAlign = TextAlign.Center
+                )
+                Text(
+                    text = message,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TextSecondary,
+                    textAlign = TextAlign.Center
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Text(text = "Cancel", color = MaterialTheme.colorScheme.onSurface)
-                }
-                Button(
-                    onClick = onConfirm,
-                    colors = ButtonDefaults.buttonColors(containerColor = confirmColor),
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(48.dp)
-                        .testTag(confirmTag)
-                ) {
-                    Text(
+                    GlossyArcadeButton(
+                        text = "Cancel",
+                        onClick = onDismiss,
+                        style = ArcadeButtonStyle.BLUE,
+                        height = 48.dp,
+                        cornerRadius = 24.dp,
+                        testTag = cancelTag,
+                        modifier = Modifier.weight(1f)
+                    )
+                    GlossyArcadeButton(
                         text = confirmLabel,
-                        fontWeight = FontWeight.Bold,
-                        color = confirmTextColor
+                        onClick = onConfirm,
+                        style = confirmStyle,
+                        height = 48.dp,
+                        cornerRadius = 24.dp,
+                        testTag = confirmTag,
+                        modifier = Modifier.weight(1f)
                     )
                 }
             }

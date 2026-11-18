@@ -24,7 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
@@ -35,8 +35,10 @@ import androidx.compose.ui.unit.dp
 import com.example.game.GamePiece
 import com.example.game.GameStatus
 import com.example.game.TraySlot
-import com.example.ui.theme.AccentCyan
+import com.example.ui.theme.AccentGold
 import com.example.ui.theme.BoardRim
+import com.example.ui.theme.BoardWellBg
+import com.example.ui.theme.GlassBorder
 import com.example.ui.theme.SurfaceCard
 import com.example.ui.theme.SurfaceCardElevated
 
@@ -56,8 +58,16 @@ fun PieceTray(
     Row(
         modifier = modifier
             .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(
+                Brush.verticalGradient(
+                    listOf(SurfaceCard.copy(alpha = 0.88f), BoardWellBg.copy(alpha = 0.94f))
+                )
+            )
+            .border(1.5.dp, GlassBorder.copy(alpha = 0.55f), RoundedCornerShape(20.dp))
+            .padding(8.dp)
             .testTag("piece_tray"),
-        horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
+        horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally),
         verticalAlignment = Alignment.CenterVertically
     ) {
         for (slot in slots) {
@@ -93,25 +103,25 @@ private fun TraySlotCard(
     var slotRootPos by remember { mutableStateOf(Offset.Zero) }
     val borderColor by animateColorAsState(
         targetValue = when {
-            isSelected -> AccentCyan
-            slot.piece != null -> BoardRim
-            else -> BoardRim.copy(alpha = 0.35f)
+            isSelected -> AccentGold
+            slot.piece != null -> BoardRim.copy(alpha = 0.7f)
+            else -> BoardRim.copy(alpha = 0.25f)
         },
         label = "slot_border"
     )
 
-    val bgColor = if (isSelected) SurfaceCardElevated else SurfaceCard
+    val bgColor = if (isSelected) SurfaceCardElevated else BoardWellBg.copy(alpha = 0.7f)
     val desc = slot.piece?.let { "Piece ${slot.index + 1}, ${it.shape.cellCount} cells" }
         ?: "Empty piece slot ${slot.index + 1}"
 
     Box(
         contentAlignment = Alignment.Center,
         modifier = modifier
-            .defaultMinSize(minHeight = 92.dp)
+            .defaultMinSize(minHeight = 64.dp)
             .aspectRatio(1f)
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(14.dp))
             .background(bgColor)
-            .border(if (isSelected) 2.dp else 1.dp, borderColor, RoundedCornerShape(16.dp))
+            .border(if (isSelected) 2.dp else 1.dp, borderColor, RoundedCornerShape(14.dp))
             .onGloballyPositioned { coords ->
                 slotRootPos = coords.positionInRoot()
             }
@@ -133,7 +143,7 @@ private fun TraySlotCard(
                     onDragCancel = { onDragCancel() }
                 )
             }
-            .padding(10.dp)
+            .padding(8.dp)
             .testTag("tray_slot_${slot.index}")
             .semantics { contentDescription = desc }
     ) {

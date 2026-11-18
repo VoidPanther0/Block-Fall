@@ -49,11 +49,10 @@ import com.example.ui.components.GameBoard
 import com.example.ui.components.GravityRulesDialog
 import com.example.ui.components.PieceTray
 import com.example.ui.components.RestartConfirmationDialog
+import com.example.ui.components.RoyalSkyBackdrop
 import com.example.ui.components.ScorePanel
 import com.example.ui.components.TopGameBar
 import com.example.ui.components.drawBevelBlock
-import com.example.ui.theme.ObsidianBg
-import com.example.ui.theme.ObsidianGlow
 import com.example.ui.theme.TextSecondary
 
 @Composable
@@ -97,15 +96,10 @@ fun CascadeGameScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                Brush.radialGradient(
-                    colors = listOf(ObsidianGlow, ObsidianBg),
-                    radius = 1200f
-                )
-            )
             .onGloballyPositioned { rootOrigin = it.positionInRoot() }
             .testTag("gameplay_screen")
     ) {
+        RoyalSkyBackdrop()
         BoxWithConstraints(
             contentAlignment = Alignment.Center,
             modifier = Modifier
@@ -169,9 +163,8 @@ fun CascadeGameScreen(
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         TopGameBar(
-                            mode = state.mode,
-                            onSwitchMode = viewModel::switchMode,
-                            onShowRules = onOpenHowToPlay,
+                            state = state,
+                            onShowHowToPlay = onOpenHowToPlay,
                             onRestart = { showRestartConfirm = true },
                             onPause = {
                                 viewModel.pauseGame()
@@ -205,7 +198,7 @@ fun CascadeGameScreen(
                     }
                 }
             } else {
-                val boardMaxWidth = (maxHeight * 0.50f).coerceAtMost(500.dp)
+                val boardMaxWidth = (maxHeight * 0.46f).coerceIn(170.dp, 500.dp)
 
                 Column(
                     modifier = Modifier
@@ -216,12 +209,11 @@ fun CascadeGameScreen(
                 ) {
                     Column(
                         modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         TopGameBar(
-                            mode = state.mode,
-                            onSwitchMode = viewModel::switchMode,
-                            onShowRules = onOpenHowToPlay,
+                            state = state,
+                            onShowHowToPlay = onOpenHowToPlay,
                             onRestart = { showRestartConfirm = true },
                             onPause = {
                                 viewModel.pauseGame()
@@ -262,8 +254,8 @@ fun CascadeGameScreen(
                             viewModel.updateBoardBounds(rect, dragLiftPx)
                         },
                         modifier = Modifier
-                            .fillMaxWidth()
                             .widthIn(max = boardMaxWidth)
+                            .fillMaxWidth()
                     )
 
                     Column(
@@ -362,8 +354,10 @@ private fun HintFooter(hasSelectedPiece: Boolean) {
         } else {
             "Drag any piece onto the board · Clear lines to trigger gravity"
         },
-        style = MaterialTheme.typography.bodyMedium.copy(fontSize = 12.sp),
-        color = TextSecondary.copy(alpha = 0.78f),
-        textAlign = TextAlign.Center
+        style = MaterialTheme.typography.bodyMedium.copy(fontSize = 11.sp),
+        color = TextSecondary.copy(alpha = 0.82f),
+        textAlign = TextAlign.Center,
+        maxLines = 1,
+        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
     )
 }

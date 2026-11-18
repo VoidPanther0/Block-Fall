@@ -11,13 +11,10 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import androidx.navigation.navArgument
 import com.example.ui.navigation.CascadeRoutes
-import com.example.ui.screens.ChallengeDetailsScreen
 import com.example.ui.screens.ChallengeSelectionScreen
 import com.example.ui.screens.GameOverScreen
 import com.example.ui.screens.HomeScreen
@@ -93,10 +90,6 @@ fun CascadeApp(
                     viewModel.playUiClick()
                     navController.navigate(CascadeRoutes.CHALLENGE_SELECTION)
                 },
-                onOpenHowToPlay = {
-                    viewModel.playUiClick()
-                    navController.navigate(CascadeRoutes.HOW_TO_PLAY)
-                },
                 onOpenSettings = {
                     viewModel.playUiClick()
                     navController.navigate(CascadeRoutes.SETTINGS)
@@ -104,17 +97,12 @@ fun CascadeApp(
                 onOpenStatistics = {
                     viewModel.playUiClick()
                     navController.navigate(CascadeRoutes.STATISTICS)
-                },
-                onOpenRules = {
-                    viewModel.playUiClick()
-                    navController.navigate(CascadeRoutes.RULES)
                 }
             )
         }
 
         composable(CascadeRoutes.MODE_SELECTION) {
             ModeSelectionScreen(
-                state = state,
                 onBack = { navController.popBackStack() },
                 onPlayNewClassic = {
                     viewModel.playUiClick()
@@ -123,28 +111,9 @@ fun CascadeApp(
                         popUpTo(CascadeRoutes.HOME)
                     }
                 },
-                onContinueClassic = {
-                    viewModel.playUiClick()
-                    if (viewModel.continueSavedClassicGame()) {
-                        navController.navigate(CascadeRoutes.GAMEPLAY) {
-                            popUpTo(CascadeRoutes.HOME)
-                        }
-                    }
-                },
                 onSelectChallengeLevels = {
                     viewModel.playUiClick()
                     navController.navigate(CascadeRoutes.CHALLENGE_SELECTION)
-                },
-                onQuickPlayChallenge = {
-                    viewModel.playUiClick()
-                    viewModel.startChallengeLevel(state.unlockedChallengeLevel)
-                    navController.navigate(CascadeRoutes.GAMEPLAY) {
-                        popUpTo(CascadeRoutes.HOME)
-                    }
-                },
-                onOpenRules = {
-                    viewModel.playUiClick()
-                    navController.navigate(CascadeRoutes.RULES)
                 }
             )
         }
@@ -193,14 +162,6 @@ fun CascadeApp(
                     viewModel.restartCurrentGame()
                     navController.popBackStack()
                 },
-                onOpenHowToPlay = {
-                    viewModel.playUiClick()
-                    navController.navigate(CascadeRoutes.HOW_TO_PLAY)
-                },
-                onOpenSettings = {
-                    viewModel.playUiClick()
-                    navController.navigate(CascadeRoutes.SETTINGS)
-                },
                 onExitToHomeConfirmed = {
                     viewModel.playUiClick()
                     viewModel.exitToHome()
@@ -211,11 +172,7 @@ fun CascadeApp(
 
         composable(CascadeRoutes.HOW_TO_PLAY) {
             HowToPlayScreen(
-                onBack = { navController.popBackStack() },
-                onOpenRules = {
-                    viewModel.playUiClick()
-                    navController.navigate(CascadeRoutes.RULES)
-                }
+                onBack = { navController.popBackStack() }
             )
         }
 
@@ -223,25 +180,9 @@ fun CascadeApp(
             ChallengeSelectionScreen(
                 state = state,
                 onBack = { navController.popBackStack() },
-                onSelectLevel = { levelNumber ->
+                onPlayLevel = { levelNumber ->
                     viewModel.playUiClick()
-                    navController.navigate(CascadeRoutes.challengeDetails(levelNumber))
-                }
-            )
-        }
-
-        composable(
-            route = CascadeRoutes.CHALLENGE_DETAILS,
-            arguments = listOf(navArgument("levelNumber") { type = NavType.IntType })
-        ) { backStackEntry ->
-            val levelNumber = backStackEntry.arguments?.getInt("levelNumber") ?: 1
-            ChallengeDetailsScreen(
-                levelNumber = levelNumber,
-                state = state,
-                onBack = { navController.popBackStack() },
-                onPlayLevel = { lvl ->
-                    viewModel.playUiClick()
-                    viewModel.startChallengeLevel(lvl)
+                    viewModel.startChallengeLevel(levelNumber)
                     navController.navigate(CascadeRoutes.GAMEPLAY) {
                         popUpTo(CascadeRoutes.HOME)
                     }
@@ -310,14 +251,6 @@ fun CascadeApp(
                 onToggleHaptics = viewModel::toggleHaptics,
                 onToggleVisualEffects = viewModel::toggleVisualEffects,
                 onTogglePlacementPreview = viewModel::togglePlacementPreview,
-                onOpenHowToPlay = {
-                    viewModel.playUiClick()
-                    navController.navigate(CascadeRoutes.HOW_TO_PLAY)
-                },
-                onOpenRules = {
-                    viewModel.playUiClick()
-                    navController.navigate(CascadeRoutes.RULES)
-                },
                 onResetProgressConfirmed = {
                     viewModel.playUiClick()
                     viewModel.resetAllProgress()

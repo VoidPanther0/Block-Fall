@@ -19,10 +19,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.outlined.HelpOutline
+import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -33,8 +36,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -45,19 +51,20 @@ import com.example.R
 import com.example.game.GameMode
 import com.example.ui.GameUiState
 import com.example.ui.theme.AccentCoral
-import com.example.ui.theme.AccentCyan
 import com.example.ui.theme.AccentEmerald
 import com.example.ui.theme.AccentGold
-import com.example.ui.theme.BoardRim
+import com.example.ui.theme.BlueBtnBottom
+import com.example.ui.theme.BlueBtnTop
+import com.example.ui.theme.GlassBorder
+import com.example.ui.theme.OutfitFontFamily
 import com.example.ui.theme.SurfaceCard
 import com.example.ui.theme.SurfaceCardElevated
 import com.example.ui.theme.TextSecondary
 
 @Composable
 fun TopGameBar(
-    mode: GameMode,
-    onSwitchMode: (GameMode) -> Unit,
-    onShowRules: () -> Unit,
+    state: GameUiState,
+    onShowHowToPlay: () -> Unit,
     onRestart: () -> Unit,
     onPause: () -> Unit,
     modifier: Modifier = Modifier,
@@ -68,7 +75,6 @@ fun TopGameBar(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        // Back (optional) + Brand mark + Title
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -81,61 +87,44 @@ fun TopGameBar(
                         .testTag("gameplay_back_button")
                 ) {
                     Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
                         contentDescription = stringResource(R.string.back_label),
-                        tint = MaterialTheme.colorScheme.onBackground
+                        tint = Color.White,
+                        modifier = Modifier.size(30.dp)
                     )
                 }
             }
             Box(
                 modifier = Modifier
-                    .size(10.dp)
-                    .clip(RoundedCornerShape(3.dp))
-                    .background(
-                        Brush.linearGradient(listOf(AccentCyan, AccentGold))
-                    )
-            )
-            Spacer(Modifier.width(4.dp))
-            Text(
-                text = stringResource(R.string.app_name).uppercase(),
-                style = MaterialTheme.typography.titleLarge.copy(
-                    fontWeight = FontWeight.ExtraBold,
-                    letterSpacing = 1.2.sp,
-                    fontSize = 17.sp
-                ),
-                color = MaterialTheme.colorScheme.onBackground,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(SurfaceCard.copy(alpha = 0.78f))
+                    .border(1.dp, GlassBorder.copy(alpha = 0.55f), RoundedCornerShape(14.dp))
+                    .padding(horizontal = 12.dp, vertical = 6.dp)
+            ) {
+                Text(
+                    text = if (state.mode == GameMode.CLASSIC) {
+                        stringResource(R.string.mode_classic)
+                    } else {
+                        "Level ${state.currentChallengeLevel.levelNumber}"
+                    },
+                    style = MaterialTheme.typography.labelLarge.copy(
+                        fontFamily = OutfitFontFamily,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp
+                    ),
+                    color = Color.White,
+                    maxLines = 1
+                )
+            }
         }
 
-        // Mode switcher pill
+        // Utility buttons (Help, Restart, Glossy Blue Pause)
         Row(
-            modifier = Modifier
-                .clip(RoundedCornerShape(12.dp))
-                .background(SurfaceCard)
-                .border(1.dp, BoardRim, RoundedCornerShape(12.dp))
-                .padding(3.dp),
+            verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(2.dp)
         ) {
-            ModePill(
-                label = stringResource(R.string.mode_classic),
-                selected = mode == GameMode.CLASSIC,
-                onClick = { onSwitchMode(GameMode.CLASSIC) },
-                testTag = "mode_classic_tab"
-            )
-            ModePill(
-                label = stringResource(R.string.mode_challenge),
-                selected = mode == GameMode.CHALLENGE,
-                onClick = { onSwitchMode(GameMode.CHALLENGE) },
-                testTag = "mode_challenge_tab"
-            )
-        }
-
-        // Utility buttons (Help, Restart, Pause)
-        Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(
-                onClick = onShowRules,
+                onClick = onShowHowToPlay,
                 modifier = Modifier
                     .size(48.dp)
                     .testTag("rules_button")
@@ -158,49 +147,26 @@ fun TopGameBar(
                     tint = TextSecondary
                 )
             }
-            IconButton(
-                onClick = onPause,
+            Box(
+                contentAlignment = Alignment.Center,
                 modifier = Modifier
                     .size(48.dp)
+                    .padding(4.dp)
+                    .shadow(4.dp, CircleShape, clip = false)
+                    .clip(CircleShape)
+                    .background(Brush.verticalGradient(listOf(BlueBtnTop, BlueBtnBottom)))
+                    .border(1.dp, Color.White.copy(alpha = 0.45f), CircleShape)
+                    .clickable(onClick = onPause)
                     .testTag("pause_button")
             ) {
                 Icon(
                     imageVector = Icons.Filled.Pause,
                     contentDescription = stringResource(R.string.pause),
-                    tint = MaterialTheme.colorScheme.onBackground
+                    tint = Color.White,
+                    modifier = Modifier.size(22.dp)
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun ModePill(
-    label: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-    testTag: String
-) {
-    val bg = if (selected) SurfaceCardElevated else Color.Transparent
-    val textColor = if (selected) AccentCyan else TextSecondary
-    Box(
-        contentAlignment = Alignment.Center,
-        modifier = Modifier
-            .clip(RoundedCornerShape(9.dp))
-            .background(bg)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 10.dp, vertical = 6.dp)
-            .testTag(testTag)
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelMedium.copy(
-                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                letterSpacing = 0.4.sp
-            ),
-            color = textColor,
-            maxLines = 1
-        )
     }
 }
 
@@ -217,68 +183,69 @@ fun ScorePanel(
 
     Column(
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        // Primary Score + Best/Target HUD row matching the Gold Star / Gold Trophy mockup
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            // Current Score Card
-            HudStatCard(
-                label = stringResource(R.string.score_label),
+            HudPill(
+                icon = Icons.Filled.Star,
+                iconTint = AccentGold,
+                label = if (state.isNewBest && state.mode == GameMode.CLASSIC) "NEW!" else stringResource(R.string.score_label),
                 value = animatedScore.toString(),
-                accent = AccentCyan,
-                badge = if (state.isNewBest && state.mode == GameMode.CLASSIC) {
-                    stringResource(R.string.new_best_badge)
-                } else null,
                 modifier = Modifier
                     .weight(1f)
                     .testTag("score_card")
             )
 
             if (state.mode == GameMode.CLASSIC) {
-                HudStatCard(
+                HudPill(
+                    icon = Icons.Filled.EmojiEvents,
+                    iconTint = AccentGold,
                     label = stringResource(R.string.best_label),
                     value = state.classicBestScore.toString(),
-                    accent = AccentGold,
-                    badge = if (state.bestCascadeDepth >= 2) "MAX x${state.bestCascadeDepth}" else null,
                     modifier = Modifier
                         .weight(1f)
                         .testTag("best_score_card")
                 )
             } else {
-                HudStatCard(
-                    label = stringResource(R.string.target_label),
+                HudPill(
+                    icon = Icons.Filled.Flag,
+                    iconTint = AccentEmerald,
+                    label = "Target",
                     value = state.currentChallengeLevel.targetScore.toString(),
-                    accent = AccentEmerald,
-                    badge = "LVL ${state.currentChallengeLevel.levelNumber}",
                     modifier = Modifier
-                        .weight(0.95f)
+                        .weight(1f)
                         .testTag("target_card")
                 )
-                HudStatCard(
+                HudPill(
+                    icon = Icons.Filled.EmojiEvents,
+                    iconTint = if (state.movesRemaining <= 3) AccentCoral else AccentGold,
                     label = stringResource(R.string.moves_label),
                     value = state.movesRemaining.toString(),
-                    accent = if (state.movesRemaining <= 3) AccentCoral else AccentGold,
-                    badge = null,
+                    valueColor = if (state.movesRemaining <= 3) AccentCoral else Color.White,
                     modifier = Modifier
-                        .weight(0.75f)
+                        .weight(0.82f)
                         .testTag("moves_card")
                 )
             }
         }
 
-        // Challenge progress bar + subtitle OR active cascade indicator
+        // Challenge progress bar
         if (state.mode == GameMode.CHALLENGE) {
             val progress = (state.score.toFloat() / state.currentChallengeLevel.targetScore.toFloat())
                 .coerceIn(0f, 1f)
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(SurfaceCard)
-                    .border(1.dp, BoardRim, RoundedCornerShape(12.dp))
-                    .padding(horizontal = 12.dp, vertical = 8.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(SurfaceCard.copy(alpha = 0.85f))
+                    .border(1.dp, GlassBorder.copy(alpha = 0.45f), RoundedCornerShape(14.dp))
+                    .padding(horizontal = 12.dp, vertical = 6.dp)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -287,7 +254,7 @@ fun ScorePanel(
                 ) {
                     Text(
                         text = "${state.currentChallengeLevel.title} — ${state.currentChallengeLevel.subtitle}",
-                        style = MaterialTheme.typography.bodyMedium.copy(fontSize = 12.sp),
+                        style = MaterialTheme.typography.bodyMedium.copy(fontSize = 11.sp),
                         color = TextSecondary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -296,101 +263,96 @@ fun ScorePanel(
                     Spacer(Modifier.width(8.dp))
                     Text(
                         text = "${(progress * 100).toInt()}%",
-                        style = MaterialTheme.typography.labelLarge.copy(fontSize = 12.sp),
-                        color = AccentEmerald
+                        style = MaterialTheme.typography.labelLarge.copy(fontSize = 11.sp),
+                        color = AccentGold
                     )
                 }
-                Spacer(Modifier.height(5.dp))
+                Spacer(Modifier.height(4.dp))
                 LinearProgressIndicator(
                     progress = { progress },
-                    color = AccentEmerald,
+                    color = AccentGold,
                     trackColor = SurfaceCardElevated,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(5.dp)
+                        .height(6.dp)
                         .clip(CircleShape)
                 )
             }
         }
 
+        // Glowing "Combo x2" arcade callout matching the mockup!
         AnimatedVisibility(visible = state.currentCascadeWave >= 1) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(AccentGold.copy(alpha = 0.14f))
-                    .border(1.dp, AccentGold.copy(alpha = 0.45f), RoundedCornerShape(10.dp))
-                    .padding(vertical = 4.dp)
-                    .testTag("combo_indicator")
-            ) {
-                Text(
-                    text = if (state.currentCascadeWave >= 2) {
-                        "GRAVITY CASCADE x${state.currentCascadeWave} ACTIVE!"
-                    } else {
-                        "LINE CLEAR · GRAVITY DROPPING..."
-                    },
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 0.9.sp
-                    ),
-                    color = AccentGold
-                )
+            val labelText = if (state.currentCascadeWave >= 2) {
+                "Combo x${state.currentCascadeWave}"
+            } else {
+                "Line Clear!"
             }
+            Text(
+                text = labelText,
+                style = MaterialTheme.typography.headlineMedium.copy(
+                    fontFamily = OutfitFontFamily,
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = 23.sp,
+                    shadow = Shadow(
+                        color = Color(0xFF0A1438),
+                        offset = Offset(0f, 3f),
+                        blurRadius = 4f
+                    )
+                ),
+                color = AccentGold,
+                modifier = Modifier
+                    .padding(vertical = 1.dp)
+                    .testTag("combo_indicator")
+            )
         }
     }
 }
 
 @Composable
-private fun HudStatCard(
+private fun HudPill(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    iconTint: Color,
     label: String,
     value: String,
-    accent: Color,
-    badge: String?,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    valueColor: Color = Color.White
 ) {
-    Column(
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
         modifier = modifier
-            .clip(RoundedCornerShape(14.dp))
-            .background(SurfaceCard)
-            .border(1.dp, BoardRim, RoundedCornerShape(14.dp))
-            .padding(horizontal = 12.dp, vertical = 9.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(
+                Brush.verticalGradient(
+                    listOf(SurfaceCardElevated.copy(alpha = 0.85f), SurfaceCard.copy(alpha = 0.90f))
+                )
+            )
+            .border(1.dp, GlassBorder.copy(alpha = 0.55f), RoundedCornerShape(16.dp))
+            .padding(horizontal = 12.dp, vertical = 6.dp)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = iconTint,
+            modifier = Modifier.size(22.dp)
+        )
+        Column {
             Text(
                 text = label,
-                style = MaterialTheme.typography.labelMedium,
-                color = TextSecondary
+                style = MaterialTheme.typography.labelMedium.copy(fontSize = 10.sp),
+                color = TextSecondary,
+                maxLines = 1
             )
-            if (badge != null) {
-                Text(
-                    text = badge,
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.Bold
-                    ),
-                    color = accent,
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(accent.copy(alpha = 0.16f))
-                        .padding(horizontal = 5.dp, vertical = 2.dp)
-                )
-            }
+            Text(
+                text = value,
+                style = MaterialTheme.typography.labelLarge.copy(
+                    fontFamily = OutfitFontFamily,
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = 19.sp
+                ),
+                color = valueColor,
+                maxLines = 1
+            )
         }
-        Spacer(Modifier.height(2.dp))
-        Text(
-            text = value,
-            style = MaterialTheme.typography.labelLarge.copy(
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Bold
-            ),
-            color = MaterialTheme.colorScheme.onSurface,
-            maxLines = 1
-        )
     }
 }

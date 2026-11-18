@@ -1,7 +1,6 @@
 package com.example.ui.screens
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -22,13 +21,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.components.CascadeScreenContainer
+import com.example.ui.components.FrostedGlassCard
 import com.example.ui.components.ScreenTopBar
 import com.example.ui.theme.AccentCoral
 import com.example.ui.theme.AccentCyan
 import com.example.ui.theme.AccentEmerald
 import com.example.ui.theme.AccentGold
-import com.example.ui.theme.BoardRim
-import com.example.ui.theme.SurfaceCard
+import com.example.ui.theme.OutfitFontFamily
 import com.example.ui.theme.SurfaceCardElevated
 import com.example.ui.theme.TextSecondary
 
@@ -37,7 +36,7 @@ fun RulesScreen(
     onBack: () -> Unit
 ) {
     CascadeScreenContainer(
-        maxContentWidth = 640.dp,
+        maxContentWidth = 620.dp,
         modifier = Modifier.testTag("rules_screen")
     ) {
         ScreenTopBar(
@@ -73,27 +72,30 @@ fun RulesScreen(
                 )
             )
 
-            // Exact Scoring Formula Card
-            Column(
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(18.dp))
-                    .background(SurfaceCard)
-                    .border(1.2.dp, AccentGold.copy(alpha = 0.55f), RoundedCornerShape(18.dp))
-                    .padding(16.dp)
+            FrostedGlassCard(
+                cornerRadius = 20.dp,
+                borderColor = AccentGold.copy(alpha = 0.65f),
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Text(
-                    text = "SCORING FORMULA",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = AccentGold
-                )
-                ScoreRow("Place a Piece", "+1 pt per cell placed")
-                ScoreRow("Clear a Line", "+10 pts per line")
-                ScoreRow("Multi-Line Clear", "+15 pts per extra line in wave")
-                ScoreRow("Gravity Cascade Multiplier", "×Wave Index (×2, ×3, ×4...)")
-                ScoreRow("Cascade Chain Bonus", "+25 pts per chain step above wave 1")
-                ScoreRow("Full Board Clear", "+150 pts bonus")
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.padding(16.dp)
+                ) {
+                    Text(
+                        text = "SCORING FORMULA",
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            fontFamily = OutfitFontFamily,
+                            fontWeight = FontWeight.ExtraBold
+                        ),
+                        color = AccentGold
+                    )
+                    ScoreRow("Place a Piece", "+1 pt per cell placed")
+                    ScoreRow("Clear a Line", "+10 pts per line")
+                    ScoreRow("Multi-Line Clear", "+15 pts per extra line in wave")
+                    ScoreRow("Gravity Cascade Multiplier", "×Wave Index (×2, ×3, ×4...)")
+                    ScoreRow("Cascade Chain Bonus", "+25 pts per chain step above wave 1")
+                    ScoreRow("Full Board Clear", "+150 pts bonus")
+                }
             }
 
             RuleSectionCard(
@@ -115,26 +117,29 @@ private fun RuleSectionCard(
     accent: Color,
     bullets: List<String>
 ) {
-    Column(
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
-            .background(SurfaceCard)
-            .border(1.dp, BoardRim, RoundedCornerShape(18.dp))
-            .padding(16.dp)
+    FrostedGlassCard(
+        cornerRadius = 20.dp,
+        modifier = Modifier.fillMaxWidth()
     ) {
-        Text(
-            text = title.uppercase(),
-            style = MaterialTheme.typography.labelMedium,
-            color = accent
-        )
-        bullets.forEach { bullet ->
+        Column(
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.padding(16.dp)
+        ) {
             Text(
-                text = "• $bullet",
-                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
-                color = TextSecondary
+                text = title.uppercase(),
+                style = MaterialTheme.typography.labelMedium.copy(
+                    fontFamily = OutfitFontFamily,
+                    fontWeight = FontWeight.ExtraBold
+                ),
+                color = accent
             )
+            bullets.forEach { bullet ->
+                Text(
+                    text = "• $bullet",
+                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
+                    color = TextSecondary
+                )
+            }
         }
     }
 }
@@ -145,14 +150,14 @@ private fun ScoreRow(label: String, value: String) {
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(10.dp))
-            .background(SurfaceCardElevated)
+            .background(SurfaceCardElevated.copy(alpha = 0.72f))
             .padding(horizontal = 12.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Text(
             text = label,
             style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
-            color = MaterialTheme.colorScheme.onSurface
+            color = Color.White
         )
         Text(
             text = value,

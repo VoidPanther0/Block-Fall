@@ -1,6 +1,5 @@
 package com.example.ui.screens
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -18,23 +17,22 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.HelpOutline
-import androidx.compose.material.icons.automirrored.rounded.MenuBook
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.EmojiEvents
-import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Replay
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
@@ -44,19 +42,21 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
-import com.example.game.BlockColor
-import com.example.game.ChallengeLevels
 import com.example.ui.GameUiState
+import com.example.ui.components.ArcadeButtonStyle
+import com.example.ui.components.ArcadeTitleLogo
 import com.example.ui.components.CascadeScreenContainer
-import com.example.ui.components.drawBevelBlock
-import com.example.ui.theme.AccentCoral
-import com.example.ui.theme.AccentCyan
-import com.example.ui.theme.AccentEmerald
+import com.example.ui.components.GlossyArcadeButton
+import com.example.ui.components.ScenicHillsBackdrop
 import com.example.ui.theme.AccentGold
-import com.example.ui.theme.BoardRim
+import com.example.ui.theme.GlassBorder
+import com.example.ui.theme.GreenTileBottom
+import com.example.ui.theme.GreenTileTop
+import com.example.ui.theme.OutfitFontFamily
+import com.example.ui.theme.PurpleTileBottom
+import com.example.ui.theme.PurpleTileTop
 import com.example.ui.theme.SurfaceCard
 import com.example.ui.theme.SurfaceCardElevated
-import com.example.ui.theme.TextSecondary
 
 @Composable
 fun HomeScreen(
@@ -65,233 +65,115 @@ fun HomeScreen(
     onContinueClassic: () -> Unit,
     onOpenModes: () -> Unit,
     onOpenChallenges: () -> Unit,
-    onOpenHowToPlay: () -> Unit,
     onOpenSettings: () -> Unit,
-    onOpenStatistics: () -> Unit,
-    onOpenRules: () -> Unit
+    onOpenStatistics: () -> Unit
 ) {
-    val completedCount = state.challengeProgress.values.count { it.completed }
     val savedSummary = state.savedClassicSummary
+    val canContinue = savedSummary != null
 
     CascadeScreenContainer(
-        maxContentWidth = 600.dp,
+        maxContentWidth = 560.dp,
+        backdrop = { ScenicHillsBackdrop() },
         modifier = Modifier.testTag("home_screen")
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Spacer(Modifier.height(4.dp))
-
-            // Brand Header Card
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(14.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(SurfaceCard)
-                    .border(1.5.dp, BoardRim, RoundedCornerShape(20.dp))
-                    .padding(18.dp)
-            ) {
-                Canvas(modifier = Modifier.size(56.dp)) {
-                    val cell = size.width / 2f
-                    val gap = cell * 0.14f
-                    val tile = cell - gap
-                    drawBevelBlock(gap / 2f, gap / 2f, tile, BlockColor.CYAN)
-                    drawBevelBlock(cell + gap / 2f, gap / 2f, tile, BlockColor.AMBER)
-                    drawBevelBlock(gap / 2f, cell + gap / 2f, tile, BlockColor.CORAL)
-                    drawBevelBlock(cell + gap / 2f, cell + gap / 2f, tile, BlockColor.EMERALD)
-                }
-
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = stringResource(R.string.app_name).uppercase(),
-                        style = MaterialTheme.typography.displaySmall.copy(
-                            fontSize = 28.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            letterSpacing = 2.sp
-                        ),
-                        color = MaterialTheme.colorScheme.onBackground
-                    )
-                    Text(
-                        text = "Gravity-Driven 8×8 Block Puzzle",
-                        style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
-                        color = TextSecondary
-                    )
-                }
-
-                Column(horizontalAlignment = Alignment.End) {
-                    Text(
-                        text = "BEST",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = AccentGold
-                    )
-                    Text(
-                        text = state.classicBestScore.toString(),
-                        style = MaterialTheme.typography.labelLarge.copy(fontSize = 20.sp),
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-            }
-
-            // Primary Play CTA
-            Button(
-                onClick = onPlayNewClassic,
-                colors = ButtonDefaults.buttonColors(containerColor = AccentCyan),
-                shape = RoundedCornerShape(16.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(58.dp)
-                    .testTag("home_play_button")
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.PlayArrow,
-                    contentDescription = null,
-                    tint = Color(0xFF002026),
-                    modifier = Modifier.size(26.dp)
-                )
-                Spacer(Modifier.size(8.dp))
-                Text(
-                    text = "Play Classic",
-                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold),
-                    color = Color(0xFF002026)
-                )
-            }
-
-            // Continue Saved Classic Game Card
-            val canContinue = savedSummary != null
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(if (canContinue) SurfaceCardElevated else SurfaceCard.copy(alpha = 0.65f))
-                    .border(
-                        1.dp,
-                        if (canContinue) AccentEmerald.copy(alpha = 0.65f) else BoardRim.copy(alpha = 0.5f),
-                        RoundedCornerShape(16.dp)
-                    )
-                    .clickable(enabled = canContinue, onClick = onContinueClassic)
-                    .padding(horizontal = 16.dp, vertical = 14.dp)
-                    .testTag("home_continue_button")
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.weight(1f)
+            // Top-right Settings gear icon matching mockup
+            Box(modifier = Modifier.fillMaxWidth()) {
+                IconButton(
+                    onClick = onOpenSettings,
+                    modifier = Modifier
+                        .align(Alignment.CenterEnd)
+                        .size(48.dp)
+                        .testTag("home_top_settings_button")
                 ) {
                     Icon(
-                        imageVector = Icons.Filled.Replay,
-                        contentDescription = null,
-                        tint = if (canContinue) AccentEmerald else TextSecondary.copy(alpha = 0.5f),
-                        modifier = Modifier.size(24.dp)
-                    )
-                    Column {
-                        Text(
-                            text = stringResource(R.string.nav_continue),
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                            color = if (canContinue) MaterialTheme.colorScheme.onSurface else TextSecondary.copy(alpha = 0.6f)
-                        )
-                        Text(
-                            text = if (savedSummary != null) {
-                                "Saved Classic · Score ${savedSummary.score} · ${savedSummary.movesPlayed} moves"
-                            } else {
-                                "No active saved Classic game"
-                            },
-                            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 12.sp),
-                            color = TextSecondary.copy(alpha = if (canContinue) 1f else 0.6f),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                }
-                if (canContinue) {
-                    Text(
-                        text = "RESUME",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = AccentEmerald
+                        imageVector = Icons.Filled.Settings,
+                        contentDescription = stringResource(R.string.nav_settings),
+                        tint = Color.White,
+                        modifier = Modifier.size(30.dp)
                     )
                 }
             }
 
-            // Mode & Challenge Cards
+            Spacer(Modifier.height(6.dp))
+
+            // Hero Block Falls Title
+            ArcadeTitleLogo(fontSize = 50.sp)
+
+            Spacer(Modifier.height(10.dp))
+
+            // Glossy Yellow Play CTA
+            GlossyArcadeButton(
+                text = "Play",
+                icon = Icons.Filled.PlayArrow,
+                style = ArcadeButtonStyle.GOLD,
+                onClick = onPlayNewClassic,
+                height = 58.dp,
+                cornerRadius = 29.dp,
+                fontSize = 21.sp,
+                testTag = "home_play_button",
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            // Glossy Blue Continue CTA
+            GlossyArcadeButton(
+                text = stringResource(R.string.nav_continue),
+                icon = Icons.Filled.Replay,
+                style = ArcadeButtonStyle.BLUE,
+                enabled = canContinue,
+                onClick = onContinueClassic,
+                height = 56.dp,
+                cornerRadius = 28.dp,
+                fontSize = 19.sp,
+                testTag = "home_continue_button",
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            // Purple "Modes" & Green "Challenges" feature tiles
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                HomeMenuTile(
-                    title = stringResource(R.string.nav_game_modes),
-                    subtitle = "Classic & Challenge",
-                    icon = Icons.Filled.GridView,
-                    accent = AccentGold,
+                HomeGradientSquareTile(
+                    title = "Modes",
+                    icon = Icons.Filled.EmojiEvents,
+                    iconTint = AccentGold,
+                    gradient = Brush.verticalGradient(listOf(PurpleTileTop, PurpleTileBottom)),
                     onClick = onOpenModes,
                     testTag = "home_modes_button",
                     modifier = Modifier.weight(1f)
                 )
-                HomeMenuTile(
+                HomeGradientSquareTile(
                     title = stringResource(R.string.nav_challenges),
-                    subtitle = "$completedCount/${ChallengeLevels.levels.size} Cleared",
-                    icon = Icons.Filled.EmojiEvents,
-                    accent = AccentCoral,
+                    icon = Icons.Filled.Star,
+                    iconTint = Color.White,
+                    gradient = Brush.verticalGradient(listOf(GreenTileTop, GreenTileBottom)),
                     onClick = onOpenChallenges,
                     testTag = "home_challenges_button",
                     modifier = Modifier.weight(1f)
                 )
             }
 
-            // Learning & Reference Row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                HomeMenuTile(
-                    title = stringResource(R.string.how_to_play),
-                    subtitle = "Interactive Demo",
-                    icon = Icons.AutoMirrored.Outlined.HelpOutline,
-                    accent = AccentCyan,
-                    onClick = onOpenHowToPlay,
-                    testTag = "home_how_to_play_button",
-                    modifier = Modifier.weight(1f)
-                )
-                HomeMenuTile(
-                    title = stringResource(R.string.nav_rules),
-                    subtitle = "Scoring & Gravity",
-                    icon = Icons.AutoMirrored.Rounded.MenuBook,
-                    accent = AccentEmerald,
-                    onClick = onOpenRules,
-                    testTag = "home_rules_button",
-                    modifier = Modifier.weight(1f)
-                )
-            }
+            // Frosted Glass Menu Bars: Statistics & Settings ONLY
+            HomeGlassMenuBar(
+                title = stringResource(R.string.nav_statistics),
+                icon = Icons.Filled.BarChart,
+                onClick = onOpenStatistics,
+                testTag = "home_statistics_button"
+            )
 
-            // Stats & Settings Row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                HomeMenuTile(
-                    title = stringResource(R.string.nav_statistics),
-                    subtitle = "${state.statistics.totalGamesPlayed} Games",
-                    icon = Icons.Filled.BarChart,
-                    accent = AccentGold,
-                    onClick = onOpenStatistics,
-                    testTag = "home_statistics_button",
-                    modifier = Modifier.weight(1f)
-                )
-                HomeMenuTile(
-                    title = stringResource(R.string.nav_settings),
-                    subtitle = "Audio & Visuals",
-                    icon = Icons.Filled.Settings,
-                    accent = TextSecondary,
-                    onClick = onOpenSettings,
-                    testTag = "home_settings_button",
-                    modifier = Modifier.weight(1f)
-                )
-            }
+            HomeGlassMenuBar(
+                title = stringResource(R.string.nav_settings),
+                icon = Icons.Filled.Settings,
+                onClick = onOpenSettings,
+                testTag = "home_settings_button"
+            )
 
             Spacer(Modifier.height(8.dp))
         }
@@ -299,46 +181,90 @@ fun HomeScreen(
 }
 
 @Composable
-private fun HomeMenuTile(
+private fun HomeGradientSquareTile(
     title: String,
-    subtitle: String,
     icon: ImageVector,
-    accent: Color,
+    iconTint: Color,
+    gradient: Brush,
     onClick: () -> Unit,
     testTag: String,
     modifier: Modifier = Modifier
 ) {
+    val shape = RoundedCornerShape(20.dp)
     Column(
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
         modifier = modifier
-            .clip(RoundedCornerShape(16.dp))
-            .background(SurfaceCard)
-            .border(1.dp, BoardRim, RoundedCornerShape(16.dp))
+            .height(92.dp)
+            .shadow(6.dp, shape, clip = false)
+            .clip(shape)
+            .background(gradient)
+            .border(1.5.dp, Color.White.copy(alpha = 0.35f), shape)
             .clickable(onClick = onClick)
-            .padding(16.dp)
+            .padding(12.dp)
             .testTag(testTag)
     ) {
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = accent,
-            modifier = Modifier.size(26.dp)
+            tint = iconTint,
+            modifier = Modifier.size(34.dp)
         )
-        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+        Spacer(Modifier.height(4.dp))
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium.copy(
+                fontFamily = OutfitFontFamily,
+                fontWeight = FontWeight.ExtraBold,
+                fontSize = 17.sp
+            ),
+            color = Color.White,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+@Composable
+private fun HomeGlassMenuBar(
+    title: String,
+    icon: ImageVector,
+    onClick: () -> Unit,
+    testTag: String
+) {
+    val shape = RoundedCornerShape(16.dp)
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(54.dp)
+            .clip(shape)
+            .background(
+                Brush.verticalGradient(
+                    listOf(SurfaceCardElevated.copy(alpha = 0.82f), SurfaceCard.copy(alpha = 0.90f))
+                )
             )
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 12.sp),
-                color = TextSecondary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
+            .border(1.2.dp, GlassBorder.copy(alpha = 0.6f), shape)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 18.dp)
+            .testTag(testTag)
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = Color.White,
+            modifier = Modifier.size(22.dp)
+        )
+        Spacer(Modifier.size(10.dp))
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium.copy(
+                fontFamily = OutfitFontFamily,
+                fontWeight = FontWeight.Bold,
+                fontSize = 17.sp
+            ),
+            color = Color.White
+        )
     }
 }

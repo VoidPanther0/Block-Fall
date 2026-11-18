@@ -362,34 +362,33 @@ private fun StatLine(label: String, value: String) {
 @Composable
 fun GravityRulesDialog(onDismiss: () -> Unit) {
     Dialog(onDismissRequest = onDismiss) {
-        Column(
+        FrostedGlassCard(
+            cornerRadius = 24.dp,
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(22.dp))
-                .background(SurfaceCard)
-                .border(1.5.dp, AccentCyan.copy(alpha = 0.6f), RoundedCornerShape(22.dp))
-                .padding(20.dp)
-                .testTag("rules_dialog"),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+                .testTag("rules_dialog")
         ) {
-            Text(
-                text = "How Cascade Gravity Works",
-                style = MaterialTheme.typography.titleLarge,
-                color = AccentCyan
-            )
-            RuleStep("1. Place Anywhere", "Drag pieces from the tray (or tap a piece then tap the board). Pieces stay where you place them until a line clears.")
-            RuleStep("2. Clear Lines", "Fill any complete horizontal row or vertical column to shatter those blocks.")
-            RuleStep("3. Gravity Falls", "Every block above empty space drops straight DOWN within its column. New lines formed by falling blocks clear automatically for huge chain multipliers!")
-            Spacer(Modifier.height(4.dp))
-            Button(
-                onClick = onDismiss,
-                colors = ButtonDefaults.buttonColors(containerColor = AccentCyan),
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp)
+            Column(
+                modifier = Modifier.padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Text("Got It", fontWeight = FontWeight.Bold)
+                Text(
+                    text = "How Gravity Works",
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold),
+                    color = Color.White
+                )
+                RuleStep("1. Place Anywhere", "Drag pieces from the tray (or tap a piece then tap the board). Pieces stay where you place them until a line clears.")
+                RuleStep("2. Clear Lines", "Fill any complete horizontal row or vertical column to shatter those blocks.")
+                RuleStep("3. Gravity Falls", "Every block above empty space drops straight DOWN within its column. New lines formed by falling blocks clear automatically for huge chain multipliers!")
+                Spacer(Modifier.height(4.dp))
+                GlossyArcadeButton(
+                    text = "Got it!",
+                    style = ArcadeButtonStyle.BLUE,
+                    onClick = onDismiss,
+                    height = 48.dp,
+                    cornerRadius = 24.dp,
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         }
     }
@@ -400,14 +399,14 @@ private fun RuleStep(title: String, body: String) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(SurfaceCardElevated)
+            .clip(RoundedCornerShape(14.dp))
+            .background(SurfaceCardElevated.copy(alpha = 0.72f))
             .padding(12.dp),
         verticalArrangement = Arrangement.spacedBy(3.dp)
     ) {
         Text(
             text = title,
-            style = MaterialTheme.typography.titleMedium,
+            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
             color = AccentGold
         )
         Text(

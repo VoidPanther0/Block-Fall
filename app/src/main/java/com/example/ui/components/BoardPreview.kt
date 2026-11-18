@@ -11,9 +11,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
@@ -32,17 +34,23 @@ fun BoardPreview(
     highlightedCoords: Set<GridCoord> = emptySet(),
     highlightRows: List<Int> = emptyList()
 ) {
+    val shape = RoundedCornerShape(18.dp)
     Box(
         modifier = modifier
             .aspectRatio(1f)
-            .clip(RoundedCornerShape(16.dp))
-            .background(BoardWellBg)
-            .border(1.5.dp, BoardRim, RoundedCornerShape(16.dp))
+            .shadow(8.dp, shape, clip = false)
+            .clip(shape)
+            .background(
+                Brush.verticalGradient(
+                    listOf(Color(0xFF1A3478), BoardWellBg)
+                )
+            )
+            .border(2.dp, BoardRim, shape)
             .padding(8.dp)
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             val cellSize = size.width / Board.SIZE.toFloat()
-            val gap = (cellSize * 0.1f).coerceAtLeast(1.5f)
+            val gap = (cellSize * 0.09f).coerceAtLeast(1.5f)
             val tileSize = cellSize - gap
             val radius = CornerRadius(tileSize * 0.18f, tileSize * 0.18f)
 

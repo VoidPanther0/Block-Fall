@@ -114,9 +114,11 @@ class CascadeRobolectricTest {
     fun `13_splash_home_gameplay_pause_and_dialogs_navigate_cleanly`() {
         navigatePastSplashToHome()
 
-        // Home screen elements visible
+        // Home screen elements visible and removed How-To-Play/Rules buttons absent
         composeRule.onNodeWithTag("home_screen").assertIsDisplayed()
         composeRule.onNodeWithTag("home_play_button").assertIsDisplayed()
+        assertEquals(0, composeRule.onAllNodesWithTag("home_how_to_play_button").fetchSemanticsNodes().size)
+        assertEquals(0, composeRule.onAllNodesWithTag("home_rules_button").fetchSemanticsNodes().size)
 
         // Navigate Home -> Gameplay
         composeRule.onNodeWithTag("home_play_button").performClick()
@@ -136,14 +138,17 @@ class CascadeRobolectricTest {
         composeRule.waitForIdle()
         composeRule.onNodeWithTag("game_board").performClick()
         composeRule.waitForIdle()
-        // Score card should no longer be 0 after successful lifted placement
         assertTrue(composeRule.onAllNodesWithTag("score_card").fetchSemanticsNodes().isNotEmpty())
 
-        // Switch to Challenge mode and verify target & moves HUD appear
-        composeRule.onNodeWithTag("mode_challenge_tab").performClick()
+        // Open How to Play from gameplay HUD '?' button and close with 'Got it!'
+        composeRule.onNodeWithTag("rules_button").performClick()
         composeRule.waitForIdle()
-        composeRule.onNodeWithTag("target_card").assertIsDisplayed()
-        composeRule.onNodeWithTag("moves_card").assertIsDisplayed()
+        composeRule.onNodeWithTag("how_to_play_screen").assertIsDisplayed()
+        composeRule.onNodeWithTag("how_to_play_demo_board").performClick()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag("how_to_play_got_it_button").performScrollTo().performClick()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag("game_board").assertIsDisplayed()
 
         // Open Restart confirmation dialog and cancel
         composeRule.onNodeWithTag("restart_button").performClick()
@@ -152,21 +157,12 @@ class CascadeRobolectricTest {
         composeRule.onNodeWithTag("cancel_restart_button").performClick()
         composeRule.waitForIdle()
 
-        // Open Pause screen -> How to Play -> back -> Resume
+        // Open Pause screen -> Resume
         composeRule.onNodeWithTag("pause_button").performClick()
         composeRule.waitForIdle()
         composeRule.onNodeWithTag("pause_screen").assertIsDisplayed()
-
-        composeRule.onNodeWithTag("pause_how_to_play_button").performClick()
-        composeRule.waitForIdle()
-        composeRule.onNodeWithTag("how_to_play_screen").assertIsDisplayed()
-        composeRule.onNodeWithTag("how_to_play_next_step_button").performClick()
-        composeRule.waitForIdle()
-
-        composeRule.onNodeWithTag("how_to_play_back_button").performClick()
-        composeRule.waitForIdle()
-        composeRule.onNodeWithTag("pause_screen").assertIsDisplayed()
-
+        composeRule.onNodeWithTag("pause_restart_button").assertIsDisplayed()
+        composeRule.onNodeWithTag("pause_home_button").assertIsDisplayed()
         composeRule.onNodeWithTag("pause_resume_button").performClick()
         composeRule.waitForIdle()
         composeRule.onNodeWithTag("game_board").assertIsDisplayed()
@@ -181,31 +177,36 @@ class CascadeRobolectricTest {
     }
 
     @Test
-    fun `14_secondary_screens_modes_challenges_stats_settings_rules_work`() {
+    fun `14_secondary_screens_modes_challenges_stats_settings_work`() {
         navigatePastSplashToHome()
 
-        // Mode Selection -> Challenge Selection -> Challenge Details -> Back -> Home
+        // Mode Selection -> Challenge Selection -> direct Play into Challenge Gameplay -> Exit -> Home
         composeRule.onNodeWithTag("home_modes_button").performScrollTo().performClick()
         composeRule.waitForIdle()
         composeRule.onNodeWithTag("mode_selection_screen").assertIsDisplayed()
+        assertEquals(0, composeRule.onAllNodesWithTag("mode_rules_button").fetchSemanticsNodes().size)
 
         composeRule.onNodeWithTag("mode_browse_challenges_button").performScrollTo().performClick()
         composeRule.waitForIdle()
         composeRule.onNodeWithTag("challenge_selection_screen").assertIsDisplayed()
         composeRule.onNodeWithTag("challenge_level_card_1").assertIsDisplayed()
         composeRule.onNodeWithTag("challenge_level_card_1").performClick()
-        composeRule.mainClock.advanceTimeBy(300L)
         composeRule.waitForIdle()
+        composeRule.onNodeWithTag("challenge_target_summary_card").performScrollTo().assertIsDisplayed()
 
-        composeRule.onNodeWithTag("challenge_details_screen").assertIsDisplayed()
-        composeRule.onNodeWithTag("challenge_details_play_button").performScrollTo().assertIsDisplayed()
-        composeRule.onNodeWithTag("challenge_details_back_button").performClick()
+        // Clicking Play launches Challenge level directly (no intermediate details screen)
+        composeRule.onNodeWithTag("challenge_play_button").performScrollTo().performClick()
         composeRule.waitForIdle()
+        composeRule.onNodeWithTag("gameplay_screen").assertIsDisplayed()
+        composeRule.onNodeWithTag("target_card").assertIsDisplayed()
+        composeRule.onNodeWithTag("moves_card").assertIsDisplayed()
 
-        composeRule.onNodeWithTag("challenge_selection_back_button").performClick()
+        // Exit Challenge back to Home
+        composeRule.onNodeWithTag("gameplay_back_button").performClick()
         composeRule.waitForIdle()
-        composeRule.onNodeWithTag("mode_selection_back_button").performClick()
+        composeRule.onNodeWithTag("confirm_exit_button").performClick()
         composeRule.waitForIdle()
+        composeRule.onNodeWithTag("home_screen").assertIsDisplayed()
 
         // Statistics screen + Reset confirmation cancel
         composeRule.onNodeWithTag("home_statistics_button").performScrollTo().performClick()
@@ -219,17 +220,13 @@ class CascadeRobolectricTest {
         composeRule.onNodeWithTag("statistics_back_button").performClick()
         composeRule.waitForIdle()
 
-        // Settings screen + Rules screen
+        // Settings screen (without How to Play / Rules buttons)
         composeRule.onNodeWithTag("home_settings_button").performScrollTo().performClick()
         composeRule.waitForIdle()
         composeRule.onNodeWithTag("settings_screen").assertIsDisplayed()
+        assertEquals(0, composeRule.onAllNodesWithTag("settings_rules_button").fetchSemanticsNodes().size)
+        assertEquals(0, composeRule.onAllNodesWithTag("settings_how_to_play_button").fetchSemanticsNodes().size)
         composeRule.onNodeWithTag("setting_sound_switch").performClick()
-        composeRule.waitForIdle()
-
-        composeRule.onNodeWithTag("settings_rules_button").performScrollTo().performClick()
-        composeRule.waitForIdle()
-        composeRule.onNodeWithTag("rules_screen").assertIsDisplayed()
-        composeRule.onNodeWithTag("rules_back_button").performClick()
         composeRule.waitForIdle()
 
         composeRule.onNodeWithTag("settings_back_button").performClick()

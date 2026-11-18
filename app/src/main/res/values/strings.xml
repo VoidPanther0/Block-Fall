@@ -14,9 +14,9 @@
     <string name="play_again">Play Again</string>
     <string name="next_level">Next Level</string>
     <string name="retry_level">Retry Level</string>
-    <string name="game_over_title">No Moves Left</string>
-    <string name="challenge_complete_title">Level Cleared!</string>
-    <string name="challenge_failed_title">Out of Moves</string>
+    <string name="game_over_title">Game Over</string>
+    <string name="challenge_complete_title">Level Complete!</string>
+    <string name="challenge_failed_title">Game Over</string>
     <string name="new_best_badge">NEW BEST</string>
     <string name="how_to_play">How to Play</string>
     <string name="haptics_label">Tactile Haptics</string>
