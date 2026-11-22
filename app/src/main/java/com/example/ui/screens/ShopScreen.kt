@@ -58,10 +58,8 @@ import com.example.ui.GameUiState
 import com.example.ui.components.ArcadeButtonStyle
 import com.example.ui.components.CascadeScreenContainer
 import com.example.ui.components.CurrencyWallet
-import com.example.ui.components.PremiumQuickNav
 import com.example.ui.components.PremiumCard
 import com.example.ui.components.PremiumPrimaryButton
-import com.example.ui.components.PrimaryNavTab
 import com.example.ui.components.ScreenTopBar
 import com.example.ui.components.SectionHeader
 import com.example.ui.theme.AccentCyan
@@ -104,8 +102,7 @@ fun ShopScreen(
     onPurchase: (String) -> Unit,
     onWatchAd: (() -> Unit)? = null,
     onSelectBlockStyle: ((BlockStyle) -> Unit)? = null,
-    onSelectBoardPalette: ((BoardColorPalette) -> Unit)? = null,
-    onNavigateTab: ((PrimaryNavTab) -> Unit)? = null
+    onSelectBoardPalette: ((BoardColorPalette) -> Unit)? = null
 ) {
     var selectedSection by remember { mutableStateOf(StoreSection.DIAMONDS) }
 
@@ -117,15 +114,7 @@ fun ShopScreen(
     val goldItems = remember { visibleItems.filter { it.category == ShopCategory.GOLD } }
 
     CascadeScreenContainer(
-        maxContentWidth = 820.dp,
-        bottomBar = if (onNavigateTab != null) {
-            {
-                PremiumQuickNav(
-                    selectedTab = PrimaryNavTab.SHOP,
-                    onSelectTab = onNavigateTab
-                )
-            }
-        } else null,
+        maxContentWidth = 820.dp,
         modifier = Modifier.testTag("shop_screen")
     ) {
         ScreenTopBar(title = "Shop", onBack = onBack, backTestTag = "shop_back_button")

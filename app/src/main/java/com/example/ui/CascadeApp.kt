@@ -40,7 +40,6 @@ import com.example.data.cloud.authStateFlow
 import com.example.security.PlayIntegrityManager
 import com.example.ui.components.AuthenticatedCloudAccountCard
 import com.example.ui.components.GoogleSignInCard
-import com.example.ui.components.PrimaryNavTab
 import com.example.ui.navigation.ChallengeSelectionRoute
 import com.example.ui.navigation.GameOverRoute
 import com.example.ui.navigation.GameplayRoute
@@ -212,40 +211,6 @@ private fun CascadeNavHost(
         }
     }
 
-    val navigatePrimaryTab: (PrimaryNavTab) -> Unit = remember(navController, viewModel) {
-        { tab ->
-            viewModel.playUiClick()
-            when (tab) {
-                PrimaryNavTab.HOME -> {
-                    navController.popBackStack<HomeRoute>(inclusive = false)
-                }
-                PrimaryNavTab.PLAY -> {
-                    navController.navigate(ModeSelectionRoute) {
-                        popUpTo<HomeRoute> { inclusive = false }
-                        launchSingleTop = true
-                    }
-                }
-                PrimaryNavTab.CHALLENGES -> {
-                    navController.navigate(ChallengeSelectionRoute) {
-                        popUpTo<HomeRoute> { inclusive = false }
-                        launchSingleTop = true
-                    }
-                }
-                PrimaryNavTab.SHOP -> {
-                    navController.navigate(ShopRoute) {
-                        popUpTo<HomeRoute> { inclusive = false }
-                        launchSingleTop = true
-                    }
-                }
-                PrimaryNavTab.PROFILE -> {
-                    navController.navigate(StatisticsRoute) {
-                        popUpTo<HomeRoute> { inclusive = false }
-                        launchSingleTop = true
-                    }
-                }
-            }
-        }
-    }
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -328,8 +293,7 @@ private fun CascadeNavHost(
                     onOpenStatistics = {
                         viewModel.playUiClick()
                         navController.navigate(StatisticsRoute)
-                    },
-                    onNavigateTab = navigatePrimaryTab
+                    }
                 )
             }
 
@@ -354,8 +318,7 @@ private fun CascadeNavHost(
                             popUpTo<HomeRoute>()
                         }
                     },
-                    state = state,
-                    onNavigateTab = navigatePrimaryTab
+                    state = state
                 )
             }
 
@@ -431,8 +394,7 @@ private fun CascadeNavHost(
                         navController.navigate(GameplayRoute) {
                             popUpTo<HomeRoute>()
                         }
-                    },
-                    onNavigateTab = navigatePrimaryTab
+                    }
                 )
             }
 
@@ -492,8 +454,7 @@ private fun CascadeNavHost(
                         viewModel.playUiClick()
                         viewModel.resetAllProgress()
                     },
-                    playerName = currentUser?.displayName,
-                    onNavigateTab = navigatePrimaryTab
+                    playerName = currentUser?.displayName
                 )
             }
 
@@ -540,8 +501,7 @@ private fun CascadeNavHost(
                         null
                     },
                     onSelectBlockStyle = viewModel::setBlockStyle,
-                    onSelectBoardPalette = viewModel::setBoardPalette,
-                    onNavigateTab = navigatePrimaryTab
+                    onSelectBoardPalette = viewModel::setBoardPalette
                 )
             }
 
@@ -551,8 +511,7 @@ private fun CascadeNavHost(
                         isSignedIn = false,
                         currentUserId = null,
                         leaderboardState = CloudStreamState.Success(emptyList<LeaderboardEntry>()),
-                        onBack = { navController.popBackStack() },
-                        onSyncScore = {}
+                        onBack = { navController.popBackStack() }
                     )
                 } else {
                     val leaderboardState by cloudViewModel.leaderboardState.collectAsStateWithLifecycle()
@@ -560,8 +519,7 @@ private fun CascadeNavHost(
                         isSignedIn = true,
                         currentUserId = currentUser.uid,
                         leaderboardState = leaderboardState,
-                        onBack = { navController.popBackStack() },
-                        onSyncScore = { cloudViewModel.syncLocalStateToCloud(state) }
+                        onBack = { navController.popBackStack() }
                     )
                 }
             }

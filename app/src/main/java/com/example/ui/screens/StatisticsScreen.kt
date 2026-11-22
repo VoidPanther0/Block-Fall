@@ -52,10 +52,8 @@ import com.example.ui.components.ArcadeBlockEmblem
 import com.example.ui.components.ArcadeButtonStyle
 import com.example.ui.components.CascadeScreenContainer
 import com.example.ui.components.CurrencyWallet
-import com.example.ui.components.PremiumQuickNav
 import com.example.ui.components.PremiumCard
 import com.example.ui.components.PremiumPrimaryButton
-import com.example.ui.components.PrimaryNavTab
 import com.example.ui.components.ResetProgressConfirmationDialog
 import com.example.ui.components.ScreenTopBar
 import com.example.ui.components.SectionHeader
@@ -80,8 +78,7 @@ fun StatisticsScreen(
     state: GameUiState,
     onBack: () -> Unit,
     onResetProgressConfirmed: () -> Unit,
-    playerName: String? = null,
-    onNavigateTab: ((PrimaryNavTab) -> Unit)? = null
+    playerName: String? = null
 ) {
     val stats = state.statistics
     val completedLevels = state.challengeProgress.values.count { it.completed }
@@ -90,15 +87,7 @@ fun StatisticsScreen(
     val progressRatio = (completedLevels.toFloat() / ChallengeLevels.levels.size.toFloat()).coerceIn(0f, 1f)
 
     CascadeScreenContainer(
-        maxContentWidth = 940.dp,
-        bottomBar = if (onNavigateTab != null) {
-            {
-                PremiumQuickNav(
-                    selectedTab = PrimaryNavTab.PROFILE,
-                    onSelectTab = onNavigateTab
-                )
-            }
-        } else null,
+        maxContentWidth = 940.dp,
         modifier = Modifier.testTag("statistics_screen")
     ) {
         ScreenTopBar(

@@ -20,7 +20,7 @@ class RedesignLayoutRobolectricTest {
     val composeRule = createAndroidComposeRule<MainActivity>()
 
     @Test
-    fun `18_narrow_screen_bottom_nav_shop_categories_and_profile_render_cleanly`() {
+    fun `18_narrow_screen_home_shop_categories_and_profile_render_cleanly`() {
         composeRule.waitForIdle()
         if (composeRule.onAllNodesWithTag("onboarding_skip_button").fetchSemanticsNodes().isNotEmpty()) {
             composeRule.onNodeWithTag("onboarding_skip_button").performClick()
@@ -31,25 +31,28 @@ class RedesignLayoutRobolectricTest {
             composeRule.waitForIdle()
         }
 
-        // Home renders hero play CTA and bottom navigation on narrow 320dp width
+        // Home renders hero play CTA on narrow 320dp width
         composeRule.onNodeWithTag("home_screen").assertIsDisplayed()
         composeRule.onNodeWithTag("home_play_button").assertIsDisplayed()
-        composeRule.onNodeWithTag("premium_bottom_navigation").assertIsDisplayed()
 
-        // Navigate via bottom nav -> Play (Mode Selection)
-        composeRule.onNodeWithTag("bottom_nav_play").performClick()
+        // Home -> Play (Mode Selection)
+        composeRule.onNodeWithTag("home_modes_button").performScrollTo().performClick()
         composeRule.waitForIdle()
         composeRule.onNodeWithTag("mode_selection_screen").assertIsDisplayed()
         composeRule.onNodeWithTag("mode_play_classic_button").assertIsDisplayed()
 
-        // Navigate via bottom nav -> Challenges
-        composeRule.onNodeWithTag("bottom_nav_challenges").performClick()
+        // Back, then Home -> Challenges
+        composeRule.onNodeWithTag("mode_selection_back_button").performClick()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag("home_challenges_button").performScrollTo().performClick()
         composeRule.waitForIdle()
         composeRule.onNodeWithTag("challenge_selection_screen").assertIsDisplayed()
         composeRule.onNodeWithTag("challenge_level_card_1").assertIsDisplayed()
 
-        // Navigate via bottom nav -> Shop and inspect all 5 sections
-        composeRule.onNodeWithTag("bottom_nav_shop").performClick()
+        // Back, then Home -> Shop and inspect all 5 sections
+        composeRule.onNodeWithTag("challenge_selection_back_button").performClick()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag("home_shop_button").performScrollTo().performClick()
         composeRule.waitForIdle()
         composeRule.onNodeWithTag("shop_screen").assertIsDisplayed()
         composeRule.onNodeWithTag("shop_wallet_bar").assertIsDisplayed()
@@ -71,14 +74,16 @@ class RedesignLayoutRobolectricTest {
         composeRule.onNodeWithTag("shop_tab_vip_teams").performScrollTo().performClick()
         composeRule.waitForIdle()
 
-        // Navigate via bottom nav -> Profile (Statistics & Achievements)
-        composeRule.onNodeWithTag("bottom_nav_profile").performClick()
+        // Back, then Home -> Profile (Statistics & Achievements)
+        composeRule.onNodeWithTag("shop_back_button").performClick()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag("home_statistics_button").performScrollTo().performClick()
         composeRule.waitForIdle()
         composeRule.onNodeWithTag("statistics_screen").assertIsDisplayed()
         composeRule.onNodeWithTag("player_rank_card").assertIsDisplayed()
 
-        // Return to Home via bottom nav
-        composeRule.onNodeWithTag("bottom_nav_home").performClick()
+        // Return to Home
+        composeRule.onNodeWithTag("statistics_back_button").performClick()
         composeRule.waitForIdle()
         composeRule.onNodeWithTag("home_screen").assertIsDisplayed()
     }

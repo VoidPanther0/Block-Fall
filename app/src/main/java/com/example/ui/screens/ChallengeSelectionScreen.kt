@@ -53,10 +53,8 @@ import com.example.ui.GameUiState
 import com.example.ui.components.ArcadeButtonStyle
 import com.example.ui.components.BoardPreview
 import com.example.ui.components.CascadeScreenContainer
-import com.example.ui.components.PremiumQuickNav
 import com.example.ui.components.PremiumCard
 import com.example.ui.components.PremiumPrimaryButton
-import com.example.ui.components.PrimaryNavTab
 import com.example.ui.components.ScreenTopBar
 import com.example.ui.theme.AccentCyan
 import com.example.ui.theme.AccentEmerald
@@ -82,8 +80,7 @@ import kotlin.math.ceil
 fun ChallengeSelectionScreen(
     state: GameUiState,
     onBack: () -> Unit,
-    onPlayLevel: (Int) -> Unit,
-    onNavigateTab: ((PrimaryNavTab) -> Unit)? = null
+    onPlayLevel: (Int) -> Unit
 ) {
     var selectedLevelNumber by remember(state.unlockedChallengeLevel) {
         mutableIntStateOf(state.unlockedChallengeLevel.coerceIn(1, ChallengeLevels.levels.size))
@@ -95,15 +92,7 @@ fun ChallengeSelectionScreen(
     val maxStars = ChallengeLevels.levels.size * 3
 
     CascadeScreenContainer(
-        maxContentWidth = 940.dp,
-        bottomBar = if (onNavigateTab != null) {
-            {
-                PremiumQuickNav(
-                    selectedTab = PrimaryNavTab.CHALLENGES,
-                    onSelectTab = onNavigateTab
-                )
-            }
-        } else null,
+        maxContentWidth = 940.dp,
         modifier = Modifier.testTag("challenge_selection_screen")
     ) {
         ScreenTopBar(

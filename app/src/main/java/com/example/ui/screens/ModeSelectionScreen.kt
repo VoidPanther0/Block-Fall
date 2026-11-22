@@ -29,8 +29,6 @@ import com.example.ui.GameUiState
 import com.example.ui.components.ArcadeButtonStyle
 import com.example.ui.components.CascadeScreenContainer
 import com.example.ui.components.GameModeCard
-import com.example.ui.components.PremiumQuickNav
-import com.example.ui.components.PrimaryNavTab
 import com.example.ui.components.ScreenTopBar
 import com.example.ui.components.SectionHeader
 import com.example.ui.components.drawBevelBlock
@@ -47,8 +45,7 @@ fun ModeSelectionScreen(
     onPlayNewClassic: () -> Unit,
     onSelectChallengeLevels: () -> Unit,
     onPlayDaily: () -> Unit = {},
-    state: GameUiState = GameUiState(),
-    onNavigateTab: ((PrimaryNavTab) -> Unit)? = null
+    state: GameUiState = GameUiState()
 ) {
     val totalStars = state.challengeProgress.values.sumOf { it.stars }
     val maxStars = ChallengeLevels.levels.size * 3
@@ -56,15 +53,7 @@ fun ModeSelectionScreen(
     val challengeStat = "★ $totalStars/$maxStars · Level ${state.unlockedChallengeLevel} unlocked"
 
     CascadeScreenContainer(
-        maxContentWidth = 880.dp,
-        bottomBar = if (onNavigateTab != null) {
-            {
-                PremiumQuickNav(
-                    selectedTab = PrimaryNavTab.PLAY,
-                    onSelectTab = onNavigateTab
-                )
-            }
-        } else null,
+        maxContentWidth = 880.dp,
         modifier = Modifier.testTag("mode_selection_screen")
     ) {
         ScreenTopBar(

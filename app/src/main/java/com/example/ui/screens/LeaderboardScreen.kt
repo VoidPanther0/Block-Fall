@@ -21,7 +21,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.EmojiEvents
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -63,8 +62,7 @@ fun LeaderboardScreen(
     isSignedIn: Boolean,
     currentUserId: String?,
     leaderboardState: CloudStreamState<List<LeaderboardEntry>>,
-    onBack: () -> Unit,
-    onSyncScore: () -> Unit
+    onBack: () -> Unit
 ) {
     CascadeScreenContainer(
         maxContentWidth = 620.dp,
@@ -73,21 +71,7 @@ fun LeaderboardScreen(
         ScreenTopBar(
             title = "Leaderboard",
             onBack = onBack,
-            backTestTag = "leaderboard_back_button",
-            actions = {
-                if (isSignedIn) {
-                    IconButton(
-                        onClick = onSyncScore,
-                        modifier = Modifier.testTag("leaderboard_sync_button")
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Refresh,
-                            contentDescription = "Sync my score",
-                            tint = AccentCyan
-                        )
-                    }
-                }
-            }
+            backTestTag = "leaderboard_back_button"
         )
 
         if (!isSignedIn) {
@@ -118,22 +102,20 @@ fun LeaderboardScreen(
                         icon = Icons.Filled.CloudOff,
                         title = "Unable to load leaderboard",
                         description = leaderboardState.message,
-                        accent = AccentCoral,
-                        actionLabel = "Retry Sync",
-                        onAction = onSyncScore
+                        accent = AccentCoral
                     )
                 }
 
                 is CloudStreamState.Success -> {
                     val entries = leaderboardState.data
+                        .distinctBy { it.userId }
+                        .sortedByDescending { it.classicBestScore }
                     if (entries.isEmpty()) {
                         EmptyState(
                             icon = Icons.Filled.EmojiEvents,
                             title = "No scores posted yet",
-                            description = "Play Classic mode and tap refresh to publish your best score.",
-                            accent = AccentGold,
-                            actionLabel = "Sync Best Score",
-                            onAction = onSyncScore
+                            description = "Play Classic mode. Your best score is posted here automatically.",
+                            accent = AccentGold
                         )
                     } else {
                         LazyColumn(

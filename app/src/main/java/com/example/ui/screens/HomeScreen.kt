@@ -50,10 +50,8 @@ import com.example.ui.components.ArcadeButtonStyle
 import com.example.ui.components.ArcadeTitleLogo
 import com.example.ui.components.CascadeScreenContainer
 import com.example.ui.components.PlayerProfileHeader
-import com.example.ui.components.PremiumQuickNav
 import com.example.ui.components.PremiumCard
 import com.example.ui.components.PremiumPrimaryButton
-import com.example.ui.components.PrimaryNavTab
 import com.example.ui.components.drawBevelBlock
 import com.example.ui.theme.AccentCyan
 import com.example.ui.theme.AccentEmerald
@@ -81,8 +79,7 @@ fun HomeScreen(
     onOpenLeaderboard: () -> Unit = {},
     onOpenShop: () -> Unit = {},
     onOpenSettings: () -> Unit,
-    onOpenStatistics: () -> Unit,
-    onNavigateTab: ((PrimaryNavTab) -> Unit)? = null
+    onOpenStatistics: () -> Unit
 ) {
     val savedSummary = state.savedClassicSummary
     val canContinue = savedSummary != null
@@ -91,15 +88,7 @@ fun HomeScreen(
     val hasCrown = "cosmetic_prism_crown" in state.wallet.unlockedEntitlements
 
     CascadeScreenContainer(
-        maxContentWidth = 960.dp,
-        bottomBar = if (onNavigateTab != null) {
-            {
-                PremiumQuickNav(
-                    selectedTab = PrimaryNavTab.HOME,
-                    onSelectTab = onNavigateTab
-                )
-            }
-        } else null,
+        maxContentWidth = 960.dp,
         modifier = Modifier.testTag("home_screen")
     ) {
         Column(

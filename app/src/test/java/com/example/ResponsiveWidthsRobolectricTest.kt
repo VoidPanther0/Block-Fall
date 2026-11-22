@@ -44,18 +44,11 @@ class ResponsiveWidthsRobolectricTest {
         }
 
         composeRule.onNodeWithTag("home_screen").assertIsDisplayed()
-        composeRule.onNodeWithTag("premium_bottom_navigation").assertIsDisplayed()
         composeRule.onNodeWithTag("home_play_button").assertIsDisplayed()
         composeRule.onNodeWithTag("home_statistics_button").performScrollTo().assertIsDisplayed()
 
-        val navBottom = composeRule.onNodeWithTag("premium_bottom_navigation")
-            .fetchSemanticsNode().boundsInRoot.bottom
-        val playTop = composeRule.onNodeWithTag("home_play_button")
-            .fetchSemanticsNode().boundsInRoot.top
-        assertTrue("Quick nav must stay above the primary content", playTop >= navBottom - 1f)
-
-        // All five destinations remain reachable at narrow widths.
-        composeRule.onNodeWithTag("bottom_nav_play").performClick()
+        // Destinations remain reachable at narrow widths.
+        composeRule.onNodeWithTag("home_modes_button").performScrollTo().performClick()
         composeRule.waitForIdle()
         composeRule.onNodeWithTag("mode_selection_screen").assertIsDisplayed()
         composeRule.onNodeWithTag("mode_play_daily_button").performScrollTo().assertIsDisplayed()
