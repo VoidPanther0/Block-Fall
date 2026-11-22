@@ -114,9 +114,10 @@ fun PauseScreen(
                         )
 
                         Text(
-                            text = when (state.mode) {
-                                GameMode.CLASSIC -> "Classic Endless"
-                                GameMode.CHALLENGE -> "Level ${state.currentChallengeLevel.levelNumber} · ${state.currentChallengeLevel.title}"
+                            text = when {
+                                state.isDailyChallenge -> "Daily Gravity · ${state.currentChallengeLevel.title}"
+                                state.mode == GameMode.CLASSIC -> "Classic Endless"
+                                else -> "Level ${state.currentChallengeLevel.levelNumber} · ${state.currentChallengeLevel.title}"
                             },
                             style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
                             color = TextSecondary

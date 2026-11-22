@@ -215,15 +215,11 @@ class CascadeRobolectricTest {
         composeRule.waitForIdle()
         composeRule.onNodeWithTag("home_screen").assertIsDisplayed()
 
-        // Statistics screen + Reset confirmation cancel
+        // Statistics screen (reset UI intentionally removed)
         composeRule.onNodeWithTag("home_statistics_button").performScrollTo().performClick()
         composeRule.waitForIdle()
         composeRule.onNodeWithTag("statistics_screen").assertIsDisplayed()
-        composeRule.onNodeWithTag("statistics_reset_button").performScrollTo().performClick()
-        composeRule.waitForIdle()
-        composeRule.onNodeWithTag("reset_progress_confirmation_dialog").assertIsDisplayed()
-        composeRule.onNodeWithTag("cancel_reset_button").performClick()
-        composeRule.waitForIdle()
+        composeRule.onNodeWithTag("player_rank_card").performScrollTo().assertIsDisplayed()
         composeRule.onNodeWithTag("statistics_back_button").performClick()
         composeRule.waitForIdle()
 
@@ -279,6 +275,10 @@ class CascadeRobolectricTest {
 
     private fun navigatePastSplashToHome() {
         composeRule.waitForIdle()
+        if (composeRule.onAllNodesWithTag("onboarding_skip_button").fetchSemanticsNodes().isNotEmpty()) {
+            composeRule.onNodeWithTag("onboarding_skip_button").performClick()
+            composeRule.waitForIdle()
+        }
         if (composeRule.onAllNodesWithTag("splash_screen").fetchSemanticsNodes().isNotEmpty()) {
             composeRule.onNodeWithTag("splash_screen").performClick()
             composeRule.waitForIdle()

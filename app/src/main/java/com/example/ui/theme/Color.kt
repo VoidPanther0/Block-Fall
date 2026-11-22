@@ -31,7 +31,7 @@ val GlassTopSheen = Color(0x28FFFFFF)
 
 val TextPrimary = Color(0xFFF6F8FF)
 val TextSecondary = Color(0xFFA4B5E0)
-val TextMuted = Color(0xFF7D90C4)
+val TextMuted = Color(0xFF8FA2D4)
 
 val AccentCyan = Color(0xFF2EE6FF)
 val AccentBlue = Color(0xFF3B82F6)

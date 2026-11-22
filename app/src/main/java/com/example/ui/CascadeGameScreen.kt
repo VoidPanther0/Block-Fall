@@ -27,8 +27,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
@@ -53,6 +55,8 @@ import com.example.ui.components.RoyalSkyBackdrop
 import com.example.ui.components.ScorePanel
 import com.example.ui.components.TopGameBar
 import com.example.ui.components.drawBevelBlock
+import com.example.ui.theme.AccentCyan
+import com.example.ui.theme.InvalidTint
 import com.example.ui.theme.TextSecondary
 
 @Composable
@@ -108,7 +112,11 @@ fun CascadeGameScreen(
                 .windowInsetsPadding(WindowInsets.safeDrawing)
                 .padding(horizontal = 16.dp, vertical = 10.dp)
         ) {
-            val isWideLayout = maxWidth >= 660.dp && maxWidth > maxHeight
+            // Short landscape phones cannot fit the vertical stack (HUD + board + tray),
+            // so they use the two-pane layout with a height-clamped board instead.
+            val isShortLandscape = maxHeight < 480.dp && maxWidth >= 480.dp
+            val isWideLayout = (maxWidth >= 660.dp && maxWidth > maxHeight) || isShortLandscape
+            val wideBoardMax = (maxHeight - 56.dp).coerceAtLeast(120.dp).coerceAtMost(500.dp)
 
             if (isWideLayout) {
                 Row(
@@ -125,7 +133,10 @@ fun CascadeGameScreen(
                             .weight(1.1f)
                             .fillMaxHeight()
                     ) {
-                        CascadeCalloutBar(floatingBanner = state.floatingBanner)
+                        CascadeCalloutBar(
+                            floatingBanner = state.floatingBanner,
+                            cascadeWave = state.currentCascadeWave
+                        )
                         Spacer(Modifier.height(4.dp))
                         GameBoard(
                             board = state.board,
@@ -156,7 +167,7 @@ fun CascadeGameScreen(
                                 boardBoundsInRoot = rect
                                 viewModel.updateBoardBounds(rect, dragLiftPx)
                             },
-                            modifier = Modifier.widthIn(max = 500.dp)
+                            modifier = Modifier.widthIn(max = wideBoardMax)
                         )
                     }
 
@@ -164,7 +175,7 @@ fun CascadeGameScreen(
                         modifier = Modifier
                             .weight(0.9f)
                             .widthIn(max = 420.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                        verticalArrangement = Arrangement.spacedBy(if (isShortLandscape) 8.dp else 16.dp)
                     ) {
                         TopGameBar(
                             state = state,
@@ -179,6 +190,7 @@ fun CascadeGameScreen(
                         ScorePanel(state = state)
                         PieceTray(
                             slots = state.traySlots,
+                            board = state.board,
                             selectedSlotIndex = state.selectedSlotIndex,
                             draggingSlotIndex = state.dragState?.slotIndex,
                             status = state.status,
@@ -239,7 +251,10 @@ fun CascadeGameScreen(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center
                         ) {
-                            CascadeCalloutBar(floatingBanner = state.floatingBanner)
+                            CascadeCalloutBar(
+                            floatingBanner = state.floatingBanner,
+                            cascadeWave = state.currentCascadeWave
+                        )
                             Spacer(Modifier.height(4.dp))
                             GameBoard(
                                 board = state.board,
@@ -285,6 +300,7 @@ fun CascadeGameScreen(
                     ) {
                         PieceTray(
                             slots = state.traySlots,
+                            board = state.board,
                             selectedSlotIndex = state.selectedSlotIndex,
                             draggingSlotIndex = state.dragState?.slotIndex,
                             status = state.status,
@@ -324,6 +340,17 @@ fun CascadeGameScreen(
                 val localPointer = activeDrag.pointerRootOffset - rootOrigin
                 val startX = localPointer.x - pieceW / 2f
                 val startY = localPointer.y - dragLiftPx - pieceH
+
+                // Soft footprint glow communicates valid vs invalid hover without a blur.
+                if (activeDrag.hoverAnchor != null) {
+                    val footprintColor = if (activeDrag.isHoverValid) AccentCyan else InvalidTint
+                    drawRoundRect(
+                        color = footprintColor.copy(alpha = 0.14f),
+                        topLeft = Offset(startX - 6f, startY - 6f),
+                        size = Size(pieceW + 12f, pieceH + 12f),
+                        cornerRadius = CornerRadius(14f, 14f)
+                    )
+                }
 
                 for (cell in activeDrag.piece.shape.offsets) {
                     drawBevelBlock(

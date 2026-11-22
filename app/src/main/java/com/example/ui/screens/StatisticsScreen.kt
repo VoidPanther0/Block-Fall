@@ -51,7 +51,8 @@ import com.example.ui.components.AchievementCard
 import com.example.ui.components.ArcadeBlockEmblem
 import com.example.ui.components.ArcadeButtonStyle
 import com.example.ui.components.CascadeScreenContainer
-import com.example.ui.components.PremiumBottomNavigation
+import com.example.ui.components.CurrencyWallet
+import com.example.ui.components.PremiumQuickNav
 import com.example.ui.components.PremiumCard
 import com.example.ui.components.PremiumPrimaryButton
 import com.example.ui.components.PrimaryNavTab
@@ -82,7 +83,6 @@ fun StatisticsScreen(
     playerName: String? = null,
     onNavigateTab: ((PrimaryNavTab) -> Unit)? = null
 ) {
-    var showResetConfirm by remember { mutableStateOf(false) }
     val stats = state.statistics
     val completedLevels = state.challengeProgress.values.count { it.completed }
     val totalStars = state.challengeProgress.values.sumOf { it.stars }
@@ -93,7 +93,7 @@ fun StatisticsScreen(
         maxContentWidth = 940.dp,
         bottomBar = if (onNavigateTab != null) {
             {
-                PremiumBottomNavigation(
+                PremiumQuickNav(
                     selectedTab = PrimaryNavTab.PROFILE,
                     onSelectTab = onNavigateTab
                 )
@@ -146,31 +146,11 @@ fun StatisticsScreen(
                     ChallengeMasteryCard(state, completedLevels, totalStars, maxStars, progressRatio)
                 }
 
-                PremiumPrimaryButton(
-                    text = "Reset All Progress",
-                    icon = Icons.Filled.DeleteForever,
-                    style = ArcadeButtonStyle.RED,
-                    onClick = { showResetConfirm = true },
-                    height = 52.dp,
-                    cornerRadius = 16.dp,
-                    fontSize = 16.sp,
-                    testTag = "statistics_reset_button",
-                    modifier = Modifier.fillMaxWidth()
-                )
                 Spacer(Modifier.height(6.dp))
             }
         }
     }
 
-    if (showResetConfirm) {
-        ResetProgressConfirmationDialog(
-            onConfirm = {
-                showResetConfirm = false
-                onResetProgressConfirmed()
-            },
-            onDismiss = { showResetConfirm = false }
-        )
-    }
 }
 
 @Composable
@@ -323,6 +303,13 @@ private fun PlayerRankAndMilestonesCard(
                     )
                 }
             }
+
+            HorizontalDivider(color = GlassBorder.copy(alpha = 0.3f))
+            CurrencyWallet(
+                goldCoins = state.wallet.goldCoins,
+                diamonds = state.wallet.diamonds,
+                modifier = Modifier.fillMaxWidth()
+            )
         }
     }
 }

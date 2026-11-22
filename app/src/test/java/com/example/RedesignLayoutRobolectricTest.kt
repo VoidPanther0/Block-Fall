@@ -22,6 +22,10 @@ class RedesignLayoutRobolectricTest {
     @Test
     fun `18_narrow_screen_bottom_nav_shop_categories_and_profile_render_cleanly`() {
         composeRule.waitForIdle()
+        if (composeRule.onAllNodesWithTag("onboarding_skip_button").fetchSemanticsNodes().isNotEmpty()) {
+            composeRule.onNodeWithTag("onboarding_skip_button").performClick()
+            composeRule.waitForIdle()
+        }
         if (composeRule.onAllNodesWithTag("splash_screen").fetchSemanticsNodes().isNotEmpty()) {
             composeRule.onNodeWithTag("splash_screen").performClick()
             composeRule.waitForIdle()
@@ -60,9 +64,9 @@ class RedesignLayoutRobolectricTest {
         composeRule.waitForIdle()
         composeRule.onNodeWithTag("shop_watch_ad_button").assertIsDisplayed()
 
-        composeRule.onNodeWithTag("shop_tab_skins").performScrollTo().performClick()
+        composeRule.onNodeWithTag("shop_tab_abilities").performScrollTo().performClick()
         composeRule.waitForIdle()
-        composeRule.onNodeWithTag("shop_skin_style_modern").assertIsDisplayed()
+        composeRule.onNodeWithTag("shop_wallet_bar").assertIsDisplayed()
 
         composeRule.onNodeWithTag("shop_tab_vip_teams").performScrollTo().performClick()
         composeRule.waitForIdle()

@@ -90,103 +90,109 @@ import com.example.ui.theme.TextSecondary
 
 enum class PrimaryNavTab(
     val label: String,
+    val compactLabel: String,
     val selectedIcon: ImageVector,
     val unselectedIcon: ImageVector,
     val testTag: String
 ) {
-    HOME("Home", Icons.Filled.Home, Icons.Outlined.Home, "bottom_nav_home"),
-    PLAY("Play", Icons.Filled.GridView, Icons.Outlined.GridView, "bottom_nav_play"),
-    CHALLENGES("Challenges", Icons.Filled.EmojiEvents, Icons.Outlined.EmojiEvents, "bottom_nav_challenges"),
-    SHOP("Shop", Icons.Filled.ShoppingBag, Icons.Outlined.ShoppingBag, "bottom_nav_shop"),
-    PROFILE("Profile", Icons.Filled.Person, Icons.Outlined.Person, "bottom_nav_profile")
+    HOME("Home", "Home", Icons.Filled.Home, Icons.Outlined.Home, "bottom_nav_home"),
+    PLAY("Play", "Play", Icons.Filled.GridView, Icons.Outlined.GridView, "bottom_nav_play"),
+    CHALLENGES("Challenges", "Levels", Icons.Filled.EmojiEvents, Icons.Outlined.EmojiEvents, "bottom_nav_challenges"),
+    SHOP("Shop", "Shop", Icons.Filled.ShoppingBag, Icons.Outlined.ShoppingBag, "bottom_nav_shop"),
+    PROFILE("Profile", "Profile", Icons.Filled.Person, Icons.Outlined.Person, "bottom_nav_profile")
 }
 
+/**
+ * Compact top quick-navigation strip.
+ *
+ * Replaces the previous five-item bottom navigation bar. It keeps the existing navigation
+ * callbacks, screen routes and test tags intact while freeing the bottom of the screen for
+ * the game board, piece tray and content. Rendered at the top of [CascadeScreenContainer].
+ */
 @Composable
-fun PremiumBottomNavigation(
+fun PremiumQuickNav(
     selectedTab: PrimaryNavTab,
     onSelectTab: (PrimaryNavTab) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val shape = RoundedCornerShape(16.dp)
     Surface(
-        color = SurfaceCard.copy(alpha = 0.96f),
-        tonalElevation = 8.dp,
-        shadowElevation = 12.dp,
+        color = SurfaceCard.copy(alpha = 0.92f),
+        shape = shape,
+        tonalElevation = 2.dp,
+        shadowElevation = 4.dp,
         modifier = modifier
             .fillMaxWidth()
             .testTag("premium_bottom_navigation")
     ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(1.dp)
-                    .background(DividerSubtle.copy(alpha = 0.85f))
-            )
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .windowInsetsPadding(WindowInsets.navigationBars)
-                    .padding(horizontal = 6.dp, vertical = 6.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                PrimaryNavTab.entries.forEach { tab ->
-                    val isSelected = tab == selectedTab
-                    val tint by animateColorAsState(
-                        targetValue = if (isSelected) AccentCyan else TextMuted,
-                        label = "nav_tab_tint"
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    Brush.verticalGradient(
+                        listOf(SurfaceCardElevated.copy(alpha = 0.55f), SurfaceCard.copy(alpha = 0.85f))
                     )
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center,
-                        modifier = Modifier
-                            .weight(1f)
-                            .defaultMinSize(minHeight = 48.dp)
-                            .clip(RoundedCornerShape(14.dp))
-                            .clickable(
-                                role = Role.Tab,
-                                onClick = { onSelectTab(tab) }
-                            )
-                            .semantics { selected = isSelected }
-                            .padding(vertical = 4.dp)
-                            .testTag(tab.testTag)
-                    ) {
-                        Box(
-                            contentAlignment = Alignment.Center,
-                            modifier = Modifier
-                                .clip(CircleShape)
-                                .background(
-                                    if (isSelected) AccentCyan.copy(alpha = 0.16f)
-                                    else Color.Transparent
-                                )
-                                .padding(horizontal = 14.dp, vertical = 4.dp)
-                        ) {
-                            Icon(
-                                imageVector = if (isSelected) tab.selectedIcon else tab.unselectedIcon,
-                                contentDescription = tab.label,
-                                tint = tint,
-                                modifier = Modifier.size(22.dp)
-                            )
-                        }
-                        Spacer(Modifier.height(2.dp))
-                        Text(
-                            text = tab.label,
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                fontFamily = OutfitFontFamily,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                fontSize = 10.5.sp,
-                                letterSpacing = 0.2.sp
-                            ),
-                            color = tint,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
+                )
+                .border(1.dp, GlassBorder.copy(alpha = 0.4f), shape)
+                .padding(horizontal = 4.dp, vertical = 3.dp),
+            horizontalArrangement = Arrangement.spacedBy(2.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            PrimaryNavTab.entries.forEach { tab ->
+                val isSelected = tab == selectedTab
+                val tint by animateColorAsState(
+                    targetValue = if (isSelected) AccentCyan else TextMuted,
+                    label = "nav_tab_tint"
+                )
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                    modifier = Modifier
+                        .weight(1f)
+                        .defaultMinSize(minHeight = 48.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(if (isSelected) AccentCyan.copy(alpha = 0.12f) else Color.Transparent)
+                        .clickable(role = Role.Tab, onClick = { onSelectTab(tab) })
+                        .semantics { selected = isSelected }
+                        .padding(vertical = 3.dp)
+                        .testTag(tab.testTag)
+                ) {
+                    Icon(
+                        imageVector = if (isSelected) tab.selectedIcon else tab.unselectedIcon,
+                        contentDescription = tab.label,
+                        tint = tint,
+                        modifier = Modifier.size(19.dp)
+                    )
+                    Spacer(Modifier.height(1.dp))
+                    Text(
+                        text = tab.compactLabel,
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontFamily = OutfitFontFamily,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                            fontSize = 9.5.sp,
+                            letterSpacing = 0.1.sp
+                        ),
+                        color = tint,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
             }
         }
     }
 }
+
+/**
+ * @deprecated The bottom bar has been removed. Use [PremiumQuickNav]; this alias keeps
+ * existing call sites and test tags source-compatible.
+ */
+@Deprecated("Use PremiumQuickNav — bottom navigation has been replaced by a top strip.")
+@Composable
+fun PremiumBottomNavigation(
+    selectedTab: PrimaryNavTab,
+    onSelectTab: (PrimaryNavTab) -> Unit,
+    modifier: Modifier = Modifier
+) = PremiumQuickNav(selectedTab = selectedTab, onSelectTab = onSelectTab, modifier = modifier)
 
 @Composable
 fun PlayerProfileHeader(
@@ -202,92 +208,113 @@ fun PlayerProfileHeader(
     onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+    val accent = if (hasCrownCosmetic) AccentGold else AccentCyan
+    Column(
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+        modifier = modifier.fillMaxWidth()
     ) {
+        // Identity row — avatar + name + rank on the left, quick actions on the right.
         Row(
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            modifier = Modifier
-                .weight(1f, fill = false)
-                .clip(RoundedCornerShape(16.dp))
-                .clickable(onClick = onOpenProfile)
-                .padding(end = 6.dp, top = 2.dp, bottom = 2.dp)
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Box(
-                contentAlignment = Alignment.Center,
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
                 modifier = Modifier
-                    .size(44.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(SurfaceCardElevated, SurfaceCard)
-                        )
-                    )
-                    .border(
-                        width = if (hasCrownCosmetic) 1.5.dp else 1.dp,
-                        color = if (hasCrownCosmetic) AccentGold else AccentCyan.copy(alpha = 0.45f),
-                        shape = RoundedCornerShape(14.dp)
-                    )
+                    .weight(1f)
+                    .clip(RoundedCornerShape(16.dp))
+                    .clickable(onClick = onOpenProfile)
+                    .padding(vertical = 2.dp)
             ) {
-                ArcadeBlockEmblem(size = 26.dp)
-            }
-
-            Column(modifier = Modifier.weight(1f, fill = false)) {
-                Text(
-                    text = playerName?.takeIf { it.isNotBlank() } ?: "Block Tactician",
-                    style = MaterialTheme.typography.titleSmall.copy(
-                        fontFamily = OutfitFontFamily,
-                        fontWeight = FontWeight.ExtraBold,
-                        fontSize = 15.sp
-                    ),
-                    color = TextPrimary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .size(46.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(Brush.verticalGradient(listOf(SurfaceCardElevated, SurfaceCard)))
+                        .border(
+                            width = if (hasCrownCosmetic) 1.5.dp else 1.dp,
+                            color = accent.copy(alpha = if (hasCrownCosmetic) 0.9f else 0.5f),
+                            shape = RoundedCornerShape(14.dp)
+                        )
                 ) {
+                    ArcadeBlockEmblem(size = 27.dp)
+                }
+
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "T${rank.tierNumber} · ${rank.title}",
+                        text = playerName?.takeIf { it.isNotBlank() } ?: "Block Tactician",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontFamily = OutfitFontFamily,
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 15.sp
+                        ),
+                        color = TextPrimary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = "TIER ${rank.tierNumber} · ${rank.title}",
                         style = MaterialTheme.typography.labelSmall.copy(
                             fontFamily = JetBrainsMonoFontFamily,
-                            fontSize = 10.sp
+                            fontSize = 10.sp,
+                            letterSpacing = 0.2.sp
                         ),
-                        color = if (hasCrownCosmetic) AccentGold else AccentCyan,
+                        color = accent,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                 }
             }
+
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconActionButton(
+                    icon = Icons.Filled.Leaderboard,
+                    contentDescription = "Leaderboard & Cloud",
+                    size = 48.dp,
+                    tint = if (isCloudSignedIn) AccentEmerald else AccentCyan,
+                    borderColor = if (isCloudSignedIn) AccentEmerald.copy(alpha = 0.6f) else AccentCyan.copy(alpha = 0.45f),
+                    onClick = onOpenLeaderboard,
+                    testTag = "home_leaderboard_button"
+                )
+                IconActionButton(
+                    icon = Icons.Filled.Settings,
+                    contentDescription = "Settings",
+                    size = 48.dp,
+                    onClick = onOpenSettings,
+                    testTag = "home_top_settings_button"
+                )
+            }
         }
 
+        // Wallet row — dedicated line so gold and diamond values never overlap the name.
         Row(
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            verticalAlignment = Alignment.CenterVertically
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(14.dp))
+                .clickable(onClick = onOpenWallet),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             CurrencyWallet(
                 goldCoins = goldCoins,
                 diamonds = diamonds,
                 compact = true,
-                onClick = onOpenWallet
+                modifier = Modifier.weight(1f)
             )
-            IconActionButton(
-                icon = Icons.Filled.Leaderboard,
-                contentDescription = "Leaderboard & Cloud",
-                tint = if (isCloudSignedIn) AccentEmerald else AccentCyan,
-                borderColor = if (isCloudSignedIn) AccentEmerald.copy(alpha = 0.6f) else AccentCyan.copy(alpha = 0.45f),
-                onClick = onOpenLeaderboard,
-                testTag = "home_leaderboard_button"
-            )
-            IconActionButton(
-                icon = Icons.Filled.Settings,
-                contentDescription = "Settings",
-                onClick = onOpenSettings,
-                testTag = "home_top_settings_button"
+            Text(
+                text = "${rank.xp} XP",
+                style = MaterialTheme.typography.labelMedium.copy(
+                    fontFamily = JetBrainsMonoFontFamily,
+                    fontSize = 10.sp
+                ),
+                color = TextMuted,
+                maxLines = 1
             )
         }
     }

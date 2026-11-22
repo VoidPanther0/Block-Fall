@@ -67,9 +67,10 @@ fun GameOverScreen(
     onHome: () -> Unit,
     onWatchAd: (() -> Unit)? = null
 ) {
-    val subtitle = when (state.mode) {
-        GameMode.CLASSIC -> "No valid moves remaining"
-        GameMode.CHALLENGE -> "Level ${state.currentChallengeLevel.levelNumber} · Target ${state.currentChallengeLevel.targetScore} not reached"
+    val subtitle = when {
+        state.isDailyChallenge -> "Today's puzzle · Target ${state.currentChallengeLevel.targetScore} not reached"
+        state.mode == GameMode.CLASSIC -> "No valid moves remaining"
+        else -> "Level ${state.currentChallengeLevel.levelNumber} · Target ${state.currentChallengeLevel.targetScore} not reached"
     }
     val goalScore = when (state.mode) {
         GameMode.CLASSIC -> state.classicBestScore.coerceAtLeast(1)

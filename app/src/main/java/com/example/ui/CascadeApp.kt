@@ -1,6 +1,7 @@
 package com.example.ui
 
 import android.app.Activity
+import android.content.Context
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -48,6 +49,7 @@ import com.example.ui.navigation.HowToPlayRoute
 import com.example.ui.navigation.LeaderboardRoute
 import com.example.ui.navigation.LevelCompleteRoute
 import com.example.ui.navigation.ModeSelectionRoute
+import com.example.ui.navigation.OnboardingRoute
 import com.example.ui.navigation.PauseRoute
 import com.example.ui.navigation.RulesRoute
 import com.example.ui.navigation.SettingsRoute
@@ -61,6 +63,7 @@ import com.example.ui.screens.HowToPlayScreen
 import com.example.ui.screens.LeaderboardScreen
 import com.example.ui.screens.LevelCompleteScreen
 import com.example.ui.screens.ModeSelectionScreen
+import com.example.ui.screens.OnboardingScreen
 import com.example.ui.screens.PauseScreen
 import com.example.ui.screens.RulesScreen
 import com.example.ui.screens.SettingsScreen
@@ -75,6 +78,12 @@ import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.flow.emptyFlow
+
+/**
+ * Single first-launch onboarding: the [OnboardingRoute] NavHost destination, persisted via
+ * [com.example.data.OnboardingPrefs] (the same flag earlier builds used, so existing installs
+ * are not shown onboarding again). Google sign-in and guest (Skip) both complete it.
+ */
 
 @Composable
 fun CascadeApp(
@@ -105,23 +114,8 @@ fun CascadeApp(
         }
     }
 
-    val onboardingPrefs = remember { com.example.data.OnboardingPrefs(context) }
-    var onboardingSeen by remember { androidx.compose.runtime.mutableStateOf(onboardingPrefs.signInOnboardingSeen) }
-
     val signedInUser = currentUser
-    if (auth != null && signedInUser == null && !onboardingSeen) {
-        SignInOnboarding(
-            onSignedIn = {
-                onboardingPrefs.signInOnboardingSeen = true
-                onboardingSeen = true
-                viewModel.soundManager.playLogin()
-            },
-            onSkip = {
-                onboardingPrefs.signInOnboardingSeen = true
-                onboardingSeen = true
-            }
-        )
-    } else if (signedInUser == null) {
+    if (signedInUser == null) {
         CascadeNavHost(
             viewModel = viewModel,
             currentUser = null,
@@ -201,8 +195,22 @@ private fun CascadeNavHost(
     val navController = rememberNavController()
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val adState by viewModel.adState.collectAsStateWithLifecycle()
-    val activity = LocalContext.current as? Activity
+    val context = LocalContext.current
+    val activity = context as? Activity
     val lifecycleOwner = LocalLifecycleOwner.current
+    val onboardingPrefs = remember(context) { com.example.data.OnboardingPrefs(context) }
+    val onboardingComplete = remember(currentUser != null) {
+        onboardingPrefs.signInOnboardingSeen || currentUser != null
+    }
+    val startDestination: Any = if (onboardingComplete) SplashRoute else OnboardingRoute
+
+    val completeOnboarding: () -> Unit = {
+        onboardingPrefs.signInOnboardingSeen = true
+        navController.navigate(HomeRoute) {
+            popUpTo<OnboardingRoute> { inclusive = true }
+            launchSingleTop = true
+        }
+    }
 
     val navigatePrimaryTab: (PrimaryNavTab) -> Unit = remember(navController, viewModel) {
         { tab ->
@@ -259,13 +267,17 @@ private fun CascadeNavHost(
     ) {
         NavHost(
             navController = navController,
-            startDestination = SplashRoute,
+            startDestination = startDestination,
             modifier = Modifier.semantics { testTagsAsResourceId = true },
             enterTransition = { fadeIn(animationSpec = tween(180)) },
             exitTransition = { fadeOut(animationSpec = tween(180)) },
             popEnterTransition = { fadeIn(animationSpec = tween(180)) },
             popExitTransition = { fadeOut(animationSpec = tween(180)) }
         ) {
+            composable<OnboardingRoute> {
+                OnboardingScreen(onContinue = completeOnboarding)
+            }
+
             composable<SplashRoute> {
                 SplashScreen(
                     onFinished = {
@@ -334,6 +346,13 @@ private fun CascadeNavHost(
                     onSelectChallengeLevels = {
                         viewModel.playUiClick()
                         navController.navigate(ChallengeSelectionRoute)
+                    },
+                    onPlayDaily = {
+                        viewModel.playUiClick()
+                        viewModel.startDailyChallenge()
+                        navController.navigate(GameplayRoute) {
+                            popUpTo<HomeRoute>()
+                        }
                     },
                     state = state,
                     onNavigateTab = navigatePrimaryTab
@@ -429,7 +448,9 @@ private fun CascadeNavHost(
                     },
                     onReplay = {
                         viewModel.playUiClick()
-                        viewModel.startChallengeLevel(state.currentChallengeLevel.levelNumber)
+                        // restartCurrentGame keeps Daily Gravity in daily mode; a raw
+                        // startChallengeLevel(0) would fall back to campaign Level 1.
+                        viewModel.restartCurrentGame()
                         navController.navigate(GameplayRoute) {
                             popUpTo<HomeRoute>()
                         }

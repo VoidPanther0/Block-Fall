@@ -3,6 +3,7 @@ package com.example.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
@@ -62,27 +64,24 @@ fun CascadeScreenContainer(
 
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier
+                .fillMaxSize()
+                .windowInsetsPadding(WindowInsets.safeDrawing)
+                .padding(horizontal = 16.dp, vertical = 10.dp)
+                .widthIn(max = maxContentWidth)
         ) {
-            val contentInsets = if (bottomBar != null) {
-                WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)
-            } else {
-                WindowInsets.safeDrawing
+            // The former bottom navigation slot now hosts the compact top quick-nav.
+            if (bottomBar != null) {
+                bottomBar()
+                Spacer(Modifier.height(10.dp))
             }
 
             Column(
                 modifier = Modifier
                     .weight(1f)
-                    .fillMaxWidth()
-                    .windowInsetsPadding(contentInsets)
-                    .padding(horizontal = 16.dp, vertical = 10.dp)
-                    .widthIn(max = maxContentWidth),
+                    .fillMaxWidth(),
                 content = content
             )
-
-            if (bottomBar != null) {
-                bottomBar()
-            }
         }
     }
 }
@@ -94,16 +93,19 @@ fun ScreenTopBar(
     backTestTag: String = "screen_back_button",
     actions: @Composable RowScope.() -> Unit = {}
 ) {
-    Box(
+    // Three-slot Row keeps the title inside the space between back button and actions,
+    // so trailing chips can never overlap it on 320dp screens.
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(bottom = 12.dp)
+            .padding(bottom = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         if (onBack != null) {
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
-                    .align(Alignment.CenterStart)
                     .size(48.dp)
                     .clip(RoundedCornerShape(14.dp))
                     .background(
@@ -122,6 +124,8 @@ fun ScreenTopBar(
                     modifier = Modifier.size(26.dp)
                 )
             }
+        } else {
+            Spacer(Modifier.size(48.dp))
         }
 
         Text(
@@ -129,25 +133,19 @@ fun ScreenTopBar(
             style = MaterialTheme.typography.headlineMedium.copy(
                 fontFamily = OutfitFontFamily,
                 fontWeight = FontWeight.ExtraBold,
-                fontSize = 21.sp,
+                fontSize = 19.sp,
                 letterSpacing = 0.2.sp
             ),
             color = Color.White,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center,
-            modifier = Modifier
-                .align(Alignment.Center)
-                .padding(horizontal = 56.dp)
+            modifier = Modifier.weight(1f)
         )
 
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.align(Alignment.CenterEnd),
             content = actions
         )
-        if (onBack == null) {
-            Spacer(Modifier.size(48.dp).align(Alignment.CenterStart))
-        }
     }
 }

@@ -15,22 +15,18 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Diamond
 import androidx.compose.material.icons.filled.Groups
-import androidx.compose.material.icons.filled.Hardware
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.MonetizationOn
 import androidx.compose.material.icons.filled.PlayCircle
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.WorkspacePremium
 import androidx.compose.material3.Icon
@@ -44,6 +40,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
@@ -61,19 +58,17 @@ import com.example.ui.GameUiState
 import com.example.ui.components.ArcadeButtonStyle
 import com.example.ui.components.CascadeScreenContainer
 import com.example.ui.components.CurrencyWallet
-import com.example.ui.components.PremiumBottomNavigation
+import com.example.ui.components.PremiumQuickNav
 import com.example.ui.components.PremiumCard
 import com.example.ui.components.PremiumPrimaryButton
 import com.example.ui.components.PrimaryNavTab
 import com.example.ui.components.ScreenTopBar
 import com.example.ui.components.SectionHeader
-import com.example.ui.components.SkinCard
 import com.example.ui.theme.AccentCyan
 import com.example.ui.theme.AccentDiamond
 import com.example.ui.theme.AccentEmerald
 import com.example.ui.theme.AccentGold
 import com.example.ui.theme.AccentPurple
-import com.example.ui.theme.BlockTheme
 import com.example.ui.theme.BoardWellBg
 import com.example.ui.theme.CascadeTextStyles
 import com.example.ui.theme.GlassBorder
@@ -84,16 +79,23 @@ import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
 
 private enum class StoreSection(val label: String) {
-    BOOSTERS("Abilities"),
+    ABILITIES("Abilities"),
     DIAMONDS("Diamonds"),
     GOLD("Gold"),
-    SKINS("Block Skins"),
     VIP_TEAMS("VIP & Teams")
 }
 
+/** Offers that grant boosters the current gameplay loop cannot consume yet. */
+private val HIDDEN_OFFER_IDS = setOf(
+    "booster_hammer_1",
+    "booster_refresh_1",
+    // This bundle also grants Hammer + Refresh, which the current gameplay loop cannot use.
+    "booster_trio_bundle"
+)
+
 /**
- * Economy storefront: abilities/boosters, diamond cosmetics, gold exchange & rewarded ads,
- * block skin styles, and future-ready Play Billing / VIP & Teams previews.
+ * Premium game storefront. Block Skins are intentionally hidden for this release.
+ * Prices and purchase behaviour are driven entirely by the existing [ShopCatalog].
  */
 @Composable
 fun ShopScreen(
@@ -105,17 +107,20 @@ fun ShopScreen(
     onSelectBoardPalette: ((BoardColorPalette) -> Unit)? = null,
     onNavigateTab: ((PrimaryNavTab) -> Unit)? = null
 ) {
-    var selectedSection by remember { mutableStateOf(StoreSection.BOOSTERS) }
+    var selectedSection by remember { mutableStateOf(StoreSection.DIAMONDS) }
 
-    val boosterItems = remember { ShopCatalog.items.filter { it.category == ShopCategory.BOOSTERS } }
-    val diamondItems = remember { ShopCatalog.items.filter { it.category == ShopCategory.DIAMONDS } }
-    val goldItems = remember { ShopCatalog.items.filter { it.category == ShopCategory.GOLD } }
+    val visibleItems = remember {
+        ShopCatalog.items.filterNot { it.id in HIDDEN_OFFER_IDS }
+    }
+    val boosterItems = remember { visibleItems.filter { it.category == ShopCategory.BOOSTERS } }
+    val diamondItems = remember { visibleItems.filter { it.category == ShopCategory.DIAMONDS } }
+    val goldItems = remember { visibleItems.filter { it.category == ShopCategory.GOLD } }
 
     CascadeScreenContainer(
         maxContentWidth = 820.dp,
         bottomBar = if (onNavigateTab != null) {
             {
-                PremiumBottomNavigation(
+                PremiumQuickNav(
                     selectedTab = PrimaryNavTab.SHOP,
                     onSelectTab = onNavigateTab
                 )
@@ -123,43 +128,46 @@ fun ShopScreen(
         } else null,
         modifier = Modifier.testTag("shop_screen")
     ) {
-        ScreenTopBar(
-            title = "Shop",
-            onBack = onBack,
-            backTestTag = "shop_back_button"
-        )
+        ScreenTopBar(title = "Shop", onBack = onBack, backTestTag = "shop_back_button")
 
         PremiumCard(
             cornerRadius = 18.dp,
-            borderColor = AccentGold.copy(alpha = 0.36f),
+            borderColor = AccentGold.copy(alpha = 0.38f),
             modifier = Modifier
                 .fillMaxWidth()
                 .testTag("shop_wallet_bar")
         ) {
-            Row(
+            Column(
+                verticalArrangement = Arrangement.spacedBy(10.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
             ) {
-                Column {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Text(
                         text = "YOUR WALLET",
                         style = CascadeTextStyles.SectionKicker,
-                        color = AccentGold
+                        color = AccentGold,
+                        maxLines = 1
                     )
                     Text(
-                        text = "Earn Gold in games & challenges",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = TextSecondary
+                        text = "Earn more by playing & challenges",
+                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                        color = TextSecondary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
                 CurrencyWallet(
                     goldCoins = state.wallet.goldCoins,
                     diamonds = state.wallet.diamonds,
                     goldTag = "shop_gold_balance",
-                    diamondTag = "shop_diamond_balance"
+                    diamondTag = "shop_diamond_balance",
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
         }
@@ -175,18 +183,21 @@ fun ShopScreen(
             StoreSection.entries.forEach { section ->
                 val selected = section == selectedSection
                 val shape = RoundedCornerShape(14.dp)
+                val accent = when (section) {
+                    StoreSection.DIAMONDS -> AccentDiamond
+                    StoreSection.GOLD -> AccentGold
+                    StoreSection.VIP_TEAMS -> AccentPurple
+                    else -> AccentCyan
+                }
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
-                        .defaultMinSize(minHeight = 44.dp)
+                        .defaultMinSize(minHeight = 48.dp)
                         .clip(shape)
-                        .background(
-                            if (selected) AccentGold.copy(alpha = 0.18f)
-                            else SurfaceCardElevated.copy(alpha = 0.72f)
-                        )
+                        .background(if (selected) accent.copy(alpha = 0.18f) else SurfaceCardElevated.copy(alpha = 0.72f))
                         .border(
                             width = if (selected) 1.5.dp else 1.dp,
-                            color = if (selected) AccentGold else GlassBorder.copy(alpha = 0.38f),
+                            color = if (selected) accent else GlassBorder.copy(alpha = 0.38f),
                             shape = shape
                         )
                         .clickable { selectedSection = section }
@@ -198,7 +209,7 @@ fun ShopScreen(
                         style = MaterialTheme.typography.labelLarge.copy(
                             fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
                         ),
-                        color = if (selected) AccentGold else TextSecondary,
+                        color = if (selected) accent else TextSecondary,
                         maxLines = 1
                     )
                 }
@@ -213,47 +224,37 @@ fun ShopScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             when (selectedSection) {
-                StoreSection.BOOSTERS -> {
-                    item(key = "booster_inventory") {
-                        BoosterInventoryCard(state)
-                    }
+                StoreSection.ABILITIES -> {
+                    item(key = "booster_inventory") { BoosterInventoryCard(state) }
                     items(boosterItems, key = { it.id }) { item ->
                         ShopItemCard(item = item, state = state, onPurchase = onPurchase)
                     }
                 }
 
                 StoreSection.DIAMONDS -> {
-                    item(key = "diamond_cosmetics_hdr") {
+                    item(key = "diamond_packs_hdr") {
                         SectionHeader(
-                            kicker = "Diamond Store",
-                            title = "Profile Cosmetics",
+                            kicker = "Premium Currency",
+                            title = "Diamond Packs",
                             accent = AccentDiamond
+                        )
+                    }
+                    item(key = "diamond_packs_preview") {
+                        StorePreviewCard(
+                            icon = Icons.Filled.Diamond,
+                            accent = AccentDiamond,
+                            title = "Gem Bundles",
+                            subtitle = "Direct packs open with store billing in a future release. Earn Diamonds today through 3-star Challenges.",
+                            testTag = "shop_diamond_packs_preview"
                         )
                     }
                     items(diamondItems, key = { it.id }) { item ->
                         ShopItemCard(item = item, state = state, onPurchase = onPurchase)
                     }
-                    item(key = "diamond_packs_hdr") {
-                        SectionHeader(
-                            kicker = "Storefront",
-                            title = "Diamond Packs",
-                            accent = AccentPurple
-                        )
-                    }
-                    item(key = "diamond_pack_billing_notice") {
-                        BillingPreviewCard(
-                            icon = Icons.Filled.Diamond,
-                            accent = AccentDiamond,
-                            title = "Gem Bundles",
-                            subtitle = "Play Store billing integration is prepared for release builds. Earn Diamonds by clearing 3-star Challenges!"
-                        )
-                    }
                 }
 
                 StoreSection.GOLD -> {
-                    item(key = "free_gold") {
-                        FreeGoldCard(onWatchAd)
-                    }
+                    item(key = "free_gold") { FreeGoldCard(onWatchAd) }
                     item(key = "gold_exchange_hdr") {
                         SectionHeader(
                             kicker = "Currency Exchange",
@@ -266,88 +267,13 @@ fun ShopScreen(
                     }
                 }
 
-                StoreSection.SKINS -> {
-                    item(key = "block_styles_hdr") {
-                        SectionHeader(
-                            kicker = "Tactile Finish",
-                            title = "Block Styles",
-                            accent = AccentCyan
-                        )
-                    }
-                    items(BlockStyle.entries, key = { "style_${it.id}" }) { style ->
-                        val equipped = state.settings.blockStyle == style
-                        SkinCard(
-                            title = "${style.displayName} Finish",
-                            subtitle = when (style) {
-                                BlockStyle.MODERN -> "Crisp rounded bevels with glass top sheen"
-                                BlockStyle.RETRO -> "Sharp arcade pixels with bold chamfer edges"
-                                BlockStyle.NEON -> "Luminous rim outlines over deep dark cores"
-                            },
-                            blockStyle = style,
-                            boardPalette = state.settings.boardPalette,
-                            isUnlocked = true,
-                            isEquipped = equipped,
-                            unlockRequirement = "Included",
-                            onEquip = { onSelectBlockStyle?.invoke(style) },
-                            testTag = "shop_skin_style_${style.id}"
-                        )
-                    }
-                    item(key = "board_palettes_hdr") {
-                        SectionHeader(
-                            kicker = "Arena Surface",
-                            title = "Board Palettes",
-                            accent = AccentGold
-                        )
-                    }
-                    items(BoardColorPalette.entries, key = { "palette_${it.id}" }) { palette ->
-                        val equipped = state.settings.boardPalette == palette
-                        SkinCard(
-                            title = "${palette.displayName} Arena",
-                            subtitle = "Custom grid surface and block highlight tinting",
-                            blockStyle = state.settings.blockStyle,
-                            boardPalette = palette,
-                            isUnlocked = true,
-                            isEquipped = equipped,
-                            unlockRequirement = "Included",
-                            onEquip = { onSelectBoardPalette?.invoke(palette) },
-                            testTag = "shop_skin_palette_${palette.id}"
-                        )
-                    }
-                    item(key = "milestone_themes_hdr") {
-                        SectionHeader(
-                            kicker = "Skill Unlocks",
-                            title = "Milestone Palettes",
-                            accent = AccentEmerald
-                        )
-                    }
-                    items(BlockTheme.entries, key = { "theme_${it.id}" }) { theme ->
-                        val unlocked = theme.isUnlocked(state.statistics, state.challengeProgress)
-                        SkinCard(
-                            title = theme.displayName,
-                            subtitle = theme.subtitle,
-                            blockStyle = state.settings.blockStyle,
-                            boardPalette = state.settings.boardPalette,
-                            isUnlocked = unlocked,
-                            isEquipped = theme == BlockTheme.CLASSIC_COBALT,
-                            unlockRequirement = theme.unlockRequirement,
-                            onEquip = {},
-                            testTag = "shop_milestone_theme_${theme.id}"
-                        )
-                    }
-                }
-
                 StoreSection.VIP_TEAMS -> {
                     item(key = "vip_hdr") {
-                        SectionHeader(
-                            kicker = "Membership",
-                            title = "VIP Pass",
-                            accent = AccentGold
-                        )
+                        SectionHeader(kicker = "Membership", title = "VIP Pass", accent = AccentGold)
                     }
                     item(key = "vip_monthly") {
                         VipMembershipCard(
                             title = "Monthly VIP Pass",
-                            active = state.wallet.vipActive && state.wallet.vipPlanId == "monthly",
                             benefits = listOf(
                                 "Ad-free experience across all modes",
                                 "Bonus daily login Gold & Diamonds",
@@ -358,7 +284,6 @@ fun ShopScreen(
                     item(key = "vip_yearly") {
                         VipMembershipCard(
                             title = "Annual VIP Pass",
-                            active = state.wallet.vipActive && state.wallet.vipPlanId == "yearly",
                             benefits = listOf(
                                 "All Monthly VIP perks included",
                                 "Priority leaderboard badge",
@@ -367,18 +292,15 @@ fun ShopScreen(
                         )
                     }
                     item(key = "teams_hdr") {
-                        SectionHeader(
-                            kicker = "Social Clubs",
-                            title = "Teams & Clubs",
-                            accent = AccentCyan
-                        )
+                        SectionHeader(kicker = "Social Clubs", title = "Team Pass", accent = AccentCyan)
                     }
                     item(key = "teams_preview") {
-                        BillingPreviewCard(
+                        StorePreviewCard(
                             icon = Icons.Filled.Groups,
                             accent = AccentCyan,
-                            title = "Block Fall Teams",
-                            subtitle = "Team leaderboards and cooperative cascade goals are scheduled for an upcoming cloud season."
+                            title = "Team Pass",
+                            subtitle = "Team leaderboards and cooperative cascade goals arrive in an upcoming cloud season.",
+                            testTag = "shop_team_pass_preview"
                         )
                     }
                 }
@@ -401,16 +323,9 @@ private fun BoosterInventoryCard(state: GameUiState) {
                 color = TextPrimary
             )
             Spacer(Modifier.height(10.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                BoosterType.entries.forEach { type ->
-                    val icon = when (type) {
-                        BoosterType.HAMMER -> Icons.Filled.Hardware
-                        BoosterType.REFRESH -> Icons.Filled.Refresh
-                        BoosterType.SHUFFLE -> Icons.Filled.Shuffle
-                    }
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                val availableTypes = listOf(BoosterType.SHUFFLE)
+                availableTypes.forEach { type ->
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier
@@ -421,7 +336,7 @@ private fun BoosterInventoryCard(state: GameUiState) {
                             .padding(vertical = 10.dp, horizontal = 6.dp)
                     ) {
                         Icon(
-                            imageVector = icon,
+                            imageVector = Icons.Filled.Shuffle,
                             contentDescription = type.title,
                             tint = AccentCyan,
                             modifier = Modifier.size(20.dp)
@@ -431,7 +346,8 @@ private fun BoosterInventoryCard(state: GameUiState) {
                             text = type.title,
                             style = MaterialTheme.typography.labelMedium,
                             color = TextSecondary,
-                            maxLines = 1
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                         Text(
                             text = "×${state.wallet.countFor(type)}",
@@ -464,12 +380,7 @@ private fun FreeGoldCard(onWatchAd: (() -> Unit)?) {
                         .clip(RoundedCornerShape(12.dp))
                         .background(AccentEmerald.copy(alpha = 0.16f))
                 ) {
-                    Icon(
-                        imageVector = Icons.Filled.PlayCircle,
-                        contentDescription = null,
-                        tint = AccentEmerald,
-                        modifier = Modifier.size(22.dp)
-                    )
+                    Icon(Icons.Filled.PlayCircle, null, tint = AccentEmerald, modifier = Modifier.size(22.dp))
                 }
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
@@ -521,15 +432,12 @@ private fun ShopItemCard(
         item.diamondCost > 0 -> "${item.diamondCost} Gems"
         else -> "Free"
     }
-
     val accent = if (item.diamondCost > 0) AccentDiamond else AccentGold
     val itemIcon = when {
-        item.rewardBooster == BoosterType.HAMMER -> Icons.Filled.Hardware
-        item.rewardBooster == BoosterType.REFRESH -> Icons.Filled.Refresh
         item.rewardBooster == BoosterType.SHUFFLE -> Icons.Filled.Shuffle
         item.id == "booster_trio_bundle" -> Icons.Filled.Bolt
         item.rewardGold > 0 -> Icons.Filled.MonetizationOn
-        else -> Icons.Filled.AutoAwesome
+        else -> Icons.Filled.Diamond
     }
 
     PremiumCard(
@@ -540,26 +448,19 @@ private fun ShopItemCard(
         borderColor = accent.copy(alpha = 0.34f)
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(14.dp),
+            modifier = Modifier.fillMaxWidth().padding(14.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
-                    .size(44.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(accent.copy(alpha = 0.14f))
-                    .border(1.dp, accent.copy(alpha = 0.36f), RoundedCornerShape(12.dp))
+                    .size(46.dp)
+                    .clip(RoundedCornerShape(13.dp))
+                    .background(Brush.verticalGradient(listOf(accent.copy(alpha = 0.22f), accent.copy(alpha = 0.08f))))
+                    .border(1.dp, accent.copy(alpha = 0.42f), RoundedCornerShape(13.dp))
             ) {
-                Icon(
-                    imageVector = itemIcon,
-                    contentDescription = null,
-                    tint = accent,
-                    modifier = Modifier.size(22.dp)
-                )
+                Icon(itemIcon, null, tint = accent, modifier = Modifier.size(23.dp))
             }
             Column(Modifier.weight(1f)) {
                 Row(
@@ -576,10 +477,7 @@ private fun ShopItemCard(
                     if (item.badge != null) {
                         Text(
                             text = item.badge,
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 9.5.sp
-                            ),
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, fontSize = 9.sp),
                             color = AccentGold,
                             modifier = Modifier
                                 .clip(CircleShape)
@@ -603,7 +501,7 @@ private fun ShopItemCard(
                 onClick = { onPurchase(item.id) },
                 height = 44.dp,
                 cornerRadius = 12.dp,
-                fontSize = 13.sp,
+                fontSize = 12.sp,
                 testTag = "shop_buy_button_${item.id}"
             )
         }
@@ -611,30 +509,18 @@ private fun ShopItemCard(
 }
 
 @Composable
-private fun VipMembershipCard(
-    title: String,
-    active: Boolean,
-    benefits: List<String>
-) {
+private fun VipMembershipCard(title: String, benefits: List<String>) {
     PremiumCard(
         cornerRadius = 20.dp,
-        borderColor = (if (active) AccentEmerald else AccentGold).copy(alpha = 0.42f),
+        borderColor = AccentGold.copy(alpha = 0.42f),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(
             verticalArrangement = Arrangement.spacedBy(10.dp),
             modifier = Modifier.padding(16.dp)
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.WorkspacePremium,
-                    contentDescription = null,
-                    tint = AccentGold,
-                    modifier = Modifier.size(24.dp)
-                )
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Icon(Icons.Filled.WorkspacePremium, null, tint = AccentGold, modifier = Modifier.size(24.dp))
                 Text(
                     text = title,
                     style = MaterialTheme.typography.titleMedium,
@@ -644,33 +530,29 @@ private fun VipMembershipCard(
                 Box(
                     modifier = Modifier
                         .clip(CircleShape)
-                        .background((if (active) AccentEmerald else SurfaceCard).copy(alpha = 0.9f))
-                        .border(1.dp, (if (active) AccentEmerald else GlassBorder).copy(alpha = 0.5f), CircleShape)
+                        .background(SurfaceCard)
+                        .border(1.dp, AccentGold.copy(alpha = 0.5f), CircleShape)
                         .padding(horizontal = 10.dp, vertical = 4.dp)
                 ) {
                     Text(
-                        text = if (active) "ACTIVE" else "PLAY BILLING",
-                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                        color = if (active) AccentEmerald else TextSecondary
+                        text = "COMING SOON",
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                        color = AccentGold
                     )
                 }
             }
             benefits.forEach { perk ->
-                Text(
-                    text = "• $perk",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = TextSecondary
-                )
+                Text(text = "• $perk", style = MaterialTheme.typography.bodySmall, color = TextSecondary)
             }
             PremiumPrimaryButton(
-                text = if (active) "VIP Active" else "Coming Soon · Google Play Billing",
-                icon = if (active) null else Icons.Filled.Lock,
+                text = "Coming Soon · Google Play Billing",
+                icon = Icons.Filled.Lock,
                 style = ArcadeButtonStyle.SLATE,
                 enabled = false,
                 onClick = {},
                 height = 44.dp,
                 cornerRadius = 12.dp,
-                fontSize = 13.sp,
+                fontSize = 12.sp,
                 modifier = Modifier.fillMaxWidth()
             )
         }
@@ -678,16 +560,17 @@ private fun VipMembershipCard(
 }
 
 @Composable
-private fun BillingPreviewCard(
+private fun StorePreviewCard(
     icon: ImageVector,
     accent: Color,
     title: String,
-    subtitle: String
+    subtitle: String,
+    testTag: String? = null
 ) {
     PremiumCard(
         cornerRadius = 18.dp,
         borderColor = accent.copy(alpha = 0.34f),
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth().then(if (testTag != null) Modifier.testTag(testTag) else Modifier)
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -702,12 +585,7 @@ private fun BillingPreviewCard(
                     .background(accent.copy(alpha = 0.14f))
                     .border(1.dp, accent.copy(alpha = 0.36f), RoundedCornerShape(12.dp))
             ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = accent,
-                    modifier = Modifier.size(22.dp)
-                )
+                Icon(icon, null, tint = accent, modifier = Modifier.size(22.dp))
             }
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -718,7 +596,8 @@ private fun BillingPreviewCard(
                 Text(
                     text = subtitle,
                     style = MaterialTheme.typography.bodySmall,
-                    color = TextMuted
+                    color = TextMuted,
+                    maxLines = 3
                 )
             }
         }
