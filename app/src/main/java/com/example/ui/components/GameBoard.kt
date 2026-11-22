@@ -1,7 +1,5 @@
 package com.example.ui.components
 
-import android.app.ActivityManager
-import android.content.Context
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -13,12 +11,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
@@ -32,7 +27,6 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -49,22 +43,6 @@ import com.example.ui.theme.InvalidTint
 import com.example.ui.theme.LocalBlockStyle
 import com.example.ui.theme.LocalBoardPalette
 import com.example.ui.theme.toBoardColors
-import com.example.ui.theme.toPalette
-import kotlin.math.PI
-import kotlin.math.cos
-import kotlin.math.sin
-import kotlin.random.Random
-
-private class ActiveParticle(
-    var row: Float,
-    var col: Float,
-    val vRow: Float,
-    val vCol: Float,
-    val color: Color,
-    val radiusFactor: Float,
-    var life: Float,
-    val decayPerSec: Float
-)
 
 @Composable
 fun GameBoard(
@@ -85,81 +63,12 @@ fun GameBoard(
     onBoardTouchEnd: (() -> Unit)? = null,
     onBoardTouchCancel: (() -> Unit)? = null
 ) {
-    val activeParticles = remember { mutableStateListOf<ActiveParticle>() }
     val blockStyle = LocalBlockStyle.current
     val boardPalette = LocalBoardPalette.current
     val boardTheme = boardPalette.toBoardColors()
-    val context = LocalContext.current
-    val isLowRamDevice = remember(context) {
-        runCatching {
-            val am = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
-            am?.isLowRamDevice == true
-        }.getOrDefault(false)
-    }
-    val maxActiveParticles = if (isLowRamDevice) 48 else 96
     val boardBrush = remember(boardTheme) {
         Brush.verticalGradient(listOf(boardTheme.wellTop, boardTheme.wellBottom))
     }
-
-    LaunchedEffect(particleTriggerId, visualEffectsEnabled, boardPalette) {
-        if (!visualEffectsEnabled || latestParticles.isEmpty()) return@LaunchedEffect
-        val rng = Random(particleTriggerId)
-        val perBurstCountDust = if (isLowRamDevice) 2 else 4
-        val perBurstCountClear = if (isLowRamDevice) 4 else 7
-        for (burst in latestParticles) {
-            val baseColor = burst.color.toPalette(boardPalette).glow
-            val count = if (burst.isLandingDust) perBurstCountDust else perBurstCountClear
-            repeat(count) {
-                if (activeParticles.size >= maxActiveParticles && activeParticles.isNotEmpty()) {
-                    activeParticles.removeAt(0)
-                }
-                val angle = if (burst.isLandingDust) {
-                    val side = if (rng.nextBoolean()) 0f else PI.toFloat()
-                    side + (rng.nextFloat() - 0.5f) * 0.9f
-                } else {
-                    rng.nextFloat() * (2f * PI.toFloat())
-                }
-                val speed = if (burst.isLandingDust) {
-                    1.2f + rng.nextFloat() * 1.8f
-                } else {
-                    1.8f + rng.nextFloat() * 3.8f
-                }
-                activeParticles.add(
-                    ActiveParticle(
-                        row = burst.row,
-                        col = burst.col,
-                        vRow = sin(angle) * speed * (if (burst.isLandingDust) 0.45f else 1f),
-                        vCol = cos(angle) * speed,
-                        color = if (burst.isLandingDust) Color.White.copy(alpha = 0.7f) else baseColor,
-                        radiusFactor = if (burst.isLandingDust) 0.065f else 0.095f,
-                        life = 1f,
-                        decayPerSec = if (burst.isLandingDust) 3.4f else 2.2f
-                    )
-                )
-            }
-        }
-    }
-
-    LaunchedEffect(activeParticles.isNotEmpty()) {
-        if (activeParticles.isEmpty()) return@LaunchedEffect
-        var lastTime = withFrameMillis { it }
-        while (activeParticles.isNotEmpty()) {
-            val now = withFrameMillis { it }
-            val dt = ((now - lastTime).coerceIn(1L, 48L)) / 1000f
-            lastTime = now
-            val iterator = activeParticles.listIterator()
-            while (iterator.hasNext()) {
-                val p = iterator.next()
-                p.row += p.vRow * dt + 2.4f * dt * dt
-                p.col += p.vCol * dt
-                p.life -= p.decayPerSec * dt
-                if (p.life <= 0f) {
-                    iterator.remove()
-                }
-            }
-        }
-    }
-
     val boardCorner = if (blockStyle == BlockStyle.RETRO) 10.dp else 24.dp
     val boardShape = RoundedCornerShape(boardCorner)
     Box(
@@ -470,20 +379,6 @@ fun GameBoard(
                             style = Stroke(width = 2f)
                         )
                     }
-                }
-            }
-
-            // 5. Render active particles
-            if (visualEffectsEnabled) {
-                for (particle in activeParticles) {
-                    val px = particle.col * cellSize
-                    val py = particle.row * cellSize
-                    val radius = cellSize * particle.radiusFactor * particle.life.coerceIn(0.2f, 1f)
-                    drawCircle(
-                        color = particle.color.copy(alpha = particle.life.coerceIn(0f, 1f)),
-                        radius = radius,
-                        center = Offset(px, py)
-                    )
                 }
             }
         }
