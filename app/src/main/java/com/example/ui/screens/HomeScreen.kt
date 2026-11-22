@@ -20,8 +20,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.CloudDone
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.Leaderboard
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Replay
 import androidx.compose.material.icons.filled.Settings
@@ -67,10 +69,12 @@ import com.example.ui.theme.TextSecondary
 @Composable
 fun HomeScreen(
     state: GameUiState,
+    isCloudSignedIn: Boolean = false,
     onPlayNewClassic: () -> Unit,
     onContinueClassic: () -> Unit,
     onOpenModes: () -> Unit,
     onOpenChallenges: () -> Unit,
+    onOpenLeaderboard: () -> Unit = {},
     onOpenSettings: () -> Unit,
     onOpenStatistics: () -> Unit
 ) {
@@ -87,12 +91,10 @@ fun HomeScreen(
             val isWide = maxWidth >= 660.dp
 
             Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                // Top Studio Strip: Best Score badge & Settings shortcut
+                // Pinned Top Studio Strip: Best Score badge, Leaderboard & Settings shortcuts
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -126,24 +128,59 @@ fun HomeScreen(
                         )
                     }
 
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier
-                            .size(48.dp)
-                            .clip(RoundedCornerShape(14.dp))
-                            .background(Brush.verticalGradient(listOf(SurfaceCardElevated, SurfaceCard)))
-                            .border(1.dp, GlassBorder.copy(alpha = 0.55f), RoundedCornerShape(14.dp))
-                            .clickable(onClick = onOpenSettings)
-                            .testTag("home_top_settings_button")
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            imageVector = Icons.Filled.Settings,
-                            contentDescription = stringResource(R.string.nav_settings),
-                            tint = TextPrimary,
-                            modifier = Modifier.size(22.dp)
-                        )
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(Brush.verticalGradient(listOf(SurfaceCardElevated, SurfaceCard)))
+                                .border(
+                                    1.dp,
+                                    if (isCloudSignedIn) AccentEmerald.copy(alpha = 0.65f) else AccentCyan.copy(alpha = 0.45f),
+                                    RoundedCornerShape(14.dp)
+                                )
+                                .clickable(onClick = onOpenLeaderboard)
+                                .testTag("home_leaderboard_button")
+                        ) {
+                            Icon(
+                                imageVector = if (isCloudSignedIn) Icons.Filled.CloudDone else Icons.Filled.Leaderboard,
+                                contentDescription = "Leaderboard & Cloud",
+                                tint = if (isCloudSignedIn) AccentEmerald else AccentCyan,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(Brush.verticalGradient(listOf(SurfaceCardElevated, SurfaceCard)))
+                                .border(1.dp, GlassBorder.copy(alpha = 0.55f), RoundedCornerShape(14.dp))
+                                .clickable(onClick = onOpenSettings)
+                                .testTag("home_top_settings_button")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Settings,
+                                contentDescription = stringResource(R.string.nav_settings),
+                                tint = TextPrimary,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
                     }
                 }
+
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
 
                 if (isWide) {
                     Row(
@@ -206,6 +243,7 @@ fun HomeScreen(
                 }
 
                 Spacer(Modifier.height(6.dp))
+                }
             }
         }
     }

@@ -202,7 +202,8 @@ class GameRepository(
         blocksPlaced: Int,
         linesCleared: Int,
         cascadesTriggered: Int,
-        maxDepthInTurn: Int
+        maxDepthInTurn: Int,
+        fullClearAdded: Int = 0
     ) {
         context.cascadeDataStore.edit { prefs ->
             val current = readProtectedProgressState(prefs)
@@ -212,12 +213,62 @@ class GameRepository(
                     totalBlocksPlaced = s.totalBlocksPlaced + blocksPlaced,
                     totalLinesCleared = s.totalLinesCleared + linesCleared,
                     totalCascadesTriggered = s.totalCascadesTriggered + cascadesTriggered,
-                    maxCascadeDepth = maxOf(s.maxCascadeDepth, maxDepthInTurn)
+                    maxCascadeDepth = maxOf(s.maxCascadeDepth, maxDepthInTurn),
+                    fullBoardClears = s.fullBoardClears + fullClearAdded
                 ),
                 tampered = false
             )
             writeProtectedProgressState(prefs, updated)
         }
+    }
+
+    suspend fun mergeCloudProgress(
+        cloudBestScore: Int,
+        cloudUnlockedLevel: Int,
+        cloudTotalGames: Int,
+        cloudTotalLines: Int,
+        cloudTotalCascades: Int,
+        cloudMaxDepth: Int,
+        cloudTotalBlocks: Int,
+        cloudFullClears: Int,
+        cloudChallenges: Map<Int, ChallengeLevelProgress>
+    ): PersistedProgress {
+        context.cascadeDataStore.edit { prefs ->
+            val current = readProtectedProgressState(prefs)
+            val mergedBest = maxOf(current.classicBestScore, cloudBestScore.coerceAtLeast(0))
+            val mergedUnlocked = maxOf(current.unlockedChallengeLevel, cloudUnlockedLevel.coerceIn(1, 50))
+            val s = current.statistics
+            val mergedStats = s.copy(
+                totalGamesPlayed = maxOf(s.totalGamesPlayed, cloudTotalGames.coerceAtLeast(0)),
+                totalLinesCleared = maxOf(s.totalLinesCleared, cloudTotalLines.coerceAtLeast(0)),
+                totalCascadesTriggered = maxOf(s.totalCascadesTriggered, cloudTotalCascades.coerceAtLeast(0)),
+                maxCascadeDepth = maxOf(s.maxCascadeDepth, cloudMaxDepth.coerceAtLeast(0)),
+                totalBlocksPlaced = maxOf(s.totalBlocksPlaced, cloudTotalBlocks.coerceAtLeast(0)),
+                fullBoardClears = maxOf(s.fullBoardClears, cloudFullClears.coerceAtLeast(0)),
+                classicBestScore = mergedBest
+            )
+            val mergedMap = current.challengeProgress.toMutableMap()
+            cloudChallenges.forEach { (lvl, cloudItem) ->
+                val localItem = mergedMap[lvl]
+                mergedMap[lvl] = ChallengeLevelProgress(
+                    levelNumber = lvl,
+                    bestScore = maxOf(localItem?.bestScore ?: 0, cloudItem.bestScore),
+                    stars = maxOf(localItem?.stars ?: 0, cloudItem.stars),
+                    completed = (localItem?.completed == true) || cloudItem.completed
+                )
+            }
+            writeProtectedProgressState(
+                prefs,
+                current.copy(
+                    classicBestScore = mergedBest,
+                    unlockedChallengeLevel = mergedUnlocked,
+                    statistics = mergedStats,
+                    challengeProgress = mergedMap,
+                    tampered = false
+                )
+            )
+        }
+        return loadInitialProgress()
     }
 
     suspend fun saveClassicGame(snapshot: SavedClassicGame?) {
@@ -346,6 +397,7 @@ class GameRepository(
             statsObj.put("maxCascadeDepth", state.statistics.maxCascadeDepth)
             statsObj.put("totalBlocksPlaced", state.statistics.totalBlocksPlaced)
             statsObj.put("classicBestScore", state.classicBestScore)
+            statsObj.put("fullBoardClears", state.statistics.fullBoardClears)
             root.put("statistics", statsObj)
 
             root.put("challengeProgress", JSONArray(serializeChallengeProgress(state.challengeProgress)))
@@ -364,7 +416,8 @@ class GameRepository(
                     totalCascadesTriggered = (statsObj?.optInt("totalCascadesTriggered", 0) ?: 0).coerceAtLeast(0),
                     maxCascadeDepth = (statsObj?.optInt("maxCascadeDepth", 0) ?: 0).coerceAtLeast(0),
                     totalBlocksPlaced = (statsObj?.optInt("totalBlocksPlaced", 0) ?: 0).coerceAtLeast(0),
-                    classicBestScore = best
+                    classicBestScore = best,
+                    fullBoardClears = (statsObj?.optInt("fullBoardClears", 0) ?: 0).coerceAtLeast(0)
                 )
                 val challengeArr = root.optJSONArray("challengeProgress")?.toString() ?: "[]"
                 ProtectedProgressState(

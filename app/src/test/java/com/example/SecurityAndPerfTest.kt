@@ -135,6 +135,7 @@ class SecurityAndPerfTest {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val repo = GameRepository(context)
         runBlocking {
+            repo.resetAllProgress()
             repo.updateClassicBestScore(1850)
             repo.saveChallengeLevelResult(
                 levelNumber = 2,
@@ -154,6 +155,123 @@ class SecurityAndPerfTest {
             assertEquals(0, afterReset.classicBestScore)
             assertEquals(1, afterReset.unlockedChallengeLevel)
             assertTrue(afterReset.challengeProgress.isEmpty())
+        }
+    }
+
+    @Test
+    fun `21_game_session_engine_executes_turn_deterministically_and_awards_challenge_stars`() {
+        val engine = com.example.game.GameSessionEngine(
+            com.example.game.PieceGenerator(kotlin.random.Random(42))
+        )
+        val board = Board.fromPattern(
+            listOf(
+                "........",
+                "........",
+                "........",
+                "........",
+                "........",
+                "........",
+                "........",
+                ".1111111"
+            )
+        )
+        val tray = listOf(
+            com.example.game.TraySlot(0, GamePiece(10L, PieceShape.DOT, BlockColor.CYAN)),
+            com.example.game.TraySlot(1, GamePiece(11L, PieceShape.DOMINO_H, BlockColor.AMBER)),
+            com.example.game.TraySlot(2, null)
+        )
+        val level = com.example.game.ChallengeLevels.getLevel(1)
+
+        val result = engine.executeTurn(
+            board = board,
+            traySlots = tray,
+            slotIndex = 0,
+            anchorRow = 7,
+            anchorCol = 0,
+            currentScore = 95,
+            movesPlayed = 0,
+            mode = com.example.game.GameMode.CHALLENGE,
+            challengeLevel = level,
+            startingBlockId = 100L
+        )
+
+        assertTrue(result != null)
+        val turn = result!!
+        assertEquals(1, turn.totalLinesInTurn)
+        assertTrue(turn.fullClearOccurred)
+        assertTrue(turn.finalScore >= level.targetScore)
+        assertEquals(com.example.game.GameStatus.CHALLENGE_WON, turn.nextStatus)
+        assertEquals(3, turn.earnedChallengeStars)
+    }
+
+    @Test
+    fun `22_cloud_models_and_play_integrity_helpers_enforce_rule_parity_and_monotonic_merge`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val repo = GameRepository(context)
+
+        val nonce1 = com.example.security.PlayIntegrityManager.generateNonce()
+        val nonce2 = com.example.security.PlayIntegrityManager.generateNonce()
+        assertTrue(nonce1.length in 16..128)
+        assertNotEquals(nonce1, nonce2)
+        val digest = com.example.security.PlayIntegrityManager.sha256Hex("sample_token")
+        assertEquals(64, digest.length)
+
+        val profile = com.example.data.cloud.UserCloudProfile(
+            userId = "uid_test_1",
+            displayName = "   Cascade Pro   ",
+            classicBestScore = 2500L,
+            unlockedChallengeLevel = 4L,
+            blockStyleId = "invalid_style",
+            boardPaletteId = "midnight"
+        )
+        val createMap = profile.toCreateMap()
+        assertFalse(createMap.containsKey("id"))
+        assertFalse(createMap.containsKey("documentId"))
+        assertEquals("Cascade Pro", createMap["displayName"])
+        assertEquals("modern", createMap["blockStyleId"])
+        assertEquals("midnight", createMap["boardPaletteId"])
+        assertTrue(createMap["createdAt"] is com.google.firebase.firestore.FieldValue)
+        assertTrue(createMap["updatedAt"] is com.google.firebase.firestore.FieldValue)
+
+        runBlocking {
+            repo.resetAllProgress()
+            repo.updateClassicBestScore(2500)
+            // Lower cloud score must NOT overwrite higher local score
+            val mergedLower = repo.mergeCloudProgress(
+                cloudBestScore = 1100,
+                cloudUnlockedLevel = 2,
+                cloudTotalGames = 5,
+                cloudTotalLines = 12,
+                cloudTotalCascades = 2,
+                cloudMaxDepth = 2,
+                cloudTotalBlocks = 40,
+                cloudFullClears = 0,
+                cloudChallenges = mapOf(
+                    1 to com.example.game.ChallengeLevelProgress(1, 140, 2, true)
+                )
+            )
+            assertEquals(2500, mergedLower.classicBestScore)
+            assertEquals(2, mergedLower.unlockedChallengeLevel)
+            assertEquals(2, mergedLower.challengeProgress[1]?.stars)
+
+            // Higher cloud score upgrades local score
+            val mergedHigher = repo.mergeCloudProgress(
+                cloudBestScore = 4100,
+                cloudUnlockedLevel = 5,
+                cloudTotalGames = 15,
+                cloudTotalLines = 80,
+                cloudTotalCascades = 14,
+                cloudMaxDepth = 5,
+                cloudTotalBlocks = 300,
+                cloudFullClears = 2,
+                cloudChallenges = mapOf(
+                    1 to com.example.game.ChallengeLevelProgress(1, 210, 3, true)
+                )
+            )
+            assertEquals(4100, mergedHigher.classicBestScore)
+            assertEquals(5, mergedHigher.unlockedChallengeLevel)
+            assertEquals(3, mergedHigher.challengeProgress[1]?.stars)
+            assertEquals(2, mergedHigher.statistics.fullBoardClears)
         }
     }
 }

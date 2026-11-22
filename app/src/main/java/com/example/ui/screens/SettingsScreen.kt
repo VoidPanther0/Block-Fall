@@ -89,7 +89,8 @@ fun SettingsScreen(
     onTogglePlacementPreview: (Boolean) -> Unit,
     onSelectBlockStyle: (BlockStyle) -> Unit,
     onSelectBoardPalette: (BoardColorPalette) -> Unit,
-    onResetProgressConfirmed: () -> Unit
+    onResetProgressConfirmed: () -> Unit,
+    cloudAccountContent: @Composable () -> Unit = {}
 ) {
     var showResetConfirm by remember { mutableStateOf(false) }
     val settings = state.settings
@@ -156,6 +157,8 @@ fun SettingsScreen(
                 onSelectBlockStyle = onSelectBlockStyle,
                 onSelectBoardPalette = onSelectBoardPalette
             )
+
+            cloudAccountContent()
 
             Spacer(Modifier.height(4.dp))
 

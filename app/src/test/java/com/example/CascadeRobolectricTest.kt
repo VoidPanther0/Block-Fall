@@ -227,7 +227,15 @@ class CascadeRobolectricTest {
         composeRule.onNodeWithTag("statistics_back_button").performClick()
         composeRule.waitForIdle()
 
-        // Settings screen + Theme Switcher (Block Style & Board Palette)
+        composeRule.onNodeWithTag("home_leaderboard_button").performClick()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag("leaderboard_screen").assertIsDisplayed()
+        composeRule.onNodeWithTag("google_sign_in_button").assertIsDisplayed()
+        composeRule.onNodeWithTag("leaderboard_back_button").performClick()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag("home_screen").assertIsDisplayed()
+
+        // Settings screen + Theme Switcher (Block Style & Board Palette) + Cloud Account Sign-In card
         composeRule.onNodeWithTag("home_settings_button").performScrollTo().performClick()
         composeRule.waitForIdle()
         composeRule.onNodeWithTag("settings_screen").assertIsDisplayed()
@@ -242,6 +250,7 @@ class CascadeRobolectricTest {
         composeRule.onNodeWithTag("theme_board_palette_sunset").performScrollTo().performClick()
         composeRule.waitForIdle()
         composeRule.onNodeWithTag("theme_active_summary").performScrollTo().assertTextEquals("Retro · Sunset")
+        composeRule.onNodeWithTag("google_sign_in_card").performScrollTo().assertIsDisplayed()
 
         composeRule.onNodeWithTag("settings_back_button").performClick()
         composeRule.waitForIdle()

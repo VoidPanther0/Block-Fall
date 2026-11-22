@@ -43,6 +43,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.game.AchievementId
 import com.example.game.ChallengeLevels
 import com.example.game.GameStatistics
 import com.example.ui.GameUiState
@@ -108,6 +109,7 @@ fun StatisticsScreen(
                             modifier = Modifier.weight(1f)
                         ) {
                             ClassicBestSummaryCard(state)
+                            PlayerRankAndMilestonesCard(state)
                             LifetimeMetricsCard(state, stats)
                         }
                         Column(
@@ -119,6 +121,7 @@ fun StatisticsScreen(
                     }
                 } else {
                     ClassicBestSummaryCard(state)
+                    PlayerRankAndMilestonesCard(state)
                     LifetimeMetricsCard(state, stats)
                     ChallengeMasteryCard(state, completedLevels, totalStars, maxStars, progressRatio)
                 }
@@ -214,6 +217,116 @@ private fun ClassicBestSummaryCard(state: GameUiState) {
                     ),
                     color = AccentCyan
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun PlayerRankAndMilestonesCard(state: GameUiState) {
+    val rank = state.playerRank
+    val unlockedSet = state.unlockedAchievements
+    FrostedGlassCard(
+        cornerRadius = 20.dp,
+        borderColor = AccentCyan.copy(alpha = 0.36f),
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag("player_rank_card")
+    ) {
+        Column(
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+            modifier = Modifier.padding(18.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        text = "PLAYER RANK · TIER ${rank.tierNumber}",
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            fontFamily = OutfitFontFamily,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 0.8.sp
+                        ),
+                        color = AccentCyan
+                    )
+                    Text(
+                        text = rank.title,
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            fontFamily = OutfitFontFamily,
+                            fontWeight = FontWeight.ExtraBold
+                        ),
+                        color = TextPrimary
+                    )
+                }
+                Text(
+                    text = "${rank.xp} XP",
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontFamily = JetBrainsMonoFontFamily,
+                        fontWeight = FontWeight.Bold
+                    ),
+                    color = AccentGold
+                )
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(10.dp)
+                    .clip(CircleShape)
+                    .background(BoardWellBg)
+                    .border(1.dp, GlassBorder.copy(alpha = 0.45f), CircleShape)
+                    .padding(2.dp)
+            ) {
+                if (rank.progressToNext > 0f) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .fillMaxWidth(rank.progressToNext.coerceIn(0.05f, 1f))
+                            .clip(CircleShape)
+                            .background(Brush.horizontalGradient(listOf(AccentCyan, AccentEmerald)))
+                    )
+                }
+            }
+
+            Text(
+                text = "Milestones (${unlockedSet.size}/${AchievementId.entries.size})",
+                style = MaterialTheme.typography.labelLarge,
+                color = TextSecondary
+            )
+
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                AchievementId.entries.take(5).forEach { ach ->
+                    val unlocked = ach.id in unlockedSet
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(BoardWellBg)
+                            .padding(horizontal = 12.dp, vertical = 7.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = ach.title,
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                fontSize = 13.sp,
+                                fontWeight = if (unlocked) FontWeight.Bold else FontWeight.Normal
+                            ),
+                            color = if (unlocked) TextPrimary else TextSecondary
+                        )
+                        Text(
+                            text = if (unlocked) "UNLOCKED" else "LOCKED",
+                            style = MaterialTheme.typography.labelMedium.copy(
+                                fontFamily = JetBrainsMonoFontFamily,
+                                fontSize = 11.sp
+                            ),
+                            color = if (unlocked) AccentEmerald else TextSecondary.copy(alpha = 0.7f)
+                        )
+                    }
+                }
             }
         }
     }

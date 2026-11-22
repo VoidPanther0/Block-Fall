@@ -1,0 +1,259 @@
+{
+  "entities": {
+    "UserCloudProfile": {
+      "title": "UserCloudProfile",
+      "description": "Authenticated user cloud progression, statistics, and preferences stored under /users/{userId}.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the profile owner."
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Player public or profile display name."
+        },
+        "classicBestScore": {
+          "type": "integer",
+          "description": "Highest verified local/synced Classic mode score."
+        },
+        "unlockedChallengeLevel": {
+          "type": "integer",
+          "description": "Highest unlocked Challenge level number (1..50)."
+        },
+        "totalGamesPlayed": {
+          "type": "integer",
+          "description": "Total games started."
+        },
+        "totalLinesCleared": {
+          "type": "integer",
+          "description": "Lifetime lines cleared."
+        },
+        "totalCascadesTriggered": {
+          "type": "integer",
+          "description": "Lifetime multi-wave cascades triggered."
+        },
+        "maxCascadeDepth": {
+          "type": "integer",
+          "description": "Deepest cascade wave achieved."
+        },
+        "totalBlocksPlaced": {
+          "type": "integer",
+          "description": "Lifetime blocks placed."
+        },
+        "fullBoardClears": {
+          "type": "integer",
+          "description": "Lifetime full board clears."
+        },
+        "blockStyleId": {
+          "type": "string",
+          "enum": ["modern", "retro", "neon"],
+          "description": "Active BlockStyle ID."
+        },
+        "boardPaletteId": {
+          "type": "string",
+          "enum": ["deep_ocean", "midnight", "emerald_grove", "sunset"],
+          "description": "Active BoardColorPalette ID."
+        },
+        "soundEnabled": {
+          "type": "boolean"
+        },
+        "musicEnabled": {
+          "type": "boolean"
+        },
+        "hapticsEnabled": {
+          "type": "boolean"
+        },
+        "visualEffectsEnabled": {
+          "type": "boolean"
+        },
+        "placementPreviewEnabled": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp written via FieldValue.serverTimestamp()."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp written via FieldValue.serverTimestamp()."
+        }
+      },
+      "required": [
+        "userId",
+        "displayName",
+        "classicBestScore",
+        "unlockedChallengeLevel",
+        "totalGamesPlayed",
+        "totalLinesCleared",
+        "totalCascadesTriggered",
+        "maxCascadeDepth",
+        "totalBlocksPlaced",
+        "fullBoardClears",
+        "blockStyleId",
+        "boardPaletteId",
+        "soundEnabled",
+        "musicEnabled",
+        "hapticsEnabled",
+        "visualEffectsEnabled",
+        "placementPreviewEnabled",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "ChallengeProgressDoc": {
+      "title": "ChallengeProgressDoc",
+      "description": "Per-level Challenge mode stars and best score.",
+      "type": "object",
+      "properties": {
+        "levelNumber": {
+          "type": "integer"
+        },
+        "bestScore": {
+          "type": "integer"
+        },
+        "stars": {
+          "type": "integer"
+        },
+        "completed": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp written via FieldValue.serverTimestamp()."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp written via FieldValue.serverTimestamp()."
+        }
+      },
+      "required": [
+        "levelNumber",
+        "bestScore",
+        "stars",
+        "completed",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "IntegrityAttestationDoc": {
+      "title": "IntegrityAttestationDoc",
+      "description": "Client Play Integrity attestation submission awaiting server-side Google Play Integrity API verification.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string"
+        },
+        "nonce": {
+          "type": "string"
+        },
+        "tokenLength": {
+          "type": "integer"
+        },
+        "tokenDigest": {
+          "type": "string"
+        },
+        "appVersionCode": {
+          "type": "integer"
+        },
+        "verificationStatus": {
+          "type": "string",
+          "enum": [
+            "PENDING_SERVER_VERIFICATION",
+            "LOCAL_UNAVAILABLE",
+            "VERIFIED_SERVER",
+            "REJECTED_SERVER"
+          ]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp written via FieldValue.serverTimestamp()."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp written via FieldValue.serverTimestamp()."
+        }
+      },
+      "required": [
+        "userId",
+        "nonce",
+        "tokenLength",
+        "tokenDigest",
+        "appVersionCode",
+        "verificationStatus",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "LeaderboardEntry": {
+      "title": "LeaderboardEntry",
+      "description": "Non-PII public leaderboard entry keyed by userId.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string"
+        },
+        "displayName": {
+          "type": "string"
+        },
+        "visibility": {
+          "type": "string",
+          "enum": ["public"]
+        },
+        "classicBestScore": {
+          "type": "integer"
+        },
+        "maxCascadeDepth": {
+          "type": "integer"
+        },
+        "rankTitle": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp written via FieldValue.serverTimestamp()."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp written via FieldValue.serverTimestamp()."
+        }
+      },
+      "required": [
+        "userId",
+        "displayName",
+        "visibility",
+        "classicBestScore",
+        "maxCascadeDepth",
+        "rankTitle",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserCloudProfile" },
+      "description": "Authenticated user progression, stats, and settings."
+    },
+    "/users/{userId}/challengeProgress/{levelId}": {
+      "schema": { "$ref": "#/entities/ChallengeProgressDoc" },
+      "description": "Authenticated user per-level Challenge completion state."
+    },
+    "/users/{userId}/integrityAttestations/{attestationId}": {
+      "schema": { "$ref": "#/entities/IntegrityAttestationDoc" },
+      "description": "Play Integrity token submissions pending server verification."
+    },
+    "/leaderboard/{entryId}": {
+      "schema": { "$ref": "#/entities/LeaderboardEntry" },
+      "description": "Public Classic high-score leaderboard entries without PII."
+    }
+  }
+}

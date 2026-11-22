@@ -25,6 +25,23 @@
     @androidx.annotation.Keep <init>(...);
 }
 
+# kotlinx.serialization (required for type-safe @Serializable Navigation Compose routes)
+-keepattributes *Annotation*,InnerClasses
+-dontnote kotlinx.serialization.AnnotationsKt
+-keepclassmembers class kotlinx.serialization.json.** {
+    *** Companion;
+}
+-keepclasseswithmembers class kotlinx.serialization.json.** {
+    kotlinx.serialization.KSerializer serializer(...);
+}
+-keep,includedescriptorclasses class com.example.ui.navigation.**$$serializer { *; }
+-keepclassmembers class com.example.ui.navigation.** {
+    *** Companion;
+}
+-keepclasseswithmembers class com.example.ui.navigation.** {
+    kotlinx.serialization.KSerializer serializer(...);
+}
+
 # Jetpack DataStore & Preferences serialization safety
 -keepclassmembers class * extends androidx.datastore.preferences.protobuf.GeneratedMessageLite {
     <fields>;
@@ -34,3 +51,10 @@
 -keepnames class kotlinx.coroutines.internal.MainDispatcherFactory {}
 -keepnames class kotlinx.coroutines.CoroutineExceptionHandler {}
 -dontwarn kotlinx.coroutines.**
+
+# Firebase Firestore custom class mapping & Play Integrity safety
+-keepclassmembers class com.example.data.cloud.** { *; }
+-keepnames class com.example.data.cloud.**
+-keepattributes Signature,RuntimeVisibleAnnotations,AnnotationDefault
+-dontwarn org.codehaus.mojo.animal_sniffer.IgnoreJRERequirement
+

@@ -7,35 +7,33 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.audio.SoundManager
 import com.example.data.GameRepository
+import com.example.game.AchievementEvaluator
 import com.example.game.BlockColor
 import com.example.game.BlockStyle
 import com.example.game.Board
 import com.example.game.BoardColorPalette
-import com.example.game.CascadeResolver
 import com.example.game.ChallengeLevel
 import com.example.game.ChallengeLevelProgress
 import com.example.game.ChallengeLevels
 import com.example.game.FallingBlockMove
 import com.example.game.GameMode
 import com.example.game.GamePiece
+import com.example.game.GameSessionEngine
 import com.example.game.GameSettings
 import com.example.game.GameStatistics
 import com.example.game.GameStatus
 import com.example.game.GridCoord
-import com.example.game.LineClearEngine
 import com.example.game.PieceGenerator
-import com.example.game.PlacementValidator
+import com.example.game.PlayerRankCalculator
+import com.example.game.PlayerRankInfo
 import com.example.game.SavedClassicGame
-import com.example.game.ScoringEngine
 import com.example.game.TraySlot
-import kotlinx.coroutines.delay
+import com.example.game.TurnExecutionResult
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlin.math.pow
-import kotlin.math.roundToInt
 import kotlin.random.Random
 
 sealed interface BoardVisualPhase {
@@ -110,6 +108,12 @@ data class GameUiState(
     val settings: GameSettings = GameSettings(),
     val statistics: GameStatistics = GameStatistics(),
     val challengeProgress: Map<Int, ChallengeLevelProgress> = emptyMap(),
+    val unlockedAchievements: Set<String> = emptySet(),
+    val playerRank: PlayerRankInfo = PlayerRankCalculator.compute(
+        GameStatistics(),
+        emptyMap(),
+        emptySet()
+    ),
     val lastChallengeStarsEarned: Int = 0,
     val savedClassicSummary: SavedClassicGame? = null,
     val visualPhase: BoardVisualPhase = BoardVisualPhase.Idle,
@@ -133,24 +137,18 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository = GameRepository(application.applicationContext)
     private val pieceGenerator = PieceGenerator(Random.Default)
+    private val sessionEngine = GameSessionEngine(pieceGenerator)
+    private val dragController = DragController()
     val soundManager = SoundManager(application.applicationContext)
+    private val animationRunner = CascadeAnimationRunner(soundManager)
 
     private var nextIdCounter: Long = 100L
-    private var bannerCounter: Long = 1L
-    private var particleCounter: Long = 1L
 
     private val _uiState = MutableStateFlow(GameUiState())
     val uiState: StateFlow<GameUiState> = _uiState.asStateFlow()
 
     private val _visualPhase = MutableStateFlow<BoardVisualPhase>(BoardVisualPhase.Idle)
     val visualPhase: StateFlow<BoardVisualPhase> = _visualPhase.asStateFlow()
-
-    private var boardBoundsInRoot: Rect = Rect.Zero
-    private var dragLiftPx: Float = 176f
-    private var lastDragPredictionKey: Triple<Long, Board, GridCoord>? = null
-    private var lastDragPredictionValid: Boolean = false
-    private var lastDragPredictionRows: List<Int> = emptyList()
-    private var lastDragPredictionCols: List<Int> = emptyList()
 
     init {
         viewModelScope.launch {
@@ -159,7 +157,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             soundManager.musicEnabled = saved.settings.musicEnabled
 
             val restored = saved.savedClassicGame
-            val validSaved = if (restored != null && !isClassicGameOver(restored.board, restored.trayPieces)) {
+            val validSaved = if (restored != null && !GameSessionEngine.isClassicGameOver(restored.board, restored.trayPieces)) {
                 restored
             } else {
                 null
@@ -167,6 +165,10 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
             if (validSaved != null) {
                 nextIdCounter = validSaved.nextIdCounter.coerceAtLeast(100L)
+                val mergedStats = saved.statistics.copy(
+                    classicBestScore = maxOf(saved.classicBestScore, validSaved.score)
+                )
+                val (achievements, rank) = computeProgression(mergedStats, saved.challengeProgress)
                 _uiState.update {
                     it.copy(
                         mode = GameMode.CLASSIC,
@@ -181,8 +183,10 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                         unlockedChallengeLevel = saved.unlockedChallengeLevel,
                         hapticsEnabled = saved.settings.hapticsEnabled,
                         settings = saved.settings,
-                        statistics = saved.statistics.copy(classicBestScore = maxOf(saved.classicBestScore, validSaved.score)),
+                        statistics = mergedStats,
                         challengeProgress = saved.challengeProgress,
+                        unlockedAchievements = achievements,
+                        playerRank = rank,
                         savedClassicSummary = validSaved
                     )
                 }
@@ -190,6 +194,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 val emptyBoard = Board.empty()
                 val (trayPieces, updatedId) = pieceGenerator.generateTray(emptyBoard, nextIdCounter)
                 nextIdCounter = updatedId
+                val (achievements, rank) = computeProgression(saved.statistics, saved.challengeProgress)
                 _uiState.update {
                     it.copy(
                         mode = GameMode.CLASSIC,
@@ -202,6 +207,8 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                         settings = saved.settings,
                         statistics = saved.statistics,
                         challengeProgress = saved.challengeProgress,
+                        unlockedAchievements = achievements,
+                        playerRank = rank,
                         savedClassicSummary = null
                     )
                 }
@@ -218,8 +225,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun updateBoardBounds(rect: Rect, liftPx: Float) {
-        boardBoundsInRoot = rect
-        dragLiftPx = liftPx
+        dragController.updateBoardBounds(rect, liftPx)
     }
 
     fun startNewClassicGame(countAsNewGame: Boolean = true) {
@@ -262,7 +268,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     fun continueSavedClassicGame(): Boolean {
         val snapshot = _uiState.value.savedClassicSummary
-        if (snapshot != null && !isClassicGameOver(snapshot.board, snapshot.trayPieces)) {
+        if (snapshot != null && !GameSessionEngine.isClassicGameOver(snapshot.board, snapshot.trayPieces)) {
             nextIdCounter = snapshot.nextIdCounter.coerceAtLeast(nextIdCounter)
             _visualPhase.value = BoardVisualPhase.Idle
             _uiState.update {
@@ -335,7 +341,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             GameMode.CLASSIC -> {
                 viewModelScope.launch {
                     val saved = repository.loadInitialProgress().savedClassicGame
-                    if (saved != null && !isClassicGameOver(saved.board, saved.trayPieces)) {
+                    if (saved != null && !GameSessionEngine.isClassicGameOver(saved.board, saved.trayPieces)) {
                         nextIdCounter = saved.nextIdCounter.coerceAtLeast(nextIdCounter)
                         _visualPhase.value = BoardVisualPhase.Idle
                         _uiState.update {
@@ -360,9 +366,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                     }
                 }
             }
-            GameMode.CHALLENGE -> {
-                startChallengeLevel(_uiState.value.unlockedChallengeLevel)
-            }
+            GameMode.CHALLENGE -> startChallengeLevel(_uiState.value.unlockedChallengeLevel)
         }
     }
 
@@ -440,12 +444,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun updateSettings(transform: (GameSettings) -> GameSettings) {
         val updated = transform(_uiState.value.settings)
-        _uiState.update {
-            it.copy(
-                hapticsEnabled = updated.hapticsEnabled,
-                settings = updated
-            )
-        }
+        _uiState.update { it.copy(hapticsEnabled = updated.hapticsEnabled, settings = updated) }
         viewModelScope.launch { repository.updateSettings(updated) }
     }
 
@@ -456,6 +455,8 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             val (trayPieces, updatedId) = pieceGenerator.generateTray(emptyBoard, nextIdCounter)
             nextIdCounter = updatedId
             _visualPhase.value = BoardVisualPhase.Idle
+            val emptyStats = GameStatistics()
+            val (achievements, rank) = computeProgression(emptyStats, emptyMap())
             _uiState.update {
                 it.copy(
                     mode = GameMode.CLASSIC,
@@ -473,8 +474,10 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                     bestCascadeDepth = 0,
                     currentChallengeLevel = ChallengeLevels.getLevel(1),
                     unlockedChallengeLevel = 1,
-                    statistics = GameStatistics(),
+                    statistics = emptyStats,
                     challengeProgress = emptyMap(),
+                    unlockedAchievements = achievements,
+                    playerRank = rank,
                     lastChallengeStarsEarned = 0,
                     savedClassicSummary = null,
                     visualPhase = BoardVisualPhase.Idle,
@@ -489,8 +492,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     fun selectTraySlot(slotIndex: Int) {
         val state = _uiState.value
         if (state.status != GameStatus.PLAYING) return
-        val slot = state.traySlots.getOrNull(slotIndex) ?: return
-        if (slot.piece == null) return
+        if (state.traySlots.getOrNull(slotIndex)?.piece == null) return
         _uiState.update {
             val nextSelection = if (it.selectedSlotIndex == slotIndex) null else slotIndex
             it.copy(selectedSlotIndex = nextSelection, tapHoverAnchor = null)
@@ -502,20 +504,8 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         if (state.status != GameStatus.PLAYING) return
         val slotIdx = state.selectedSlotIndex ?: return
         val piece = state.traySlots.getOrNull(slotIdx)?.piece ?: return
-
-        // Lift placement above the touched row so the user's finger does not obscure the piece
-        val liftRows = 2
-        val maxAnchorRow = (Board.SIZE - piece.shape.heightCells).coerceAtLeast(0)
-        val maxAnchorCol = (Board.SIZE - piece.shape.widthCells).coerceAtLeast(0)
-        val liftedBottomRow = (row - liftRows).coerceAtLeast(piece.shape.heightCells - 1)
-        val anchorRow = (liftedBottomRow - (piece.shape.heightCells - 1)).coerceIn(0, maxAnchorRow)
-        val anchorCol = (col - piece.shape.widthCells / 2).coerceIn(0, maxAnchorCol)
-
-        if (PlacementValidator.canPlace(state.board, piece, anchorRow, anchorCol)) {
-            placePiece(slotIdx, anchorRow, anchorCol)
-        } else if (PlacementValidator.canPlace(state.board, piece, row, col)) {
-            placePiece(slotIdx, row, col)
-        }
+        val anchor = dragController.computeTapPlacementAnchor(state.board, piece, row, col) ?: return
+        placePiece(slotIdx, anchor.row, anchor.col)
     }
 
     fun startBoardTouch(localOffset: Offset) {
@@ -523,16 +513,10 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         if (state.status != GameStatus.PLAYING) return
         val slotIdx = state.selectedSlotIndex ?: return
         val piece = state.traySlots.getOrNull(slotIdx)?.piece ?: return
-        val pointerRootOffset = boardBoundsInRoot.topLeft + localOffset
+        val rootOffset = dragController.rootOffsetForLocalBoardTouch(localOffset)
         _uiState.update {
             it.copy(
-                dragState = computeDragState(
-                    board = state.board,
-                    slotIndex = slotIdx,
-                    piece = piece,
-                    pointerRootOffset = pointerRootOffset,
-                    clampToBoard = true
-                )
+                dragState = dragController.computeDragState(state.board, slotIdx, piece, rootOffset, clampToBoard = true)
             )
         }
     }
@@ -541,15 +525,11 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         val state = _uiState.value
         val activeDrag = state.dragState ?: return
         if (state.status != GameStatus.PLAYING) return
-        val pointerRootOffset = boardBoundsInRoot.topLeft + localOffset
+        val rootOffset = dragController.rootOffsetForLocalBoardTouch(localOffset)
         _uiState.update {
             it.copy(
-                dragState = computeDragState(
-                    board = state.board,
-                    slotIndex = activeDrag.slotIndex,
-                    piece = activeDrag.piece,
-                    pointerRootOffset = pointerRootOffset,
-                    clampToBoard = true
+                dragState = dragController.computeDragState(
+                    state.board, activeDrag.slotIndex, activeDrag.piece, rootOffset, clampToBoard = true
                 )
             )
         }
@@ -562,7 +542,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update {
             it.copy(
                 selectedSlotIndex = slotIndex,
-                dragState = computeDragState(state.board, slotIndex, piece, pointerRootOffset)
+                dragState = dragController.computeDragState(state.board, slotIndex, piece, pointerRootOffset)
             )
         }
     }
@@ -573,11 +553,8 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         if (state.status != GameStatus.PLAYING) return
         _uiState.update {
             it.copy(
-                dragState = computeDragState(
-                    board = state.board,
-                    slotIndex = activeDrag.slotIndex,
-                    piece = activeDrag.piece,
-                    pointerRootOffset = pointerRootOffset
+                dragState = dragController.computeDragState(
+                    state.board, activeDrag.slotIndex, activeDrag.piece, pointerRootOffset
                 )
             )
         }
@@ -598,122 +575,27 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update { it.copy(dragState = null) }
     }
 
-    private fun computeDragState(
-        board: Board,
-        slotIndex: Int,
-        piece: GamePiece,
-        pointerRootOffset: Offset,
-        clampToBoard: Boolean = false
-    ): DragState {
-        if (boardBoundsInRoot.width <= 1f || boardBoundsInRoot.height <= 1f) {
-            return DragState(
-                slotIndex = slotIndex,
-                piece = piece,
-                pointerRootOffset = pointerRootOffset,
-                hoverAnchor = null,
-                isHoverValid = false,
-                predictedClearRows = emptyList(),
-                predictedClearCols = emptyList()
-            )
-        }
-
-        val cellSize = boardBoundsInRoot.width / Board.SIZE.toFloat()
-        val pieceW = piece.shape.widthCells * cellSize
-        val pieceH = piece.shape.heightCells * cellSize
-
-        // Keep the bottom edge of the dragged/touched piece lifted comfortably above the finger
-        val topLeftX = pointerRootOffset.x - pieceW / 2f
-        val topLeftY = pointerRootOffset.y - dragLiftPx - pieceH
-
-        val rawCol = ((topLeftX - boardBoundsInRoot.left) / cellSize).roundToInt()
-        val rawRow = ((topLeftY - boardBoundsInRoot.top) / cellSize).roundToInt()
-
-        if (!clampToBoard) {
-            val nearBoard = topLeftX >= boardBoundsInRoot.left - cellSize * 1.1f &&
-                topLeftX <= boardBoundsInRoot.right + cellSize * 0.4f &&
-                topLeftY >= boardBoundsInRoot.top - cellSize * 1.1f &&
-                topLeftY <= boardBoundsInRoot.bottom + cellSize * 0.4f
-
-            if (!nearBoard) {
-                return DragState(
-                    slotIndex = slotIndex,
-                    piece = piece,
-                    pointerRootOffset = pointerRootOffset,
-                    hoverAnchor = null,
-                    isHoverValid = false,
-                    predictedClearRows = emptyList(),
-                    predictedClearCols = emptyList()
-                )
-            }
-        }
-
-        val anchor = if (clampToBoard) {
-            val maxRow = (Board.SIZE - piece.shape.heightCells).coerceAtLeast(0)
-            val maxCol = (Board.SIZE - piece.shape.widthCells).coerceAtLeast(0)
-            GridCoord(rawRow.coerceIn(0, maxRow), rawCol.coerceIn(0, maxCol))
-        } else {
-            GridCoord(rawRow, rawCol)
-        }
-        val cacheKey = Triple(piece.instanceId, board, anchor)
-        val valid: Boolean
-        val predRows: List<Int>
-        val predCols: List<Int>
-        if (lastDragPredictionKey == cacheKey) {
-            valid = lastDragPredictionValid
-            predRows = lastDragPredictionRows
-            predCols = lastDragPredictionCols
-        } else {
-            valid = PlacementValidator.canPlace(board, piece, anchor.row, anchor.col)
-            if (valid) {
-                val fullLines = LineClearEngine.findPredictedFullLines(board, piece, anchor.row, anchor.col)
-                predRows = fullLines.fullRows
-                predCols = fullLines.fullCols
-            } else {
-                predRows = emptyList()
-                predCols = emptyList()
-            }
-            lastDragPredictionKey = cacheKey
-            lastDragPredictionValid = valid
-            lastDragPredictionRows = predRows
-            lastDragPredictionCols = predCols
-        }
-
-        return DragState(
-            slotIndex = slotIndex,
-            piece = piece,
-            pointerRootOffset = pointerRootOffset,
-            hoverAnchor = anchor,
-            isHoverValid = valid,
-            predictedClearRows = predRows,
-            predictedClearCols = predCols
-        )
-    }
-
     fun placePiece(slotIndex: Int, anchorRow: Int, anchorCol: Int) {
         val state = _uiState.value
         if (state.status != GameStatus.PLAYING) return
-        val piece = state.traySlots.getOrNull(slotIndex)?.piece ?: return
 
-        val placement = PlacementValidator.placePiece(
+        val turn = sessionEngine.executeTurn(
             board = state.board,
-            piece = piece,
+            traySlots = state.traySlots,
+            slotIndex = slotIndex,
             anchorRow = anchorRow,
             anchorCol = anchorCol,
+            currentScore = state.score,
+            movesPlayed = state.movesPlayed,
+            mode = state.mode,
+            challengeLevel = state.currentChallengeLevel,
             startingBlockId = nextIdCounter
         ) ?: return
-        nextIdCounter = placement.nextBlockId
+        nextIdCounter = turn.nextBlockIdCounter
 
         soundManager.playBlockDrop()
 
-        val placementPoints = ScoringEngine.scorePlacement(piece.shape.cellCount)
-        val updatedTray = state.traySlots.map { slot ->
-            if (slot.index == slotIndex) slot.copy(piece = null) else slot
-        }
-
-        val resolution = CascadeResolver.resolve(placement.board)
-        val nextMovesPlayed = state.movesPlayed + 1
-        val initialScore = state.score + placementPoints
-
+        val initialScore = turn.scoreAfterPlacement
         val newClassicBest = if (state.mode == GameMode.CLASSIC && initialScore > state.classicBestScore) {
             initialScore
         } else {
@@ -724,286 +606,85 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
         _uiState.update {
             it.copy(
-                board = placement.board,
-                traySlots = updatedTray,
+                board = turn.placement.board,
+                traySlots = turn.updatedTray,
                 selectedSlotIndex = null,
                 tapHoverAnchor = null,
                 dragState = null,
                 score = initialScore,
                 classicBestScore = newClassicBest,
                 isNewBest = becameNewBest,
-                movesPlayed = nextMovesPlayed,
+                movesPlayed = turn.nextMovesPlayed,
                 currentCascadeWave = 0,
-                status = if (resolution.hasClears) GameStatus.RESOLVING_CASCADE else it.status
+                status = if (turn.resolution.hasClears) GameStatus.RESOLVING_CASCADE else it.status
             )
         }
 
-        if (!resolution.hasClears) {
-            finalizeTurn(
-                finalBoard = placement.board,
-                trayAfterPlacement = updatedTray,
-                scoreAfterTurn = initialScore,
-                movesPlayed = nextMovesPlayed,
-                blocksPlaced = piece.shape.cellCount,
-                linesAdded = 0,
-                maxDepthInTurn = 0
-            )
+        val blocksPlaced = turn.placement.placedCoords.size
+        if (!turn.resolution.hasClears) {
+            applyTurnFinalization(turn, blocksPlaced)
         } else {
             viewModelScope.launch {
-                runCascadeAnimation(
-                    resolution = resolution,
+                animationRunner.runCascade(
+                    resolution = turn.resolution,
                     startingScore = initialScore,
-                    trayAfterPlacement = updatedTray,
-                    movesPlayed = nextMovesPlayed,
-                    blocksPlaced = piece.shape.cellCount
-                )
-            }
-        }
-    }
-
-    private suspend fun runCascadeAnimation(
-        resolution: com.example.game.CascadeResolution,
-        startingScore: Int,
-        trayAfterPlacement: List<TraySlot>,
-        movesPlayed: Int,
-        blocksPlaced: Int
-    ) {
-        var runningScore = startingScore
-        var totalLinesInTurn = 0
-
-        for (wave in resolution.waves) {
-            val waveLines = wave.clearedRows.size + wave.clearedCols.size
-            totalLinesInTurn += waveLines
-
-            if (wave.waveIndex >= 2) {
-                soundManager.playComboComplete(comboDepth = wave.waveIndex)
-            } else {
-                soundManager.playLineClear(linesCleared = waveLines)
-            }
-
-            val banner = buildBannerForWave(
-                waveIndex = wave.waveIndex,
-                linesCount = waveLines,
-                points = wave.scoreBreakdown.totalPoints,
-                isFullClear = wave.isFullClear
-            )
-
-            val showParticles = _uiState.value.settings.visualEffectsEnabled
-            val clearParticles = if (showParticles) {
-                wave.clearedCoords.mapNotNull { coord ->
-                    val color = wave.boardBeforeClear.get(coord.row, coord.col)?.color ?: return@mapNotNull null
-                    ParticleBurst(
-                        id = particleCounter++,
-                        row = coord.row + 0.5f,
-                        col = coord.col + 0.5f,
-                        color = color,
-                        isLandingDust = false
-                    )
-                }
-            } else {
-                emptyList()
-            }
-
-            _uiState.update {
-                it.copy(
-                    currentCascadeWave = wave.waveIndex,
-                    bestCascadeDepth = maxOf(it.bestCascadeDepth, wave.waveIndex),
-                    floatingBanner = banner,
-                    particleTriggerId = if (showParticles) particleCounter++ else it.particleTriggerId,
-                    latestParticles = clearParticles
-                )
-            }
-
-            animateStep(durationMs = 210L) { progress ->
-                _visualPhase.value = BoardVisualPhase.ClearingLines(
-                    boardBeforeClear = wave.boardBeforeClear,
-                    clearedCoords = wave.clearedCoords,
-                    clearedRows = wave.clearedRows,
-                    clearedCols = wave.clearedCols,
-                    waveIndex = wave.waveIndex,
-                    progress = progress
-                )
-            }
-
-            runningScore += wave.scoreBreakdown.totalPoints
-            _uiState.update { state ->
-                val updatedBest = if (state.mode == GameMode.CLASSIC && runningScore > state.classicBestScore) {
-                    runningScore
-                } else {
-                    state.classicBestScore
-                }
-                val newBestFlag = state.mode == GameMode.CLASSIC &&
-                    (state.isNewBest || runningScore > state.classicBestScore)
-                state.copy(
-                    board = wave.boardAfterClear,
-                    score = runningScore,
-                    classicBestScore = updatedBest,
-                    isNewBest = newBestFlag,
-                    totalLinesCleared = state.totalLinesCleared + waveLines
-                )
-            }
-
-            if (wave.movements.isNotEmpty()) {
-                val maxDist = wave.movements.maxOf { it.distance }
-                val fallDuration = (190L + maxDist * 30L).coerceAtMost(360L)
-                animateStep(durationMs = fallDuration) { linear ->
-                    val gravityEase = linear.pow(1.45f).coerceIn(0f, 1f)
-                    _visualPhase.value = BoardVisualPhase.FallingGravity(
-                        boardAfterClear = wave.boardAfterClear,
-                        movements = wave.movements,
-                        waveIndex = wave.waveIndex,
-                        progress = gravityEase
-                    )
-                }
-
-                val landedCoords = wave.movements.map { GridCoord(it.toRow, it.col) }.toSet()
-                val dustParticles = if (_uiState.value.settings.visualEffectsEnabled) {
-                    wave.movements.map { move ->
-                        ParticleBurst(
-                            id = particleCounter++,
-                            row = move.toRow + 0.92f,
-                            col = move.col + 0.5f,
-                            color = move.cell.color,
-                            isLandingDust = true
-                        )
+                    visualEffectsEnabled = _uiState.value.settings.visualEffectsEnabled,
+                    onVisualPhase = { phase -> _visualPhase.value = phase },
+                    onWaveStarted = { waveIndex, banner, particleTrigger, particles ->
+                        _uiState.update {
+                            it.copy(
+                                currentCascadeWave = waveIndex,
+                                bestCascadeDepth = maxOf(it.bestCascadeDepth, waveIndex),
+                                floatingBanner = banner,
+                                particleTriggerId = particleTrigger ?: it.particleTriggerId,
+                                latestParticles = particles
+                            )
+                        }
+                    },
+                    onWaveCleared = { boardAfterClear, runningScore, waveLines ->
+                        _uiState.update { s ->
+                            val updatedBest = if (s.mode == GameMode.CLASSIC && runningScore > s.classicBestScore) {
+                                runningScore
+                            } else {
+                                s.classicBestScore
+                            }
+                            s.copy(
+                                board = boardAfterClear,
+                                score = runningScore,
+                                classicBestScore = updatedBest,
+                                isNewBest = s.mode == GameMode.CLASSIC && (s.isNewBest || runningScore > s.classicBestScore),
+                                totalLinesCleared = s.totalLinesCleared + waveLines
+                            )
+                        }
+                    },
+                    onGravityLanded = { boardAfterGravity, particleTrigger, dustParticles ->
+                        _uiState.update {
+                            it.copy(
+                                board = boardAfterGravity,
+                                particleTriggerId = particleTrigger ?: it.particleTriggerId,
+                                latestParticles = dustParticles
+                            )
+                        }
                     }
-                } else {
-                    emptyList()
-                }
+                )
 
-                _uiState.update {
-                    it.copy(
-                        board = wave.boardAfterGravity,
-                        particleTriggerId = if (dustParticles.isNotEmpty()) particleCounter++ else it.particleTriggerId,
-                        latestParticles = dustParticles
-                    )
-                }
-                soundManager.playBlockDrop(volume = 0.5f, rate = 0.88f)
+                val lastBannerId = _uiState.value.floatingBanner?.id
+                applyTurnFinalization(turn, blocksPlaced)
 
-                animateStep(durationMs = 95L) { progress ->
-                    _visualPhase.value = BoardVisualPhase.LandingSettled(
-                        board = wave.boardAfterGravity,
-                        landedCoords = landedCoords,
-                        progress = progress
-                    )
-                }
-            } else {
-                _uiState.update { it.copy(board = wave.boardAfterGravity) }
-                delay(60L)
-            }
-        }
-
-        _visualPhase.value = BoardVisualPhase.Idle
-        _uiState.update {
-            it.copy(
-                board = resolution.finalBoard,
-                visualPhase = BoardVisualPhase.Idle,
-                currentCascadeWave = 0
-            )
-        }
-
-        if (resolution.maxCascadeDepth >= 2) {
-            soundManager.playComboComplete(comboDepth = resolution.maxCascadeDepth)
-        }
-
-        val lastBannerId = resolution.waves.lastOrNull()?.let { _uiState.value.floatingBanner?.id }
-
-        finalizeTurn(
-            finalBoard = resolution.finalBoard,
-            trayAfterPlacement = trayAfterPlacement,
-            scoreAfterTurn = runningScore,
-            movesPlayed = movesPlayed,
-            blocksPlaced = blocksPlaced,
-            linesAdded = totalLinesInTurn,
-            maxDepthInTurn = resolution.maxCascadeDepth
-        )
-
-        if (lastBannerId != null) {
-            delay(1100L)
-            _uiState.update { current ->
-                if (current.floatingBanner?.id == lastBannerId) {
-                    current.copy(floatingBanner = null)
-                } else {
-                    current
+                if (lastBannerId != null) {
+                    animationRunner.scheduleBannerDismiss(lastBannerId) { id ->
+                        _uiState.update { cur ->
+                            if (cur.floatingBanner?.id == id) cur.copy(floatingBanner = null) else cur
+                        }
+                    }
                 }
             }
         }
     }
 
-    private suspend fun animateStep(durationMs: Long, onFrame: (Float) -> Unit) {
-        val frameMs = 16L
-        val steps = (durationMs / frameMs).coerceAtLeast(1L).toInt()
-        for (step in 0..steps) {
-            val progress = (step.toFloat() / steps.toFloat()).coerceIn(0f, 1f)
-            onFrame(progress)
-            if (step < steps) delay(frameMs)
-        }
-    }
-
-    private fun buildBannerForWave(
-        waveIndex: Int,
-        linesCount: Int,
-        points: Int,
-        isFullClear: Boolean
-    ): FloatingBanner {
-        val headline = when {
-            isFullClear -> "BOARD CLEARED!"
-            waveIndex >= 3 -> "MEGA CASCADE x$waveIndex!"
-            waveIndex == 2 -> "GRAVITY CHAIN x2!"
-            linesCount >= 3 -> "TRIPLE CLEAR!"
-            linesCount == 2 -> "DOUBLE CLEAR!"
-            else -> "LINE CLEAR"
-        }
-        val subline = when {
-            waveIndex >= 2 -> "$linesCount ${if (linesCount == 1) "line" else "lines"} chained by gravity"
-            linesCount >= 2 -> "$linesCount lines cleared simultaneously"
-            else -> null
-        }
-        return FloatingBanner(
-            id = bannerCounter++,
-            headline = headline,
-            subline = subline,
-            pointsText = "+$points",
-            isChain = waveIndex >= 2 || isFullClear
-        )
-    }
-
-    private fun finalizeTurn(
-        finalBoard: Board,
-        trayAfterPlacement: List<TraySlot>,
-        scoreAfterTurn: Int,
-        movesPlayed: Int,
-        blocksPlaced: Int,
-        linesAdded: Int,
-        maxDepthInTurn: Int
-    ) {
-        val remainingPieces = trayAfterPlacement.mapNotNull { it.piece }
-        val nextTraySlots = if (remainingPieces.isEmpty()) {
-            val (refilled, updatedId) = pieceGenerator.generateTray(finalBoard, nextIdCounter)
-            nextIdCounter = updatedId
-            refilled.mapIndexed { idx, p -> TraySlot(idx, p) }
-        } else {
-            trayAfterPlacement
-        }
-
-        val activePieces = nextTraySlots.mapNotNull { it.piece }
-        val hasMove = PlacementValidator.hasAnyValidMove(finalBoard, activePieces)
+    private fun applyTurnFinalization(turn: TurnExecutionResult, blocksPlaced: Int) {
         val state = _uiState.value
-
-        val nextStatus = when (state.mode) {
-            GameMode.CLASSIC -> {
-                if (hasMove) GameStatus.PLAYING else GameStatus.GAME_OVER
-            }
-            GameMode.CHALLENGE -> {
-                val targetReached = scoreAfterTurn >= state.currentChallengeLevel.targetScore
-                val outOfMoves = movesPlayed >= state.currentChallengeLevel.moveLimit
-                when {
-                    targetReached -> GameStatus.CHALLENGE_WON
-                    outOfMoves || !hasMove -> GameStatus.CHALLENGE_LOST
-                    else -> GameStatus.PLAYING
-                }
-            }
-        }
+        val nextStatus = turn.nextStatus
 
         if (nextStatus == GameStatus.CHALLENGE_WON) {
             soundManager.playLevelComplete()
@@ -1012,8 +693,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         val nextUnlockedLevel = if (
-            state.mode == GameMode.CHALLENGE &&
-            nextStatus == GameStatus.CHALLENGE_WON
+            state.mode == GameMode.CHALLENGE && nextStatus == GameStatus.CHALLENGE_WON
         ) {
             maxOf(
                 state.unlockedChallengeLevel,
@@ -1023,36 +703,29 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             state.unlockedChallengeLevel
         }
 
-        val earnedStars = if (state.mode == GameMode.CHALLENGE && nextStatus == GameStatus.CHALLENGE_WON) {
-            calculateChallengeStars(
-                score = scoreAfterTurn,
-                targetScore = state.currentChallengeLevel.targetScore,
-                movesRemaining = (state.currentChallengeLevel.moveLimit - movesPlayed).coerceAtLeast(0)
-            )
-        } else {
-            0
-        }
-
+        val maxDepthInTurn = turn.resolution.maxCascadeDepth
         val cascadesInTurn = if (maxDepthInTurn >= 2) 1 else 0
+        val fullClearAdded = if (turn.fullClearOccurred) 1 else 0
+
         val updatedChallengeMap = if (state.mode == GameMode.CHALLENGE && nextStatus == GameStatus.CHALLENGE_WON) {
             val lvlNum = state.currentChallengeLevel.levelNumber
             val prev = state.challengeProgress[lvlNum]
             state.challengeProgress + (
                 lvlNum to ChallengeLevelProgress(
                     levelNumber = lvlNum,
-                    bestScore = maxOf(prev?.bestScore ?: 0, scoreAfterTurn),
-                    stars = maxOf(prev?.stars ?: 0, earnedStars),
+                    bestScore = maxOf(prev?.bestScore ?: 0, turn.finalScore),
+                    stars = maxOf(prev?.stars ?: 0, turn.earnedChallengeStars),
                     completed = true
                 )
             )
         } else if (state.mode == GameMode.CHALLENGE && nextStatus == GameStatus.CHALLENGE_LOST) {
             val lvlNum = state.currentChallengeLevel.levelNumber
             val prev = state.challengeProgress[lvlNum]
-            if (scoreAfterTurn > (prev?.bestScore ?: 0)) {
+            if (turn.finalScore > (prev?.bestScore ?: 0)) {
                 state.challengeProgress + (
                     lvlNum to ChallengeLevelProgress(
                         levelNumber = lvlNum,
-                        bestScore = scoreAfterTurn,
+                        bestScore = turn.finalScore,
                         stars = prev?.stars ?: 0,
                         completed = prev?.completed == true
                     )
@@ -1066,59 +739,112 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
         val updatedStats = state.statistics.copy(
             totalBlocksPlaced = state.statistics.totalBlocksPlaced + blocksPlaced,
-            totalLinesCleared = state.statistics.totalLinesCleared + linesAdded,
+            totalLinesCleared = state.statistics.totalLinesCleared + turn.totalLinesInTurn,
             totalCascadesTriggered = state.statistics.totalCascadesTriggered + cascadesInTurn,
             maxCascadeDepth = maxOf(state.statistics.maxCascadeDepth, maxDepthInTurn),
+            fullBoardClears = state.statistics.fullBoardClears + fullClearAdded,
             classicBestScore = maxOf(
                 state.statistics.classicBestScore,
-                if (state.mode == GameMode.CLASSIC) scoreAfterTurn else 0
+                if (state.mode == GameMode.CLASSIC) turn.finalScore else 0
             )
         )
+        val (achievements, rank) = computeProgression(updatedStats, updatedChallengeMap, state.unlockedAchievements)
 
+        _visualPhase.value = BoardVisualPhase.Idle
         _uiState.update {
             it.copy(
-                board = finalBoard,
-                traySlots = nextTraySlots,
+                board = turn.resolution.finalBoard,
+                traySlots = turn.nextTraySlots,
                 status = nextStatus,
+                visualPhase = BoardVisualPhase.Idle,
+                currentCascadeWave = 0,
                 unlockedChallengeLevel = nextUnlockedLevel,
                 bestCascadeDepth = maxOf(it.bestCascadeDepth, maxDepthInTurn),
-                lastChallengeStarsEarned = earnedStars,
+                lastChallengeStarsEarned = turn.earnedChallengeStars,
                 challengeProgress = updatedChallengeMap,
-                statistics = updatedStats
+                statistics = updatedStats,
+                unlockedAchievements = achievements,
+                playerRank = rank
             )
         }
 
         viewModelScope.launch {
             repository.recordTurnStatistics(
                 blocksPlaced = blocksPlaced,
-                linesCleared = linesAdded,
+                linesCleared = turn.totalLinesInTurn,
                 cascadesTriggered = cascadesInTurn,
-                maxDepthInTurn = maxDepthInTurn
+                maxDepthInTurn = maxDepthInTurn,
+                fullClearAdded = fullClearAdded
             )
-
             if (state.mode == GameMode.CLASSIC) {
-                repository.updateClassicBestScore(scoreAfterTurn)
+                repository.updateClassicBestScore(turn.finalScore)
                 if (nextStatus == GameStatus.GAME_OVER) {
                     _uiState.update { it.copy(savedClassicSummary = null) }
                     repository.saveClassicGame(null)
                 } else {
                     persistClassicSnapshot()
                 }
-            } else if (nextStatus == GameStatus.CHALLENGE_WON) {
+            } else if (nextStatus == GameStatus.CHALLENGE_WON || nextStatus == GameStatus.CHALLENGE_LOST) {
                 repository.saveChallengeLevelResult(
                     levelNumber = state.currentChallengeLevel.levelNumber,
-                    score = scoreAfterTurn,
-                    stars = earnedStars,
-                    completed = true,
+                    score = turn.finalScore,
+                    stars = turn.earnedChallengeStars,
+                    completed = nextStatus == GameStatus.CHALLENGE_WON,
                     nextUnlockedLevel = nextUnlockedLevel
                 )
-            } else if (nextStatus == GameStatus.CHALLENGE_LOST) {
-                repository.saveChallengeLevelResult(
-                    levelNumber = state.currentChallengeLevel.levelNumber,
-                    score = scoreAfterTurn,
-                    stars = 0,
-                    completed = false,
-                    nextUnlockedLevel = nextUnlockedLevel
+            }
+        }
+    }
+
+    private fun computeProgression(
+        stats: GameStatistics,
+        challengeProgress: Map<Int, ChallengeLevelProgress>,
+        existing: Set<String> = emptySet()
+    ): Pair<Set<String>, PlayerRankInfo> {
+        val unlocked = AchievementEvaluator.evaluateUnlocked(existing, stats, challengeProgress)
+        val rank = PlayerRankCalculator.compute(stats, challengeProgress, unlocked)
+        return unlocked to rank
+    }
+
+    fun applyCloudMerge(
+        cloudProfile: com.example.data.cloud.UserCloudProfile?,
+        cloudChallenges: List<com.example.data.cloud.ChallengeProgressDoc>
+    ) {
+        if (cloudProfile == null && cloudChallenges.isEmpty()) return
+        viewModelScope.launch {
+            val challengeMap = cloudChallenges.associate { doc ->
+                val lvl = doc.levelNumber.toInt().coerceIn(1, 50)
+                lvl to ChallengeLevelProgress(
+                    levelNumber = lvl,
+                    bestScore = doc.bestScore.toInt().coerceAtLeast(0),
+                    stars = doc.stars.toInt().coerceIn(0, 3),
+                    completed = doc.completed
+                )
+            }
+            val merged = repository.mergeCloudProgress(
+                cloudBestScore = cloudProfile?.classicBestScore?.toInt() ?: 0,
+                cloudUnlockedLevel = cloudProfile?.unlockedChallengeLevel?.toInt() ?: 1,
+                cloudTotalGames = cloudProfile?.totalGamesPlayed?.toInt() ?: 0,
+                cloudTotalLines = cloudProfile?.totalLinesCleared?.toInt() ?: 0,
+                cloudTotalCascades = cloudProfile?.totalCascadesTriggered?.toInt() ?: 0,
+                cloudMaxDepth = cloudProfile?.maxCascadeDepth?.toInt() ?: 0,
+                cloudTotalBlocks = cloudProfile?.totalBlocksPlaced?.toInt() ?: 0,
+                cloudFullClears = cloudProfile?.fullBoardClears?.toInt() ?: 0,
+                cloudChallenges = challengeMap
+            )
+            val (achievements, rank) = computeProgression(
+                merged.statistics,
+                merged.challengeProgress,
+                _uiState.value.unlockedAchievements
+            )
+            _uiState.update { cur ->
+                cur.copy(
+                    classicBestScore = maxOf(cur.classicBestScore, merged.classicBestScore),
+                    unlockedChallengeLevel = maxOf(cur.unlockedChallengeLevel, merged.unlockedChallengeLevel),
+                    statistics = merged.statistics,
+                    challengeProgress = merged.challengeProgress,
+                    unlockedAchievements = achievements,
+                    playerRank = rank
                 )
             }
         }
@@ -1143,25 +869,13 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    private fun isClassicGameOver(board: Board, tray: List<GamePiece?>): Boolean {
-        val available = tray.filterNotNull()
-        if (available.isEmpty()) return false
-        return !PlacementValidator.hasAnyValidMove(board, available)
-    }
-
     override fun onCleared() {
         super.onCleared()
         soundManager.release()
     }
 
     companion object {
-        fun calculateChallengeStars(score: Int, targetScore: Int, movesRemaining: Int): Int {
-            if (score < targetScore) return 0
-            return when {
-                score >= (targetScore * 1.5f).toInt() || movesRemaining >= 5 -> 3
-                score >= (targetScore * 1.25f).toInt() || movesRemaining >= 3 -> 2
-                else -> 1
-            }
-        }
+        fun calculateChallengeStars(score: Int, targetScore: Int, movesRemaining: Int): Int =
+            GameSessionEngine.calculateChallengeStars(score, targetScore, movesRemaining)
     }
 }

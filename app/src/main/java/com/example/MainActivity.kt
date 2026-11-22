@@ -6,12 +6,19 @@ import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import android.util.Log
 import com.example.ui.CascadeApp
 import com.example.ui.theme.CascadeTheme
+import com.google.firebase.Firebase
+import com.google.firebase.appcheck.AppCheckProviderFactory
+import com.google.firebase.appcheck.appCheck
+import com.google.firebase.appcheck.playintegrity.PlayIntegrityAppCheckProviderFactory
+import com.google.firebase.initialize
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        configureFirebaseAppCheck()
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
             navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT)
@@ -20,6 +27,27 @@ class MainActivity : ComponentActivity() {
             CascadeTheme {
                 CascadeApp()
             }
+        }
+    }
+
+    private fun configureFirebaseAppCheck() {
+        try {
+            Firebase.initialize(this)
+            val factory: AppCheckProviderFactory = if (BuildConfig.DEBUG) {
+                runCatching {
+                    val clazz = Class.forName(
+                        "com.google.firebase.appcheck.debug.DebugAppCheckProviderFactory"
+                    )
+                    clazz.getMethod("getInstance").invoke(null) as AppCheckProviderFactory
+                }.getOrElse {
+                    PlayIntegrityAppCheckProviderFactory.getInstance()
+                }
+            } else {
+                PlayIntegrityAppCheckProviderFactory.getInstance()
+            }
+            Firebase.appCheck.installAppCheckProviderFactory(factory)
+        } catch (t: Throwable) {
+            Log.w("MainActivity", "AppCheck initialization skipped: ${t.message}")
         }
     }
 }
