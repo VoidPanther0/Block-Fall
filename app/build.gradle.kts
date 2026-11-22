@@ -116,6 +116,18 @@ android {
   }
 }
 
+// Google AI Studio may not carry dotfiles into its workspace; the Secrets plugin fails the whole
+// build if the defaults file is missing, so recreate it with the safe test-ID defaults.
+val defaultEnvFile = rootProject.file(".env.example")
+if (!defaultEnvFile.exists()) {
+  defaultEnvFile.writeText(
+    listOf(
+      "ADMOB_APP_ID=ca-app-pub-3940256099942544~3347511713",
+      "ADMOB_REWARDED_GOLD_UNIT_ID=ca-app-pub-3940256099942544/5224354917"
+    ).joinToString(separator = System.lineSeparator(), postfix = System.lineSeparator())
+  )
+}
+
 // Configure the Secrets Gradle Plugin to use .env and .env.example files
 // to match the convention used in Web projects.
 secrets {
