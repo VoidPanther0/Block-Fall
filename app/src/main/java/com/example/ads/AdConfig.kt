@@ -28,7 +28,10 @@ object AdConfig {
     private val APP_ID_PATTERN = Regex("^ca-app-pub-\\d{16}~\\d{10}$")
     private val AD_UNIT_PATTERN = Regex("^ca-app-pub-\\d{16}/\\d{10}$")
 
-    val configuredAppId: String = BuildConfig.ADMOB_APP_ID
+    val configuredAppId: String = if (BuildConfig.DEBUG) TEST_APP_ID else BuildConfig.ADMOB_APP_ID
+
+    /** True when a release build has no real production IDs and is serving Google test ads. */
+    val isUsingTestIds: Boolean get() = configuredAppId == TEST_APP_ID
 
     val isAppIdValid: Boolean = APP_ID_PATTERN.matches(configuredAppId)
 

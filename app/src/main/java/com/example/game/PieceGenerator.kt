@@ -8,8 +8,13 @@ import kotlin.random.Random
  * while preserving genuine end-game detection when boards fill up.
  */
 class PieceGenerator(
-    private val random: Random = Random.Default
+    private var random: Random = Random.Default
 ) {
+    /** Deterministic stream for seeded modes (Daily Gravity); null restores true randomness. */
+    fun reseed(seed: Long?) {
+        random = if (seed == null) Random.Default else Random(seed)
+    }
+
     private val allShapes = PieceShape.entries
     private val totalWeight = allShapes.sumOf { it.weight }
     private val colors = BlockColor.entries

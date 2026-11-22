@@ -126,6 +126,19 @@ class SoundManager(context: Context) {
         playSample(gameOverSoundId, volume = 0.85f, rate = 1.0f)
     }
 
+    /** Sign-in success cue (reuses the level-complete sample, pitched up). */
+    fun playLogin() {
+        playSample(levelCompleteSoundId, volume = 0.7f, rate = 1.25f)
+    }
+
+    fun playGreat() {
+        playSample(lineClearSoundId, volume = 1.0f, rate = 1.2f)
+    }
+
+    fun playPerfect() {
+        playSample(levelCompleteSoundId, volume = 1.0f, rate = 1.1f)
+    }
+
     fun playUiClick() {
         playSample(uiClickSoundId, volume = 0.55f, rate = 1.0f)
     }

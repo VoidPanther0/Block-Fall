@@ -13,6 +13,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -115,8 +116,23 @@ fun CascadeApp(
         }
     }
 
+    val onboardingPrefs = remember { com.example.data.OnboardingPrefs(context) }
+    var onboardingSeen by remember { androidx.compose.runtime.mutableStateOf(onboardingPrefs.signInOnboardingSeen) }
+
     val signedInUser = currentUser
-    if (signedInUser == null) {
+    if (auth != null && signedInUser == null && !onboardingSeen) {
+        SignInOnboarding(
+            onSignedIn = {
+                onboardingPrefs.signInOnboardingSeen = true
+                onboardingSeen = true
+                viewModel.soundManager.playLogin()
+            },
+            onSkip = {
+                onboardingPrefs.signInOnboardingSeen = true
+                onboardingSeen = true
+            }
+        )
+    } else if (signedInUser == null) {
         CascadeNavHost(
             viewModel = viewModel,
             currentUser = null,

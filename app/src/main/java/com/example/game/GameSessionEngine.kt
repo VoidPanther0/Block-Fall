@@ -18,7 +18,9 @@ data class TurnExecutionResult(
     val nextTraySlots: List<TraySlot>,
     val nextBlockIdCounter: Long,
     val nextStatus: GameStatus,
-    val earnedChallengeStars: Int
+    val earnedChallengeStars: Int,
+    val feedback: ScoreFeedback = ScoreFeedback.NONE,
+    val comboStreak: Int = 0
 )
 
 class GameSessionEngine(
@@ -35,7 +37,8 @@ class GameSessionEngine(
         movesPlayed: Int,
         mode: GameMode,
         challengeLevel: ChallengeLevel,
-        startingBlockId: Long
+        startingBlockId: Long,
+        comboStreak: Int = 0
     ): TurnExecutionResult? {
         val piece = traySlots.getOrNull(slotIndex)?.piece ?: return null
         val placement = PlacementValidator.placePiece(
@@ -59,6 +62,7 @@ class GameSessionEngine(
         val finalScore = scoreAfterPlacement + cascadePoints
         val fullClearOccurred = resolution.waves.any { it.isFullClear }
         val nextMovesPlayed = movesPlayed + 1
+        val newStreak = if (resolution.hasClears) comboStreak + 1 else 0
 
         val remainingPieces = updatedTray.mapNotNull { it.piece }
         val nextTraySlots = if (remainingPieces.isEmpty()) {
@@ -109,7 +113,9 @@ class GameSessionEngine(
             nextTraySlots = nextTraySlots,
             nextBlockIdCounter = nextIdCounter,
             nextStatus = nextStatus,
-            earnedChallengeStars = stars
+            earnedChallengeStars = stars,
+            feedback = ScoreFeedback.from(resolution, newStreak),
+            comboStreak = newStreak
         )
     }
 

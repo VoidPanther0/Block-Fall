@@ -14,6 +14,7 @@ import com.example.game.AchievementEvaluator
 import com.example.game.BlockColor
 import com.example.game.BlockStyle
 import com.example.game.Board
+import com.example.game.DailyChallengeGenerator
 import com.example.game.BoardColorPalette
 import com.example.game.BoosterType
 import com.example.game.ChallengeLevel
@@ -152,12 +153,15 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     private val sessionEngine = GameSessionEngine(pieceGenerator)
     private val dragController = DragController()
     val soundManager = SoundManager(application.applicationContext)
+    val haptics = com.example.audio.HapticsManager(application.applicationContext)
     private val animationRunner = CascadeAnimationRunner(soundManager)
     private val adManager by lazy { RewardedAdManager(getApplication<Application>()) }
 
     val adState: StateFlow<AdState> = adManager.adState
 
     private var nextIdCounter: Long = 100L
+    private var activeDailyKey: String? = null
+    private var comboStreak: Int = 0
 
     private val _uiState = MutableStateFlow(GameUiState())
     val uiState: StateFlow<GameUiState> = _uiState.asStateFlow()
@@ -171,6 +175,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             val saved = repository.loadInitialProgress()
             soundManager.soundEnabled = saved.settings.soundEnabled
             soundManager.musicEnabled = saved.settings.musicEnabled
+            haptics.enabled = saved.settings.hapticsEnabled
 
             val restored = saved.savedClassicGame
             val validSaved = if (restored != null && !GameSessionEngine.isClassicGameOver(restored.board, restored.trayPieces)) {
@@ -240,6 +245,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     fun playUiClick() {
         soundManager.playUiClick()
+        haptics.perform(com.example.audio.HapticEvent.TAP)
     }
 
     fun updateBoardBounds(rect: Rect, liftPx: Float) {
@@ -247,6 +253,9 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun startNewClassicGame(countAsNewGame: Boolean = true) {
+        pieceGenerator.reseed(null)
+        activeDailyKey = null
+        comboStreak = 0
         val emptyBoard = Board.empty()
         val (trayPieces, updatedId) = pieceGenerator.generateTray(emptyBoard, nextIdCounter)
         nextIdCounter = updatedId
@@ -315,6 +324,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         return false
     }
 
+<<<<<<< HEAD
     fun startChallengeLevel(levelNumber: Int, countAsNewGame: Boolean = true) {
         startConfiguredChallenge(ChallengeLevels.getLevel(levelNumber), countAsNewGame, isDaily = false)
     }
@@ -334,6 +344,33 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         countAsNewGame: Boolean,
         isDaily: Boolean
     ) {
+=======
+    /** Daily Gravity: today's seeded puzzle (same board and piece stream for every player). */
+    fun startDailyGravity() {
+        val todayKey = DailyChallengeGenerator.todayDateKey()
+        val spec = DailyChallengeGenerator.forDateKey(todayKey)
+        pieceGenerator.reseed(spec.seed)
+        activeDailyKey = todayKey
+        comboStreak = 0
+        viewModelScope.launch {
+            repository.updateDailyProgress { it.withAttemptStarted(todayKey) }
+        }
+        startChallengeLevel(0, countAsNewGame = true, levelOverride = spec.level, keepSeed = true)
+    }
+
+    fun startChallengeLevel(
+        levelNumber: Int,
+        countAsNewGame: Boolean = true,
+        levelOverride: ChallengeLevel? = null,
+        keepSeed: Boolean = false
+    ) {
+        if (!keepSeed) {
+            pieceGenerator.reseed(null)
+            activeDailyKey = null
+            comboStreak = 0
+        }
+        val level = levelOverride ?: ChallengeLevels.getLevel(levelNumber)
+>>>>>>> 3253d7baf59381664d28dced3c60d731b7b59c24
         val board = level.buildBoard(startId = nextIdCounter)
         nextIdCounter += 100L
         val (trayPieces, updatedId) = pieceGenerator.generateTray(board, nextIdCounter)
@@ -411,10 +448,18 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     fun restartCurrentGame() {
         val state = _uiState.value
         if (state.status == GameStatus.RESOLVING_CASCADE) return
+<<<<<<< HEAD
         when {
             state.isDailyChallenge -> startDailyChallenge()
             state.mode == GameMode.CLASSIC -> startNewClassicGame()
             else -> startChallengeLevel(state.currentChallengeLevel.levelNumber)
+=======
+        if (state.mode == GameMode.CLASSIC) {
+            startNewClassicGame()
+        } else {
+            if (activeDailyKey != null && state.currentChallengeLevel.levelNumber == 0) startDailyGravity()
+            else startChallengeLevel(state.currentChallengeLevel.levelNumber)
+>>>>>>> 3253d7baf59381664d28dced3c60d731b7b59c24
         }
     }
 
@@ -451,6 +496,8 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun toggleHaptics(enabled: Boolean) {
+        haptics.enabled = enabled
+        if (enabled) haptics.perform(com.example.audio.HapticEvent.TAP)
         updateSettings { it.copy(hapticsEnabled = enabled) }
     }
 
@@ -552,6 +599,31 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             if (result is EconomyMutationResult.Success) {
                 applyWalletMutation(result.updatedWallet)
             }
+        }
+    }
+
+    /** Shuffle booster: spends one charge and rerolls the remaining tray pieces. */
+    fun useShuffleBooster() {
+        val state = _uiState.value
+        if (state.status != GameStatus.PLAYING || state.wallet.shuffleCount <= 0) return
+        val remaining = state.traySlots.count { it.piece != null }
+        if (remaining == 0) return
+        viewModelScope.launch {
+            val result = EconomyEngine.consumeBooster(
+                wallet = _uiState.value.wallet,
+                type = BoosterType.SHUFFLE,
+                transactionId = UUID.randomUUID().toString()
+            )
+            if (result !is EconomyMutationResult.Success) return@launch
+            val (fresh, updatedId) = pieceGenerator.generateTray(_uiState.value.board, nextIdCounter)
+            nextIdCounter = updatedId
+            var i = 0
+            _uiState.update { st ->
+                st.copy(traySlots = st.traySlots.map { slot ->
+                    if (slot.piece != null) slot.copy(piece = fresh[i++ % fresh.size]) else slot
+                })
+            }
+            applyWalletMutation(result.updatedWallet)
         }
     }
 
@@ -689,11 +761,24 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             movesPlayed = state.movesPlayed,
             mode = state.mode,
             challengeLevel = state.currentChallengeLevel,
-            startingBlockId = nextIdCounter
+            startingBlockId = nextIdCounter,
+            comboStreak = comboStreak
         ) ?: return
         nextIdCounter = turn.nextBlockIdCounter
+        comboStreak = turn.comboStreak
 
         soundManager.playBlockDrop()
+        haptics.perform(com.example.audio.HapticEvent.PLACE)
+        val fb = turn.feedback
+        if (fb.hasFeedback) {
+            when (fb.tier) {
+                com.example.game.FeedbackTier.PERFECT -> { soundManager.playPerfect(); haptics.perform(com.example.audio.HapticEvent.PERFECT) }
+                com.example.game.FeedbackTier.GREAT -> { soundManager.playGreat(); haptics.perform(com.example.audio.HapticEvent.CLEAR) }
+                else -> haptics.perform(if (fb.combo != com.example.game.ComboLabel.NONE) com.example.audio.HapticEvent.COMBO else com.example.audio.HapticEvent.CLEAR)
+            }
+        } else if (turn.resolution.hasClears) {
+            haptics.perform(com.example.audio.HapticEvent.CLEAR)
+        }
 
         val initialScore = turn.scoreAfterPlacement
         val newClassicBest = if (state.mode == GameMode.CLASSIC && initialScore > state.classicBestScore) {
@@ -790,12 +875,19 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             soundManager.playLevelComplete()
         } else if (nextStatus == GameStatus.GAME_OVER || nextStatus == GameStatus.CHALLENGE_LOST) {
             soundManager.playGameOver()
+            haptics.perform(com.example.audio.HapticEvent.GAME_OVER)
         }
 
+<<<<<<< HEAD
         val isCampaignLevel = state.mode == GameMode.CHALLENGE && !state.isDailyChallenge
 
         val nextUnlockedLevel = if (
             isCampaignLevel && nextStatus == GameStatus.CHALLENGE_WON
+=======
+        val isDaily = activeDailyKey != null && state.currentChallengeLevel.levelNumber == 0
+        val nextUnlockedLevel = if (
+            !isDaily && state.mode == GameMode.CHALLENGE && nextStatus == GameStatus.CHALLENGE_WON
+>>>>>>> 3253d7baf59381664d28dced3c60d731b7b59c24
         ) {
             maxOf(
                 state.unlockedChallengeLevel,
@@ -809,7 +901,13 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         val cascadesInTurn = if (maxDepthInTurn >= 2) 1 else 0
         val fullClearAdded = if (turn.fullClearOccurred) 1 else 0
 
+<<<<<<< HEAD
         val updatedChallengeMap = if (isCampaignLevel && nextStatus == GameStatus.CHALLENGE_WON) {
+=======
+        val updatedChallengeMap = if (isDaily) {
+            state.challengeProgress
+        } else if (state.mode == GameMode.CHALLENGE && nextStatus == GameStatus.CHALLENGE_WON) {
+>>>>>>> 3253d7baf59381664d28dced3c60d731b7b59c24
             val lvlNum = state.currentChallengeLevel.levelNumber
             val prev = state.challengeProgress[lvlNum]
             state.challengeProgress + (
@@ -870,6 +968,15 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 unlockedAchievements = achievements,
                 playerRank = rank
             )
+        }
+
+        if (isDaily && (nextStatus == GameStatus.CHALLENGE_WON || nextStatus == GameStatus.CHALLENGE_LOST)) {
+            val key = activeDailyKey!!
+            viewModelScope.launch {
+                repository.updateDailyProgress {
+                    it.withResult(key, turn.finalScore, nextStatus == GameStatus.CHALLENGE_WON)
+                }
+            }
         }
 
         viewModelScope.launch {
@@ -976,6 +1083,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     override fun onCleared() {
         super.onCleared()
         soundManager.release()
+        haptics.cancel()
     }
 
     companion object {

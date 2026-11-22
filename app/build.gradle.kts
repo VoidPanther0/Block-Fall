@@ -9,6 +9,23 @@ plugins {
   alias(libs.plugins.google.services)
 }
 
+val TEST_ADMOB_APP_ID = "ca-app-pub-3940256099942544~3347511713"
+fun envOrDotEnv(name: String): String? {
+  System.getenv(name)?.takeIf { it.isNotBlank() }?.let { return it.trim() }
+  val envFile = rootProject.file(".env")
+  if (!envFile.exists()) return null
+  return envFile.readLines().firstOrNull { it.startsWith("$name=") }?.substringAfter("=")?.trim()
+}
+val admobAppIdPattern = Regex("^ca-app-pub-[0-9]{16}~[0-9]{10}$")
+val admobUnitPattern = Regex("^ca-app-pub-[0-9]{16}/[0-9]{10}$")
+val realAdmobAppId: String? = envOrDotEnv("ADMOB_APP_ID")
+  ?.takeIf { admobAppIdPattern.matches(it) && it != TEST_ADMOB_APP_ID }
+val realAdmobRewardedUnit: String? = envOrDotEnv("ADMOB_REWARDED_GOLD_UNIT_ID")
+  ?.takeIf { admobUnitPattern.matches(it) && !it.startsWith("ca-app-pub-3940256099942544/") }
+// Release builds fall back to the test App ID only so the project still configures; the
+// verifyReleaseAdConfig task below blocks packaging unless real IDs are supplied.
+val prodAdmobAppId: String = realAdmobAppId ?: TEST_ADMOB_APP_ID
+
 android {
   namespace = "com.example"
   compileSdk { version = release(36) { minorApiLevel = 1 } }
@@ -22,11 +39,6 @@ android {
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-    // Google's official test AdMob App ID. Keep in sync with .env / local.properties.
-    // Never substitute a production AdMob App ID until the app is published.
-    // Declared explicitly so every variant (including unit-test manifests) resolves
-    // the ${ADMOB_APP_ID} placeholder, not just the main app manifest.
-    manifestPlaceholders["ADMOB_APP_ID"] = "ca-app-pub-3940256099942544~3347511713"
   }
 
   // Do not remove or modify these signingConfigs. They are necessary for building, installing,
@@ -49,6 +61,10 @@ android {
 
   buildTypes {
     release {
+      // Production AdMob App ID comes only from the ADMOB_APP_ID environment variable or the
+      // gitignored .env file. If neither supplies a real ID, Google's test ID is used so the
+      // build stays valid; no production ID is ever committed.
+      manifestPlaceholders["ADMOB_APP_ID"] = prodAdmobAppId
       isCrunchPngs = false
       isMinifyEnabled = true
       isShrinkResources = true
@@ -58,9 +74,17 @@ android {
       signingConfig = signingConfigs.getByName("release")
     }
     debug {
+      // Debug builds always use Google's official test AdMob App ID.
+      manifestPlaceholders["ADMOB_APP_ID"] = TEST_ADMOB_APP_ID
       // Do not remove or modify this signingConfig assignment. It is necessary for Android apps in
       // AI Studio.
-      signingConfig = signingConfigs.getByName("debugConfig")
+      // Falls back to the AGP-generated default debug keystore when no repo-root debug.keystore
+      // exists (fresh clones, Windows, CI), so debug builds never fail on a missing keystore.
+      signingConfig = if (file("${rootDir}/debug.keystore").exists()) {
+        signingConfigs.getByName("debugConfig")
+      } else {
+        signingConfigs.getByName("debug")
+      }
     }
   }
   compileOptions {
@@ -71,7 +95,21 @@ android {
     compose = true
     buildConfig = true
   }
-  testOptions { unitTests { isIncludeAndroidResources = true } }
+  testOptions {
+    unitTests {
+      isIncludeAndroidResources = true
+      // Robolectric URL-encodes spaces in paths under the user's home (e.g. "C:\Users\This PC"),
+      // then fails to open its own android-all jar. If a space-free dir holding the jar is
+      // supplied (-ProbolectricDepsDir=... or ROBOLECTRIC_DEPS_DIR), run Robolectric offline from it.
+      val depsDir = (project.findProperty("robolectricDepsDir") as String?) ?: System.getenv("ROBOLECTRIC_DEPS_DIR")
+      if (!depsDir.isNullOrBlank()) {
+        all {
+          it.systemProperty("robolectric.dependency.dir", depsDir)
+          it.systemProperty("robolectric.offline", "true")
+        }
+      }
+    }
+  }
   dependenciesInfo {
     includeInApk = false
     includeInBundle = true
@@ -151,3 +189,21 @@ dependencies {
   // "ksp"(libs.androidx.room.compiler)
   // "ksp"(libs.moshi.kotlin.codegen)
 }
+
+// Release builds must not ship Google's test ad IDs. Supply real ADMOB_APP_ID and
+// ADMOB_REWARDED_GOLD_UNIT_ID via environment or the gitignored .env. For non-shipping CI
+// verification only, pass -PallowTestAds=true.
+val verifyReleaseAdConfig = tasks.register("verifyReleaseAdConfig") {
+  val ok = realAdmobAppId != null && realAdmobRewardedUnit != null
+  val allowTest = project.findProperty("allowTestAds") == "true"
+  doLast {
+    if (!ok && !allowTest) {
+      throw GradleException(
+        "Release AdMob configuration incomplete: set real ADMOB_APP_ID and " +
+          "ADMOB_REWARDED_GOLD_UNIT_ID (env or .env). Use -PallowTestAds=true only for non-shipping builds."
+      )
+    }
+    if (!ok) logger.warn("WARNING: release build is using Google TEST AdMob IDs (allowTestAds=true).")
+  }
+}
+tasks.matching { it.name == "preReleaseBuild" }.configureEach { dependsOn(verifyReleaseAdConfig) }
