@@ -8,7 +8,9 @@ import androidx.lifecycle.viewModelScope
 import com.example.audio.SoundManager
 import com.example.data.GameRepository
 import com.example.game.BlockColor
+import com.example.game.BlockStyle
 import com.example.game.Board
+import com.example.game.BoardColorPalette
 import com.example.game.CascadeResolver
 import com.example.game.ChallengeLevel
 import com.example.game.ChallengeLevelProgress
@@ -415,6 +417,14 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     fun togglePlacementPreview(enabled: Boolean) {
         updateSettings { it.copy(placementPreviewEnabled = enabled) }
+    }
+
+    fun setBlockStyle(blockStyle: BlockStyle) {
+        updateSettings { it.copy(blockStyle = blockStyle) }
+    }
+
+    fun setBoardPalette(boardPalette: BoardColorPalette) {
+        updateSettings { it.copy(boardPalette = boardPalette) }
     }
 
     private fun updateSettings(transform: (GameSettings) -> GameSettings) {

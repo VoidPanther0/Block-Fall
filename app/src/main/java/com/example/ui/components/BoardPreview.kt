@@ -19,22 +19,26 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
+import com.example.game.BlockStyle
 import com.example.game.Board
+import com.example.game.BoardColorPalette
 import com.example.game.GridCoord
 import com.example.ui.theme.AccentGold
-import com.example.ui.theme.BoardRim
-import com.example.ui.theme.BoardWellBg
-import com.example.ui.theme.EmptySlotBorder
-import com.example.ui.theme.EmptySlotFill
+import com.example.ui.theme.LocalBlockStyle
+import com.example.ui.theme.LocalBoardPalette
+import com.example.ui.theme.toBoardColors
 
 @Composable
 fun BoardPreview(
     board: Board,
     modifier: Modifier = Modifier,
     highlightedCoords: Set<GridCoord> = emptySet(),
-    highlightRows: List<Int> = emptyList()
+    highlightRows: List<Int> = emptyList(),
+    blockStyle: BlockStyle = LocalBlockStyle.current,
+    boardPalette: BoardColorPalette = LocalBoardPalette.current
 ) {
-    val shape = RoundedCornerShape(18.dp)
+    val boardTheme = boardPalette.toBoardColors()
+    val shape = RoundedCornerShape(if (blockStyle == BlockStyle.RETRO) 8.dp else 18.dp)
     Box(
         modifier = modifier
             .aspectRatio(1f)
@@ -42,30 +46,34 @@ fun BoardPreview(
             .clip(shape)
             .background(
                 Brush.verticalGradient(
-                    listOf(Color(0xFF1A3478), BoardWellBg)
+                    listOf(boardTheme.wellTop, boardTheme.wellBottom)
                 )
             )
-            .border(2.dp, BoardRim, shape)
+            .border(2.dp, boardTheme.rim, shape)
             .padding(8.dp)
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             val cellSize = size.width / Board.SIZE.toFloat()
             val gap = (cellSize * 0.09f).coerceAtLeast(1.5f)
             val tileSize = cellSize - gap
-            val radius = CornerRadius(tileSize * 0.18f, tileSize * 0.18f)
+            val radius = if (blockStyle == BlockStyle.RETRO) {
+                CornerRadius(2f, 2f)
+            } else {
+                CornerRadius(tileSize * 0.18f, tileSize * 0.18f)
+            }
 
             for (r in 0 until Board.SIZE) {
                 for (c in 0 until Board.SIZE) {
                     val left = c * cellSize + gap / 2f
                     val top = r * cellSize + gap / 2f
                     drawRoundRect(
-                        color = EmptySlotFill,
+                        color = boardTheme.slotFill,
                         topLeft = Offset(left, top),
                         size = Size(tileSize, tileSize),
                         cornerRadius = radius
                     )
                     drawRoundRect(
-                        color = EmptySlotBorder,
+                        color = boardTheme.slotBorder,
                         topLeft = Offset(left, top),
                         size = Size(tileSize, tileSize),
                         cornerRadius = radius,
@@ -92,7 +100,9 @@ fun BoardPreview(
                         top = r * cellSize + gap / 2f,
                         cellSize = tileSize,
                         color = cell.color,
-                        glowBoost = if (isHighlighted) 0.9f else 0f
+                        glowBoost = if (isHighlighted) 0.9f else 0f,
+                        blockStyle = blockStyle,
+                        boardPalette = boardPalette
                     )
                 }
             }

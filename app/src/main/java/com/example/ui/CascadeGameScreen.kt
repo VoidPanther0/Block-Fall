@@ -2,7 +2,6 @@ package com.example.ui
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -30,7 +29,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
@@ -38,12 +36,14 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.game.Board
 import com.example.game.GameStatus
+import com.example.ui.components.CascadeCalloutBar
 import com.example.ui.components.ExitConfirmationDialog
 import com.example.ui.components.GameBoard
 import com.example.ui.components.GravityRulesDialog
@@ -117,12 +117,15 @@ fun CascadeGameScreen(
                     horizontalArrangement = Arrangement.spacedBy(24.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Box(
-                        contentAlignment = Alignment.Center,
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
                         modifier = Modifier
                             .weight(1.1f)
                             .fillMaxHeight()
                     ) {
+                        CascadeCalloutBar(floatingBanner = state.floatingBanner)
+                        Spacer(Modifier.height(4.dp))
                         GameBoard(
                             board = state.board,
                             visualPhase = state.visualPhase,
@@ -152,7 +155,7 @@ fun CascadeGameScreen(
                                 boardBoundsInRoot = rect
                                 viewModel.updateBoardBounds(rect, dragLiftPx)
                             },
-                            modifier = Modifier.widthIn(max = 520.dp)
+                            modifier = Modifier.widthIn(max = 500.dp)
                         )
                     }
 
@@ -198,18 +201,18 @@ fun CascadeGameScreen(
                     }
                 }
             } else {
-                val boardMaxWidth = (maxHeight * 0.46f).coerceIn(170.dp, 500.dp)
+                val boardMaxWidth = (maxHeight * 0.44f).coerceIn(170.dp, 500.dp)
 
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
                         .widthIn(max = 520.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.SpaceBetween
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
+                    // Fixed-height Top HUD (never expands or collapses during clears)
                     Column(
                         modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         TopGameBar(
                             state = state,
@@ -224,40 +227,56 @@ fun CascadeGameScreen(
                         ScorePanel(state = state)
                     }
 
-                    GameBoard(
-                        board = state.board,
-                        visualPhase = state.visualPhase,
-                        dragState = state.dragState,
-                        floatingBanner = state.floatingBanner,
-                        particleTriggerId = state.particleTriggerId,
-                        latestParticles = state.latestParticles,
-                        hasSelectedSlot = state.selectedSlotIndex != null,
-                        visualEffectsEnabled = state.settings.visualEffectsEnabled,
-                        placementPreviewEnabled = state.settings.placementPreviewEnabled,
-                        onCellTapped = { r, c ->
-                            if (state.settings.hapticsEnabled) {
-                                haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            }
-                            viewModel.onBoardCellTapped(r, c)
-                        },
-                        onBoardTouchStart = { localOffset ->
-                            if (state.settings.hapticsEnabled) {
-                                haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            }
-                            viewModel.startBoardTouch(localOffset)
-                        },
-                        onBoardTouchMove = viewModel::updateBoardTouch,
-                        onBoardTouchEnd = viewModel::endDrag,
-                        onBoardTouchCancel = viewModel::cancelDrag,
-                        onBoardBoundsChanged = { rect ->
-                            boardBoundsInRoot = rect
-                            viewModel.updateBoardBounds(rect, dragLiftPx)
-                        },
+                    // Centered flexible playfield zone: board position stays 100% locked
+                    Box(
+                        contentAlignment = Alignment.Center,
                         modifier = Modifier
-                            .widthIn(max = boardMaxWidth)
+                            .weight(1f)
                             .fillMaxWidth()
-                    )
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            CascadeCalloutBar(floatingBanner = state.floatingBanner)
+                            Spacer(Modifier.height(4.dp))
+                            GameBoard(
+                                board = state.board,
+                                visualPhase = state.visualPhase,
+                                dragState = state.dragState,
+                                floatingBanner = state.floatingBanner,
+                                particleTriggerId = state.particleTriggerId,
+                                latestParticles = state.latestParticles,
+                                hasSelectedSlot = state.selectedSlotIndex != null,
+                                visualEffectsEnabled = state.settings.visualEffectsEnabled,
+                                placementPreviewEnabled = state.settings.placementPreviewEnabled,
+                                onCellTapped = { r, c ->
+                                    if (state.settings.hapticsEnabled) {
+                                        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    }
+                                    viewModel.onBoardCellTapped(r, c)
+                                },
+                                onBoardTouchStart = { localOffset ->
+                                    if (state.settings.hapticsEnabled) {
+                                        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    }
+                                    viewModel.startBoardTouch(localOffset)
+                                },
+                                onBoardTouchMove = viewModel::updateBoardTouch,
+                                onBoardTouchEnd = viewModel::endDrag,
+                                onBoardTouchCancel = viewModel::cancelDrag,
+                                onBoardBoundsChanged = { rect ->
+                                    boardBoundsInRoot = rect
+                                    viewModel.updateBoardBounds(rect, dragLiftPx)
+                                },
+                                modifier = Modifier
+                                    .widthIn(max = boardMaxWidth)
+                                    .fillMaxWidth()
+                            )
+                        }
+                    }
 
+                    // Fixed-height Bottom Dock
                     Column(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalAlignment = Alignment.CenterHorizontally,
@@ -312,7 +331,9 @@ fun CascadeGameScreen(
                         cellSize = tileSize,
                         color = activeDrag.piece.color,
                         alpha = 0.94f,
-                        glowBoost = if (state.settings.visualEffectsEnabled) 0.65f else 0.1f
+                        glowBoost = if (state.settings.visualEffectsEnabled) 0.65f else 0.1f,
+                        blockStyle = state.settings.blockStyle,
+                        boardPalette = state.settings.boardPalette
                     )
                 }
             }
@@ -355,9 +376,9 @@ private fun HintFooter(hasSelectedPiece: Boolean) {
             "Drag any piece onto the board · Clear lines to trigger gravity"
         },
         style = MaterialTheme.typography.bodyMedium.copy(fontSize = 11.sp),
-        color = TextSecondary.copy(alpha = 0.82f),
+        color = TextSecondary.copy(alpha = 0.85f),
         textAlign = TextAlign.Center,
         maxLines = 1,
-        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+        overflow = TextOverflow.Ellipsis
     )
 }

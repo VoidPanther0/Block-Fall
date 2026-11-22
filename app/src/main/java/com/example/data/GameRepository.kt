@@ -10,7 +10,9 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.example.game.BlockCell
 import com.example.game.BlockColor
+import com.example.game.BlockStyle
 import com.example.game.Board
+import com.example.game.BoardColorPalette
 import com.example.game.ChallengeLevelProgress
 import com.example.game.GamePiece
 import com.example.game.GameSettings
@@ -49,6 +51,8 @@ class GameRepository(private val context: Context) {
         val MUSIC_ENABLED = booleanPreferencesKey("music_enabled")
         val VISUAL_EFFECTS_ENABLED = booleanPreferencesKey("visual_effects_enabled")
         val PLACEMENT_PREVIEW_ENABLED = booleanPreferencesKey("placement_preview_enabled")
+        val BLOCK_STYLE = stringPreferencesKey("block_style")
+        val BOARD_PALETTE = stringPreferencesKey("board_palette")
 
         val TOTAL_GAMES_PLAYED = intPreferencesKey("total_games_played")
         val TOTAL_LINES_CLEARED = intPreferencesKey("total_lines_cleared")
@@ -66,7 +70,9 @@ class GameRepository(private val context: Context) {
             musicEnabled = prefs[Keys.MUSIC_ENABLED] ?: true,
             hapticsEnabled = haptics,
             visualEffectsEnabled = prefs[Keys.VISUAL_EFFECTS_ENABLED] ?: true,
-            placementPreviewEnabled = prefs[Keys.PLACEMENT_PREVIEW_ENABLED] ?: true
+            placementPreviewEnabled = prefs[Keys.PLACEMENT_PREVIEW_ENABLED] ?: true,
+            blockStyle = BlockStyle.fromId(prefs[Keys.BLOCK_STYLE]),
+            boardPalette = BoardColorPalette.fromId(prefs[Keys.BOARD_PALETTE])
         )
         val stats = GameStatistics(
             totalGamesPlayed = prefs[Keys.TOTAL_GAMES_PLAYED] ?: 0,
@@ -151,6 +157,8 @@ class GameRepository(private val context: Context) {
             prefs[Keys.HAPTICS_ENABLED] = settings.hapticsEnabled
             prefs[Keys.VISUAL_EFFECTS_ENABLED] = settings.visualEffectsEnabled
             prefs[Keys.PLACEMENT_PREVIEW_ENABLED] = settings.placementPreviewEnabled
+            prefs[Keys.BLOCK_STYLE] = settings.blockStyle.id
+            prefs[Keys.BOARD_PALETTE] = settings.boardPalette.id
         }
     }
 

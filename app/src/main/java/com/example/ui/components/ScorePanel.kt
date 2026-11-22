@@ -3,6 +3,10 @@ package com.example.ui.components
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -21,6 +25,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.outlined.HelpOutline
+import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.Pause
@@ -37,10 +42,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -49,16 +53,21 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
 import com.example.game.GameMode
+import com.example.ui.FloatingBanner
 import com.example.ui.GameUiState
 import com.example.ui.theme.AccentCoral
+import com.example.ui.theme.AccentCyan
 import com.example.ui.theme.AccentEmerald
 import com.example.ui.theme.AccentGold
 import com.example.ui.theme.BlueBtnBottom
 import com.example.ui.theme.BlueBtnTop
+import com.example.ui.theme.BoardWellBg
 import com.example.ui.theme.GlassBorder
+import com.example.ui.theme.JetBrainsMonoFontFamily
 import com.example.ui.theme.OutfitFontFamily
 import com.example.ui.theme.SurfaceCard
 import com.example.ui.theme.SurfaceCardElevated
+import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
 
 @Composable
@@ -70,6 +79,12 @@ fun TopGameBar(
     modifier: Modifier = Modifier,
     onBack: (() -> Unit)? = null
 ) {
+    val modeBadgeText = when (state.mode) {
+        GameMode.CLASSIC -> stringResource(R.string.mode_classic)
+        GameMode.CHALLENGE -> "Level ${state.currentChallengeLevel.levelNumber}"
+    }
+    val modeAccent = if (state.mode == GameMode.CLASSIC) AccentCyan else AccentGold
+
     Row(
         modifier = modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -77,51 +92,67 @@ fun TopGameBar(
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.weight(1f, fill = false)
         ) {
             if (onBack != null) {
-                IconButton(
-                    onClick = onBack,
+                Box(
+                    contentAlignment = Alignment.Center,
                     modifier = Modifier
                         .size(48.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(Brush.verticalGradient(listOf(SurfaceCardElevated, SurfaceCard)))
+                        .border(1.dp, GlassBorder.copy(alpha = 0.5f), RoundedCornerShape(14.dp))
+                        .clickable(onClick = onBack)
                         .testTag("gameplay_back_button")
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
                         contentDescription = stringResource(R.string.back_label),
-                        tint = Color.White,
-                        modifier = Modifier.size(30.dp)
+                        tint = TextPrimary,
+                        modifier = Modifier.size(26.dp)
                     )
                 }
             }
-            Box(
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
                 modifier = Modifier
                     .clip(RoundedCornerShape(14.dp))
-                    .background(SurfaceCard.copy(alpha = 0.78f))
-                    .border(1.dp, GlassBorder.copy(alpha = 0.55f), RoundedCornerShape(14.dp))
-                    .padding(horizontal = 12.dp, vertical = 6.dp)
+                    .background(SurfaceCardElevated.copy(alpha = 0.9f))
+                    .border(1.dp, modeAccent.copy(alpha = 0.48f), RoundedCornerShape(14.dp))
+                    .padding(horizontal = 12.dp, vertical = 8.dp)
             ) {
+                Box(
+                    modifier = Modifier
+                        .size(7.dp)
+                        .clip(CircleShape)
+                        .background(modeAccent)
+                )
                 Text(
-                    text = if (state.mode == GameMode.CLASSIC) {
-                        stringResource(R.string.mode_classic)
-                    } else {
-                        "Level ${state.currentChallengeLevel.levelNumber}"
-                    },
+                    text = modeBadgeText.uppercase(),
                     style = MaterialTheme.typography.labelLarge.copy(
                         fontFamily = OutfitFontFamily,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 13.sp
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 12.sp,
+                        letterSpacing = 0.8.sp
                     ),
-                    color = Color.White,
-                    maxLines = 1
+                    color = TextPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
         }
 
-        // Utility buttons (Help, Restart, Glossy Blue Pause)
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(2.dp)
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            modifier = Modifier
+                .clip(RoundedCornerShape(16.dp))
+                .background(SurfaceCard.copy(alpha = 0.86f))
+                .border(1.dp, GlassBorder.copy(alpha = 0.42f), RoundedCornerShape(16.dp))
+                .padding(horizontal = 4.dp)
         ) {
             IconButton(
                 onClick = onShowHowToPlay,
@@ -132,9 +163,11 @@ fun TopGameBar(
                 Icon(
                     imageVector = Icons.AutoMirrored.Outlined.HelpOutline,
                     contentDescription = stringResource(R.string.how_to_play),
-                    tint = TextSecondary
+                    tint = TextSecondary,
+                    modifier = Modifier.size(21.dp)
                 )
             }
+
             IconButton(
                 onClick = onRestart,
                 modifier = Modifier
@@ -144,18 +177,20 @@ fun TopGameBar(
                 Icon(
                     imageVector = Icons.Filled.Refresh,
                     contentDescription = stringResource(R.string.restart),
-                    tint = TextSecondary
+                    tint = TextSecondary,
+                    modifier = Modifier.size(21.dp)
                 )
             }
+
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
                     .size(48.dp)
-                    .padding(4.dp)
-                    .shadow(4.dp, CircleShape, clip = false)
-                    .clip(CircleShape)
+                    .padding(5.dp)
+                    .shadow(4.dp, RoundedCornerShape(12.dp), clip = false)
+                    .clip(RoundedCornerShape(12.dp))
                     .background(Brush.verticalGradient(listOf(BlueBtnTop, BlueBtnBottom)))
-                    .border(1.dp, Color.White.copy(alpha = 0.45f), CircleShape)
+                    .border(1.dp, Color.White.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
                     .clickable(onClick = onPause)
                     .testTag("pause_button")
             ) {
@@ -163,7 +198,7 @@ fun TopGameBar(
                     imageVector = Icons.Filled.Pause,
                     contentDescription = stringResource(R.string.pause),
                     tint = Color.White,
-                    modifier = Modifier.size(22.dp)
+                    modifier = Modifier.size(20.dp)
                 )
             }
         }
@@ -183,29 +218,29 @@ fun ScorePanel(
 
     Column(
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Primary Score + Best/Target HUD row matching the Gold Star / Gold Trophy mockup
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            HudPill(
+            StudioHudCard(
                 icon = Icons.Filled.Star,
-                iconTint = AccentGold,
-                label = if (state.isNewBest && state.mode == GameMode.CLASSIC) "NEW!" else stringResource(R.string.score_label),
+                accent = AccentGold,
+                label = if (state.isNewBest && state.mode == GameMode.CLASSIC) "NEW BEST!" else stringResource(R.string.score_label),
                 value = animatedScore.toString(),
+                highlight = state.isNewBest && state.mode == GameMode.CLASSIC,
                 modifier = Modifier
                     .weight(1f)
                     .testTag("score_card")
             )
 
             if (state.mode == GameMode.CLASSIC) {
-                HudPill(
+                StudioHudCard(
                     icon = Icons.Filled.EmojiEvents,
-                    iconTint = AccentGold,
+                    accent = AccentCyan,
                     label = stringResource(R.string.best_label),
                     value = state.classicBestScore.toString(),
                     modifier = Modifier
@@ -213,39 +248,40 @@ fun ScorePanel(
                         .testTag("best_score_card")
                 )
             } else {
-                HudPill(
+                val lvl = state.currentChallengeLevel
+                StudioHudCard(
                     icon = Icons.Filled.Flag,
-                    iconTint = AccentEmerald,
-                    label = "Target",
-                    value = state.currentChallengeLevel.targetScore.toString(),
+                    accent = AccentEmerald,
+                    label = stringResource(R.string.target_label),
+                    value = lvl.targetScore.toString(),
                     modifier = Modifier
                         .weight(1f)
                         .testTag("target_card")
                 )
-                HudPill(
-                    icon = Icons.Filled.EmojiEvents,
-                    iconTint = if (state.movesRemaining <= 3) AccentCoral else AccentGold,
+                StudioHudCard(
+                    icon = Icons.Filled.Bolt,
+                    accent = if (state.movesRemaining <= 3) AccentCoral else AccentGold,
                     label = stringResource(R.string.moves_label),
                     value = state.movesRemaining.toString(),
-                    valueColor = if (state.movesRemaining <= 3) AccentCoral else Color.White,
+                    valueColor = if (state.movesRemaining <= 3) AccentCoral else TextPrimary,
                     modifier = Modifier
-                        .weight(0.82f)
+                        .weight(0.84f)
                         .testTag("moves_card")
                 )
             }
         }
 
-        // Challenge progress bar
         if (state.mode == GameMode.CHALLENGE) {
-            val progress = (state.score.toFloat() / state.currentChallengeLevel.targetScore.toFloat())
+            val lvl = state.currentChallengeLevel
+            val progress = (state.score.toFloat() / lvl.targetScore.toFloat().coerceAtLeast(1f))
                 .coerceIn(0f, 1f)
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(14.dp))
-                    .background(SurfaceCard.copy(alpha = 0.85f))
-                    .border(1.dp, GlassBorder.copy(alpha = 0.45f), RoundedCornerShape(14.dp))
-                    .padding(horizontal = 12.dp, vertical = 6.dp)
+                    .background(SurfaceCard.copy(alpha = 0.88f))
+                    .border(1.dp, GlassBorder.copy(alpha = 0.4f), RoundedCornerShape(14.dp))
+                    .padding(horizontal = 12.dp, vertical = 7.dp)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -253,7 +289,7 @@ fun ScorePanel(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "${state.currentChallengeLevel.title} — ${state.currentChallengeLevel.subtitle}",
+                        text = "${lvl.title} — ${lvl.subtitle}",
                         style = MaterialTheme.typography.bodyMedium.copy(fontSize = 11.sp),
                         color = TextSecondary,
                         maxLines = 1,
@@ -263,15 +299,18 @@ fun ScorePanel(
                     Spacer(Modifier.width(8.dp))
                     Text(
                         text = "${(progress * 100).toInt()}%",
-                        style = MaterialTheme.typography.labelLarge.copy(fontSize = 11.sp),
+                        style = MaterialTheme.typography.labelLarge.copy(
+                            fontFamily = JetBrainsMonoFontFamily,
+                            fontSize = 11.sp
+                        ),
                         color = AccentGold
                     )
                 }
-                Spacer(Modifier.height(4.dp))
+                Spacer(Modifier.height(5.dp))
                 LinearProgressIndicator(
                     progress = { progress },
                     color = AccentGold,
-                    trackColor = SurfaceCardElevated,
+                    trackColor = BoardWellBg,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(6.dp)
@@ -279,79 +318,144 @@ fun ScorePanel(
                 )
             }
         }
+    }
+}
 
-        // Glowing "Combo x2" arcade callout matching the mockup!
-        AnimatedVisibility(visible = state.currentCascadeWave >= 1) {
-            val labelText = if (state.currentCascadeWave >= 2) {
-                "Combo x${state.currentCascadeWave}"
-            } else {
-                "Line Clear!"
-            }
-            Text(
-                text = labelText,
-                style = MaterialTheme.typography.headlineMedium.copy(
-                    fontFamily = OutfitFontFamily,
-                    fontWeight = FontWeight.ExtraBold,
-                    fontSize = 23.sp,
-                    shadow = Shadow(
-                        color = Color(0xFF0A1438),
-                        offset = Offset(0f, 3f),
-                        blurRadius = 4f
+/**
+ * Fixed-height callout slot placed above the game board so line-clear / combo callouts
+ * never push or shift the 8x8 board vertically and never overlap board cells.
+ */
+@Composable
+fun CascadeCalloutBar(
+    floatingBanner: FloatingBanner?,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = modifier
+            .fillMaxWidth()
+            .height(34.dp)
+    ) {
+        AnimatedVisibility(
+            visible = floatingBanner != null,
+            enter = fadeIn(tween(140)) + scaleIn(initialScale = 0.86f, animationSpec = tween(160)),
+            exit = fadeOut(tween(180)) + scaleOut(targetScale = 0.92f, animationSpec = tween(180))
+        ) {
+            floatingBanner?.let { banner ->
+                val accent = if (banner.isChain) AccentGold else AccentCyan
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier
+                        .clip(CircleShape)
+                        .background(
+                            Brush.horizontalGradient(
+                                listOf(
+                                    SurfaceCardElevated.copy(alpha = 0.96f),
+                                    SurfaceCard.copy(alpha = 0.96f)
+                                )
+                            )
+                        )
+                        .border(1.25.dp, accent.copy(alpha = 0.85f), CircleShape)
+                        .padding(horizontal = 14.dp, vertical = 5.dp)
+                        .testTag("cascade_banner")
+                ) {
+                    Text(
+                        text = banner.headline,
+                        style = MaterialTheme.typography.labelLarge.copy(
+                            fontFamily = OutfitFontFamily,
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 12.sp,
+                            letterSpacing = 0.7.sp
+                        ),
+                        color = Color.White,
+                        maxLines = 1
                     )
-                ),
-                color = AccentGold,
-                modifier = Modifier
-                    .padding(vertical = 1.dp)
-                    .testTag("combo_indicator")
-            )
+                    Text(
+                        text = banner.pointsText,
+                        style = MaterialTheme.typography.labelLarge.copy(
+                            fontFamily = JetBrainsMonoFontFamily,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp
+                        ),
+                        color = accent,
+                        maxLines = 1
+                    )
+                }
+            }
         }
     }
 }
 
 @Composable
-private fun HudPill(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    iconTint: Color,
+private fun StudioHudCard(
+    icon: ImageVector,
+    accent: Color,
     label: String,
     value: String,
     modifier: Modifier = Modifier,
-    valueColor: Color = Color.White
+    highlight: Boolean = false,
+    valueColor: Color = TextPrimary
 ) {
+    val shape = RoundedCornerShape(18.dp)
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
         modifier = modifier
-            .clip(RoundedCornerShape(16.dp))
+            .shadow(6.dp, shape, clip = false)
+            .clip(shape)
             .background(
                 Brush.verticalGradient(
-                    listOf(SurfaceCardElevated.copy(alpha = 0.85f), SurfaceCard.copy(alpha = 0.90f))
+                    listOf(
+                        SurfaceCardElevated.copy(alpha = 0.94f),
+                        SurfaceCard.copy(alpha = 0.96f)
+                    )
                 )
             )
-            .border(1.dp, GlassBorder.copy(alpha = 0.55f), RoundedCornerShape(16.dp))
-            .padding(horizontal = 12.dp, vertical = 6.dp)
+            .border(
+                width = if (highlight) 1.5.dp else 1.dp,
+                color = if (highlight) AccentGold.copy(alpha = 0.85f) else GlassBorder.copy(alpha = 0.45f),
+                shape = shape
+            )
+            .padding(horizontal = 12.dp, vertical = 9.dp)
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = iconTint,
-            modifier = Modifier.size(22.dp)
-        )
-        Column {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .size(34.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(accent.copy(alpha = 0.16f))
+                .border(1.dp, accent.copy(alpha = 0.36f), RoundedCornerShape(10.dp))
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = accent,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+        Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = label,
-                style = MaterialTheme.typography.labelMedium.copy(fontSize = 10.sp),
-                color = TextSecondary,
-                maxLines = 1
+                style = MaterialTheme.typography.labelMedium.copy(
+                    fontSize = 10.sp,
+                    letterSpacing = 0.9.sp,
+                    fontWeight = FontWeight.Bold
+                ),
+                color = if (highlight) AccentGold else TextSecondary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
             Text(
                 text = value,
-                style = MaterialTheme.typography.labelLarge.copy(
-                    fontFamily = OutfitFontFamily,
+                style = MaterialTheme.typography.titleLarge.copy(
+                    fontFamily = JetBrainsMonoFontFamily,
                     fontWeight = FontWeight.ExtraBold,
-                    fontSize = 19.sp
+                    fontSize = 20.sp
                 ),
                 color = valueColor,
-                maxLines = 1
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
     }

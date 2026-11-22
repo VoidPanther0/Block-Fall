@@ -23,6 +23,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.input.pointer.pointerInput
@@ -32,15 +33,15 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.example.game.BlockStyle
+import com.example.game.BoardColorPalette
 import com.example.game.GamePiece
 import com.example.game.GameStatus
 import com.example.game.TraySlot
 import com.example.ui.theme.AccentGold
-import com.example.ui.theme.BoardRim
-import com.example.ui.theme.BoardWellBg
-import com.example.ui.theme.GlassBorder
-import com.example.ui.theme.SurfaceCard
-import com.example.ui.theme.SurfaceCardElevated
+import com.example.ui.theme.LocalBlockStyle
+import com.example.ui.theme.LocalBoardPalette
+import com.example.ui.theme.toBoardColors
 
 @Composable
 fun PieceTray(
@@ -55,17 +56,24 @@ fun PieceTray(
     onDragCancel: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val blockStyle = LocalBlockStyle.current
+    val boardPalette = LocalBoardPalette.current
+    val boardTheme = boardPalette.toBoardColors()
+    val trayCorner = if (blockStyle == BlockStyle.RETRO) 10.dp else 22.dp
+    val trayShape = RoundedCornerShape(trayCorner)
+
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
+            .shadow(10.dp, trayShape, clip = false)
+            .clip(trayShape)
             .background(
                 Brush.verticalGradient(
-                    listOf(SurfaceCard.copy(alpha = 0.88f), BoardWellBg.copy(alpha = 0.94f))
+                    listOf(boardTheme.trayTop, boardTheme.trayBottom)
                 )
             )
-            .border(1.5.dp, GlassBorder.copy(alpha = 0.55f), RoundedCornerShape(20.dp))
-            .padding(8.dp)
+            .border(1.25.dp, boardTheme.trayBorder, trayShape)
+            .padding(10.dp)
             .testTag("piece_tray"),
         horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally),
         verticalAlignment = Alignment.CenterVertically
@@ -76,6 +84,8 @@ fun PieceTray(
                 isSelected = selectedSlotIndex == slot.index,
                 isBeingDragged = draggingSlotIndex == slot.index,
                 isInteractive = status == GameStatus.PLAYING && slot.piece != null,
+                blockStyle = blockStyle,
+                boardPalette = boardPalette,
                 onTap = { onSlotTapped(slot.index) },
                 onDragStart = { rootPos -> onDragStart(slot.index, rootPos) },
                 onDragMove = onDragMove,
@@ -93,6 +103,8 @@ private fun TraySlotCard(
     isSelected: Boolean,
     isBeingDragged: Boolean,
     isInteractive: Boolean,
+    blockStyle: BlockStyle,
+    boardPalette: BoardColorPalette,
     onTap: () -> Unit,
     onDragStart: (Offset) -> Unit,
     onDragMove: (Offset) -> Unit,
@@ -101,16 +113,18 @@ private fun TraySlotCard(
     modifier: Modifier = Modifier
 ) {
     var slotRootPos by remember { mutableStateOf(Offset.Zero) }
+    val boardTheme = boardPalette.toBoardColors()
     val borderColor by animateColorAsState(
         targetValue = when {
             isSelected -> AccentGold
-            slot.piece != null -> BoardRim.copy(alpha = 0.7f)
-            else -> BoardRim.copy(alpha = 0.25f)
+            slot.piece != null -> boardTheme.rim.copy(alpha = 0.65f)
+            else -> boardTheme.rim.copy(alpha = 0.22f)
         },
         label = "slot_border"
     )
 
-    val bgColor = if (isSelected) SurfaceCardElevated else BoardWellBg.copy(alpha = 0.7f)
+    val bgColor = if (isSelected) boardTheme.selectedSlotBg else boardTheme.slotBg
+    val slotCorner = if (blockStyle == BlockStyle.RETRO) 6.dp else 16.dp
     val desc = slot.piece?.let { "Piece ${slot.index + 1}, ${it.shape.cellCount} cells" }
         ?: "Empty piece slot ${slot.index + 1}"
 
@@ -119,9 +133,9 @@ private fun TraySlotCard(
         modifier = modifier
             .defaultMinSize(minHeight = 64.dp)
             .aspectRatio(1f)
-            .clip(RoundedCornerShape(14.dp))
+            .clip(RoundedCornerShape(slotCorner))
             .background(bgColor)
-            .border(if (isSelected) 2.dp else 1.dp, borderColor, RoundedCornerShape(14.dp))
+            .border(if (isSelected) 2.dp else 1.dp, borderColor, RoundedCornerShape(slotCorner))
             .onGloballyPositioned { coords ->
                 slotRootPos = coords.positionInRoot()
             }
@@ -149,7 +163,12 @@ private fun TraySlotCard(
     ) {
         val piece = slot.piece
         if (piece != null && !isBeingDragged) {
-            MiniPieceCanvas(piece = piece, modifier = Modifier.fillMaxSize())
+            MiniPieceCanvas(
+                piece = piece,
+                blockStyle = blockStyle,
+                boardPalette = boardPalette,
+                modifier = Modifier.fillMaxSize()
+            )
         }
     }
 }
@@ -157,7 +176,9 @@ private fun TraySlotCard(
 @Composable
 fun MiniPieceCanvas(
     piece: GamePiece,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    blockStyle: BlockStyle = LocalBlockStyle.current,
+    boardPalette: BoardColorPalette = LocalBoardPalette.current
 ) {
     Canvas(modifier = modifier) {
         val gridDim = 5f
@@ -175,7 +196,9 @@ fun MiniPieceCanvas(
                 left = offsetX + cell.col * maxCellSize + gap / 2f,
                 top = offsetY + cell.row * maxCellSize + gap / 2f,
                 cellSize = tile,
-                color = piece.color
+                color = piece.color,
+                blockStyle = blockStyle,
+                boardPalette = boardPalette
             )
         }
     }

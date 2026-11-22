@@ -1,11 +1,14 @@
 package com.example.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -27,8 +30,11 @@ import com.example.ui.theme.AccentCoral
 import com.example.ui.theme.AccentCyan
 import com.example.ui.theme.AccentEmerald
 import com.example.ui.theme.AccentGold
+import com.example.ui.theme.BoardWellBg
+import com.example.ui.theme.GlassBorder
+import com.example.ui.theme.JetBrainsMonoFontFamily
 import com.example.ui.theme.OutfitFontFamily
-import com.example.ui.theme.SurfaceCardElevated
+import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
 
 @Composable
@@ -36,7 +42,7 @@ fun RulesScreen(
     onBack: () -> Unit
 ) {
     CascadeScreenContainer(
-        maxContentWidth = 620.dp,
+        maxContentWidth = 680.dp,
         modifier = Modifier.testTag("rules_screen")
     ) {
         ScreenTopBar(
@@ -55,58 +61,60 @@ fun RulesScreen(
                 title = "Core Gameplay",
                 accent = AccentCyan,
                 bullets = listOf(
-                    "The board is an 8×8 grid. You receive 3 polyomino pieces in the tray at a time.",
-                    "Place all 3 pieces in any order to receive a fresh set of 3 pieces.",
-                    "Placed pieces stay fixed in position—blocks do NOT fall while placing."
+                    "The playfield is an 8×8 grid. You receive 3 polyomino pieces in the tray at a time.",
+                    "Place all 3 pieces in any order to draw a fresh tray of 3 pieces.",
+                    "Placed pieces stay fixed in position—blocks do NOT drop while placing."
                 )
             )
 
             RuleSectionCard(
-                title = "Line Clearing & Gravity",
+                title = "Line Clearing & Vertical Gravity",
                 accent = AccentEmerald,
                 bullets = listOf(
-                    "Filling all 8 cells of any row or column clears that line immediately.",
-                    "Intersecting rows and columns clear simultaneously in the same wave.",
-                    "After lines clear, every remaining block above empty squares falls straight DOWN within its column without moving sideways.",
-                    "If falling blocks complete new rows or columns, another Cascade Wave triggers automatically until the board settles."
+                    "Completing all 8 cells of any row or column clears that line immediately.",
+                    "Intersecting rows and columns clear simultaneously within the same wave.",
+                    "After lines clear, remaining blocks above empty squares fall straight DOWN within their column without moving sideways.",
+                    "If falling blocks form new full lines, another Cascade Wave resolves automatically until the board settles."
                 )
             )
 
             FrostedGlassCard(
                 cornerRadius = 20.dp,
-                borderColor = AccentGold.copy(alpha = 0.65f),
+                borderColor = AccentGold.copy(alpha = 0.42f),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.padding(16.dp)
+                    modifier = Modifier.padding(18.dp)
                 ) {
                     Text(
                         text = "SCORING FORMULA",
                         style = MaterialTheme.typography.labelMedium.copy(
                             fontFamily = OutfitFontFamily,
-                            fontWeight = FontWeight.ExtraBold
+                            fontWeight = FontWeight.ExtraBold,
+                            letterSpacing = 1.sp
                         ),
                         color = AccentGold
                     )
-                    ScoreRow("Place a Piece", "+1 pt per cell placed")
-                    ScoreRow("Clear a Line", "+10 pts per line")
-                    ScoreRow("Multi-Line Clear", "+15 pts per extra line in wave")
-                    ScoreRow("Gravity Cascade Multiplier", "×Wave Index (×2, ×3, ×4...)")
-                    ScoreRow("Cascade Chain Bonus", "+25 pts per chain step above wave 1")
+                    ScoreRow("Place a Piece", "+1 pt / cell")
+                    ScoreRow("Clear a Line", "+10 pts / line")
+                    ScoreRow("Multi-Line Clear", "+15 pts / extra line")
+                    ScoreRow("Gravity Cascade", "×Wave (×2, ×3, ×4...)")
+                    ScoreRow("Cascade Chain Bonus", "+25 pts / step > 1")
                     ScoreRow("Full Board Clear", "+150 pts bonus")
                 }
             }
 
             RuleSectionCard(
-                title = "Game Modes & Win Conditions",
+                title = "Modes & Star Thresholds",
                 accent = AccentCoral,
                 bullets = listOf(
-                    "Classic Mode: Play endlessly to beat your high score. The game ends when none of your remaining tray pieces fit anywhere on the board. Progress is auto-saved after every turn.",
-                    "Challenge Mode: 8 handcrafted puzzles with target scores and move limits. Reach the target score within the move limit to clear the level and unlock the next one.",
-                    "Stars: Earn 1★ for reaching the target score, 2★ for +25% score or 3+ moves left, and 3★ for +50% score or 5+ moves left."
+                    "Classic Endless: Play endlessly to beat your personal high score. Ends when no remaining tray piece fits on the board.",
+                    "Challenge Campaign: 8 handcrafted tactical boards with target scores and move budgets. Earn 1★ at target, 2★ at +25% score or 3+ moves left, and 3★ at +50% score or 5+ moves left."
                 )
             )
+
+            Spacer(Modifier.height(4.dp))
         }
     }
 }
@@ -123,13 +131,14 @@ private fun RuleSectionCard(
     ) {
         Column(
             verticalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier.padding(18.dp)
         ) {
             Text(
                 text = title.uppercase(),
                 style = MaterialTheme.typography.labelMedium.copy(
                     fontFamily = OutfitFontFamily,
-                    fontWeight = FontWeight.ExtraBold
+                    fontWeight = FontWeight.ExtraBold,
+                    letterSpacing = 1.sp
                 ),
                 color = accent
             )
@@ -150,19 +159,27 @@ private fun ScoreRow(label: String, value: String) {
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(10.dp))
-            .background(SurfaceCardElevated.copy(alpha = 0.72f))
+            .background(BoardWellBg)
+            .border(1.dp, GlassBorder.copy(alpha = 0.3f), RoundedCornerShape(10.dp))
             .padding(horizontal = 12.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
-            color = Color.White
+            style = MaterialTheme.typography.bodyMedium.copy(
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 13.sp
+            ),
+            color = TextPrimary
         )
         Text(
             text = value,
-            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-            color = AccentGold
+            style = MaterialTheme.typography.labelMedium.copy(
+                fontFamily = JetBrainsMonoFontFamily,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 0.sp
+            ),
+            color = AccentCyan
         )
     }
 }

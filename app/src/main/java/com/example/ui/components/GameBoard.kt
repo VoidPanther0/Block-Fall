@@ -1,24 +1,15 @@
 package com.example.ui.components
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -26,9 +17,9 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.withFrameMillis
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
@@ -42,23 +33,19 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.example.game.BlockStyle
 import com.example.game.Board
 import com.example.game.GridCoord
 import com.example.ui.BoardVisualPhase
 import com.example.ui.DragState
 import com.example.ui.FloatingBanner
 import com.example.ui.ParticleBurst
-import com.example.ui.theme.AccentCyan
 import com.example.ui.theme.AccentGold
-import com.example.ui.theme.BoardRim
-import com.example.ui.theme.BoardWellBg
-import com.example.ui.theme.EmptySlotBorder
-import com.example.ui.theme.EmptySlotFill
 import com.example.ui.theme.InvalidTint
-import com.example.ui.theme.SurfaceCardElevated
+import com.example.ui.theme.LocalBlockStyle
+import com.example.ui.theme.LocalBoardPalette
+import com.example.ui.theme.toBoardColors
 import com.example.ui.theme.toPalette
 import kotlin.math.PI
 import kotlin.math.cos
@@ -81,7 +68,7 @@ fun GameBoard(
     board: Board,
     visualPhase: BoardVisualPhase,
     dragState: DragState?,
-    floatingBanner: FloatingBanner?,
+    @Suppress("UNUSED_PARAMETER") floatingBanner: FloatingBanner?,
     particleTriggerId: Long,
     latestParticles: List<ParticleBurst>,
     hasSelectedSlot: Boolean,
@@ -96,16 +83,18 @@ fun GameBoard(
     onBoardTouchCancel: (() -> Unit)? = null
 ) {
     val activeParticles = remember { mutableStateListOf<ActiveParticle>() }
+    val blockStyle = LocalBlockStyle.current
+    val boardPalette = LocalBoardPalette.current
+    val boardTheme = boardPalette.toBoardColors()
 
-    LaunchedEffect(particleTriggerId, visualEffectsEnabled) {
+    LaunchedEffect(particleTriggerId, visualEffectsEnabled, boardPalette) {
         if (!visualEffectsEnabled || latestParticles.isEmpty()) return@LaunchedEffect
         val rng = Random(particleTriggerId)
         for (burst in latestParticles) {
-            val baseColor = burst.color.toPalette().glow
+            val baseColor = burst.color.toPalette(boardPalette).glow
             val count = if (burst.isLandingDust) 4 else 7
             repeat(count) {
                 val angle = if (burst.isLandingDust) {
-                    // Spread horizontally along floor impact
                     val side = if (rng.nextBoolean()) 0f else PI.toFloat()
                     side + (rng.nextFloat() - 0.5f) * 0.9f
                 } else {
@@ -152,20 +141,23 @@ fun GameBoard(
         }
     }
 
+    val boardCorner = if (blockStyle == BlockStyle.RETRO) 10.dp else 24.dp
+    val boardShape = RoundedCornerShape(boardCorner)
     Box(
         modifier = modifier
             .aspectRatio(1f)
-            .clip(RoundedCornerShape(22.dp))
+            .shadow(14.dp, boardShape, clip = false)
+            .clip(boardShape)
             .background(
                 Brush.verticalGradient(
-                    listOf(Color(0xFF1A367D), BoardWellBg)
+                    listOf(boardTheme.wellTop, boardTheme.wellBottom)
                 )
             )
-            .border(2.dp, BoardRim, RoundedCornerShape(22.dp))
-            .padding(10.dp)
+            .border(2.dp, boardTheme.rim, boardShape)
+            .padding(11.dp)
             .testTag("game_board")
             .semantics {
-                contentDescription = "8 by 8 Cascade puzzle board"
+                contentDescription = "8 by 8 Block Falls puzzle board"
             }
     ) {
         val currentHasSelectedSlot by rememberUpdatedState(hasSelectedSlot)
@@ -229,21 +221,30 @@ fun GameBoard(
             val cellSize = size.width / Board.SIZE.toFloat()
             val gap = (cellSize * 0.09f).coerceAtLeast(2.5f)
             val tileSize = cellSize - gap
-            val slotRadius = CornerRadius(tileSize * 0.18f, tileSize * 0.18f)
+            val slotRadius = if (blockStyle == BlockStyle.RETRO) {
+                CornerRadius(2f, 2f)
+            } else {
+                CornerRadius(tileSize * 0.2f, tileSize * 0.2f)
+            }
 
-            // 1. Draw recessed 8x8 empty slots
+            // 1. Draw sculpted 8x8 recessed cell wells
             for (r in 0 until Board.SIZE) {
                 for (c in 0 until Board.SIZE) {
                     val left = c * cellSize + gap / 2f
                     val top = r * cellSize + gap / 2f
+                    val subtleChecker = if ((r + c) % 2 == 0) {
+                        boardTheme.slotFill
+                    } else {
+                        boardTheme.slotFill.copy(alpha = 0.84f)
+                    }
                     drawRoundRect(
-                        color = EmptySlotFill,
+                        color = subtleChecker,
                         topLeft = Offset(left, top),
                         size = Size(tileSize, tileSize),
                         cornerRadius = slotRadius
                     )
                     drawRoundRect(
-                        color = EmptySlotBorder,
+                        color = boardTheme.slotBorder.copy(alpha = 0.72f),
                         topLeft = Offset(left, top),
                         size = Size(tileSize, tileSize),
                         cornerRadius = slotRadius,
@@ -262,7 +263,7 @@ fun GameBoard(
                         cornerRadius = CornerRadius(8f, 8f)
                     )
                     drawRoundRect(
-                        color = AccentGold.copy(alpha = 0.7f),
+                        color = AccentGold.copy(alpha = 0.75f),
                         topLeft = Offset(1f, rowIdx * cellSize + 1f),
                         size = Size(size.width - 2f, cellSize - 2f),
                         cornerRadius = CornerRadius(8f, 8f),
@@ -277,7 +278,7 @@ fun GameBoard(
                         cornerRadius = CornerRadius(8f, 8f)
                     )
                     drawRoundRect(
-                        color = AccentGold.copy(alpha = 0.7f),
+                        color = AccentGold.copy(alpha = 0.75f),
                         topLeft = Offset(colIdx * cellSize + 1f, 1f),
                         size = Size(cellSize - 2f, size.height - 2f),
                         cornerRadius = CornerRadius(8f, 8f),
@@ -296,7 +297,9 @@ fun GameBoard(
                                 left = c * cellSize + gap / 2f,
                                 top = r * cellSize + gap / 2f,
                                 cellSize = tileSize,
-                                color = cell.color
+                                color = cell.color,
+                                blockStyle = blockStyle,
+                                boardPalette = boardPalette
                             )
                         }
                     }
@@ -306,7 +309,6 @@ fun GameBoard(
                     val p = visualPhase.progress
                     val b = visualPhase.boardBeforeClear
 
-                    // Sweep highlight behind clearing rows & columns
                     val sweepAlpha = (1f - p) * 0.55f
                     for (r in visualPhase.clearedRows) {
                         drawRoundRect(
@@ -345,14 +347,18 @@ fun GameBoard(
                                     alpha = fade,
                                     scaleX = shrink,
                                     scaleY = shrink,
-                                    glowBoost = 1.2f
+                                    glowBoost = 1.2f,
+                                    blockStyle = blockStyle,
+                                    boardPalette = boardPalette
                                 )
                             } else {
                                 drawBevelBlock(
                                     left = left,
                                     top = top,
                                     cellSize = tileSize,
-                                    color = cell.color
+                                    color = cell.color,
+                                    blockStyle = blockStyle,
+                                    boardPalette = boardPalette
                                 )
                             }
                         }
@@ -363,7 +369,6 @@ fun GameBoard(
                     val movingIds = visualPhase.movements.map { it.cell.id }.toSet()
                     val b = visualPhase.boardAfterClear
 
-                    // Draw stationary blocks first
                     for (r in 0 until Board.SIZE) {
                         for (c in 0 until Board.SIZE) {
                             val cell = b.get(r, c) ?: continue
@@ -372,12 +377,13 @@ fun GameBoard(
                                 left = c * cellSize + gap / 2f,
                                 top = r * cellSize + gap / 2f,
                                 cellSize = tileSize,
-                                color = cell.color
+                                color = cell.color,
+                                blockStyle = blockStyle,
+                                boardPalette = boardPalette
                             )
                         }
                     }
 
-                    // Draw falling blocks smoothly interpolated from oldRow -> newRow
                     val p = visualPhase.progress
                     for (move in visualPhase.movements) {
                         val interpRow = move.fromRow + (move.toRow - move.fromRow) * p
@@ -386,7 +392,9 @@ fun GameBoard(
                             top = interpRow * cellSize + gap / 2f,
                             cellSize = tileSize,
                             color = move.cell.color,
-                            glowBoost = 0.25f
+                            glowBoost = 0.25f,
+                            blockStyle = blockStyle,
+                            boardPalette = boardPalette
                         )
                     }
                 }
@@ -405,7 +413,9 @@ fun GameBoard(
                                 cellSize = tileSize,
                                 color = cell.color,
                                 scaleX = if (isLanded) sx else 1f,
-                                scaleY = if (isLanded) sy else 1f
+                                scaleY = if (isLanded) sy else 1f,
+                                blockStyle = blockStyle,
+                                boardPalette = boardPalette
                             )
                         }
                     }
@@ -427,7 +437,9 @@ fun GameBoard(
                             cellSize = tileSize,
                             color = dragState.piece.color,
                             alpha = 0.45f,
-                            glowBoost = if (visualEffectsEnabled) 0.5f else 0f
+                            glowBoost = if (visualEffectsEnabled) 0.5f else 0f,
+                            blockStyle = blockStyle,
+                            boardPalette = boardPalette
                         )
                     } else {
                         drawRoundRect(
@@ -447,7 +459,7 @@ fun GameBoard(
                 }
             }
 
-            // 5. Render active particles (clear sparks + gravity landing dust)
+            // 5. Render active particles
             if (visualEffectsEnabled) {
                 for (particle in activeParticles) {
                     val px = particle.col * cellSize
@@ -458,47 +470,6 @@ fun GameBoard(
                         radius = radius,
                         center = Offset(px, py)
                     )
-                }
-            }
-        }
-
-        // 6. Floating Cascade / Chain Reaction Callout Banner
-        AnimatedVisibility(
-            visible = floatingBanner != null,
-            enter = fadeIn() + scaleIn(initialScale = 0.8f),
-            exit = fadeOut() + scaleOut(targetScale = 0.9f),
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .padding(top = 14.dp)
-        ) {
-            floatingBanner?.let { banner ->
-                val accent = if (banner.isChain) AccentGold else AccentCyan
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(2.dp),
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(SurfaceCardElevated.copy(alpha = 0.94f))
-                        .border(1.5.dp, accent.copy(alpha = 0.85f), RoundedCornerShape(14.dp))
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
-                        .testTag("cascade_banner")
-                ) {
-                    Text(
-                        text = "${banner.headline}  ${banner.pointsText}",
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.ExtraBold,
-                            fontSize = 15.sp,
-                            letterSpacing = 0.6.sp
-                        ),
-                        color = accent
-                    )
-                    if (banner.subline != null) {
-                        Text(
-                            text = banner.subline,
-                            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 12.sp),
-                            color = Color.White.copy(alpha = 0.88f)
-                        )
-                    }
                 }
             }
         }

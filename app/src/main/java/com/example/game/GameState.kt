@@ -14,6 +14,29 @@ enum class GameStatus {
     CHALLENGE_LOST
 }
 
+enum class BlockStyle(val id: String, val displayName: String) {
+    MODERN("modern", "Modern"),
+    RETRO("retro", "Retro"),
+    NEON("neon", "Neon");
+
+    companion object {
+        fun fromId(id: String?): BlockStyle =
+            entries.firstOrNull { it.id.equals(id, ignoreCase = true) } ?: MODERN
+    }
+}
+
+enum class BoardColorPalette(val id: String, val displayName: String) {
+    ROYAL("royal", "Royal"),
+    MIDNIGHT("midnight", "Midnight"),
+    EMERALD("emerald", "Forest"),
+    SUNSET("sunset", "Sunset");
+
+    companion object {
+        fun fromId(id: String?): BoardColorPalette =
+            entries.firstOrNull { it.id.equals(id, ignoreCase = true) } ?: ROYAL
+    }
+}
+
 data class TraySlot(
     val index: Int,
     val piece: GamePiece?
@@ -34,7 +57,9 @@ data class GameSettings(
     val musicEnabled: Boolean = true,
     val hapticsEnabled: Boolean = true,
     val visualEffectsEnabled: Boolean = true,
-    val placementPreviewEnabled: Boolean = true
+    val placementPreviewEnabled: Boolean = true,
+    val blockStyle: BlockStyle = BlockStyle.MODERN,
+    val boardPalette: BoardColorPalette = BoardColorPalette.ROYAL
 )
 
 data class GameStatistics(
@@ -43,7 +68,10 @@ data class GameStatistics(
     val totalCascadesTriggered: Int = 0,
     val maxCascadeDepth: Int = 0,
     val totalBlocksPlaced: Int = 0,
-    val classicBestScore: Int = 0
+    val classicBestScore: Int = 0,
+    val fullBoardClears: Int = 0,
+    val dailyCompletedCount: Int = 0,
+    val dailyStreak: Int = 0
 )
 
 data class ChallengeLevelProgress(
@@ -52,4 +80,3 @@ data class ChallengeLevelProgress(
     val stars: Int = 0,
     val completed: Boolean = false
 )
-

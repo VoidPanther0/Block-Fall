@@ -2,6 +2,7 @@ package com.example
 
 import android.content.Context
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
@@ -10,7 +11,9 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.test.core.app.ApplicationProvider
 import com.example.data.GameRepository
 import com.example.game.BlockColor
+import com.example.game.BlockStyle
 import com.example.game.Board
+import com.example.game.BoardColorPalette
 import com.example.game.GamePiece
 import com.example.game.GameSettings
 import com.example.game.PieceShape
@@ -86,7 +89,9 @@ class CascadeRobolectricTest {
                     musicEnabled = false,
                     hapticsEnabled = true,
                     visualEffectsEnabled = false,
-                    placementPreviewEnabled = true
+                    placementPreviewEnabled = true,
+                    blockStyle = BlockStyle.RETRO,
+                    boardPalette = BoardColorPalette.MIDNIGHT
                 )
             )
             repo.saveChallengeLevelResult(
@@ -104,6 +109,8 @@ class CascadeRobolectricTest {
             assertFalse(loaded.settings.musicEnabled)
             assertTrue(loaded.settings.hapticsEnabled)
             assertFalse(loaded.settings.visualEffectsEnabled)
+            assertEquals(BlockStyle.RETRO, loaded.settings.blockStyle)
+            assertEquals(BoardColorPalette.MIDNIGHT, loaded.settings.boardPalette)
             assertEquals(2, loaded.unlockedChallengeLevel)
             assertEquals(3, loaded.challengeProgress[1]?.stars)
             assertTrue(loaded.challengeProgress[1]?.completed == true)
@@ -220,7 +227,7 @@ class CascadeRobolectricTest {
         composeRule.onNodeWithTag("statistics_back_button").performClick()
         composeRule.waitForIdle()
 
-        // Settings screen (without How to Play / Rules buttons)
+        // Settings screen + Theme Switcher (Block Style & Board Palette)
         composeRule.onNodeWithTag("home_settings_button").performScrollTo().performClick()
         composeRule.waitForIdle()
         composeRule.onNodeWithTag("settings_screen").assertIsDisplayed()
@@ -228,6 +235,13 @@ class CascadeRobolectricTest {
         assertEquals(0, composeRule.onAllNodesWithTag("settings_how_to_play_button").fetchSemanticsNodes().size)
         composeRule.onNodeWithTag("setting_sound_switch").performClick()
         composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag("theme_live_preview").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithTag("theme_block_style_retro").performScrollTo().performClick()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag("theme_board_palette_sunset").performScrollTo().performClick()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag("theme_active_summary").performScrollTo().assertTextEquals("Retro · Sunset")
 
         composeRule.onNodeWithTag("settings_back_button").performClick()
         composeRule.waitForIdle()

@@ -4,6 +4,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.Lifecycle
@@ -15,6 +16,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.ui.navigation.CascadeRoutes
+import com.example.ui.theme.LocalBlockStyle
+import com.example.ui.theme.LocalBoardPalette
 import com.example.ui.screens.ChallengeSelectionScreen
 import com.example.ui.screens.GameOverScreen
 import com.example.ui.screens.HomeScreen
@@ -49,14 +52,18 @@ fun CascadeApp(
         }
     }
 
-    NavHost(
-        navController = navController,
-        startDestination = CascadeRoutes.SPLASH,
-        enterTransition = { fadeIn(animationSpec = tween(180)) },
-        exitTransition = { fadeOut(animationSpec = tween(180)) },
-        popEnterTransition = { fadeIn(animationSpec = tween(180)) },
-        popExitTransition = { fadeOut(animationSpec = tween(180)) }
+    CompositionLocalProvider(
+        LocalBlockStyle provides state.settings.blockStyle,
+        LocalBoardPalette provides state.settings.boardPalette
     ) {
+        NavHost(
+            navController = navController,
+            startDestination = CascadeRoutes.SPLASH,
+            enterTransition = { fadeIn(animationSpec = tween(180)) },
+            exitTransition = { fadeOut(animationSpec = tween(180)) },
+            popEnterTransition = { fadeIn(animationSpec = tween(180)) },
+            popExitTransition = { fadeOut(animationSpec = tween(180)) }
+        ) {
         composable(CascadeRoutes.SPLASH) {
             SplashScreen(
                 onFinished = {
@@ -251,6 +258,8 @@ fun CascadeApp(
                 onToggleHaptics = viewModel::toggleHaptics,
                 onToggleVisualEffects = viewModel::toggleVisualEffects,
                 onTogglePlacementPreview = viewModel::togglePlacementPreview,
+                onSelectBlockStyle = viewModel::setBlockStyle,
+                onSelectBoardPalette = viewModel::setBoardPalette,
                 onResetProgressConfirmed = {
                     viewModel.playUiClick()
                     viewModel.resetAllProgress()
@@ -262,6 +271,7 @@ fun CascadeApp(
             RulesScreen(
                 onBack = { navController.popBackStack() }
             )
+        }
         }
     }
 }

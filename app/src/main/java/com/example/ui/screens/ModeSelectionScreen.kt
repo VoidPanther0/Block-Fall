@@ -1,9 +1,10 @@
 package com.example.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -18,6 +19,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AllInclusive
 import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -25,19 +27,22 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.ui.components.ArcadeButtonStyle
 import com.example.ui.components.CascadeScreenContainer
-import com.example.ui.components.ChallengeModeScenicBackground
-import com.example.ui.components.ClassicModeScenicBackground
+import com.example.ui.components.FrostedGlassCard
+import com.example.ui.components.GlossyArcadeButton
 import com.example.ui.components.ScreenTopBar
+import com.example.ui.theme.AccentCyan
 import com.example.ui.theme.AccentGold
 import com.example.ui.theme.OutfitFontFamily
+import com.example.ui.theme.TextPrimary
+import com.example.ui.theme.TextSecondary
 
 @Composable
 fun ModeSelectionScreen(
@@ -46,7 +51,7 @@ fun ModeSelectionScreen(
     onSelectChallengeLevels: () -> Unit
 ) {
     CascadeScreenContainer(
-        maxContentWidth = 580.dp,
+        maxContentWidth = 860.dp,
         modifier = Modifier.testTag("mode_selection_screen")
     ) {
         ScreenTopBar(
@@ -55,98 +60,157 @@ fun ModeSelectionScreen(
             backTestTag = "mode_selection_back_button"
         )
 
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(18.dp)
-        ) {
-            Spacer(Modifier.height(4.dp))
+        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+            val isWide = maxWidth >= 640.dp
 
-            ScenicModeCard(
-                title = "Classic",
-                subtitle = "Play endlessly\nwith best score",
-                icon = Icons.Filled.AllInclusive,
-                iconTint = Color.White,
-                scenicBackground = { ClassicModeScenicBackground() },
-                onClick = onPlayNewClassic,
-                testTag = "mode_play_classic_button"
-            )
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                if (isWide) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        ModeCard(
+                            title = "Classic Endless",
+                            badge = "ENDLESS SURVIVAL",
+                            description = "Place polyominoes freely on the 8×8 grid, clear rows or columns, and chain gravity cascades for high scores.",
+                            icon = Icons.Filled.AllInclusive,
+                            accent = AccentCyan,
+                            buttonText = "Play Classic",
+                            buttonStyle = ArcadeButtonStyle.GOLD,
+                            buttonTag = "mode_play_classic_button",
+                            onAction = onPlayNewClassic,
+                            modifier = Modifier.weight(1f)
+                        )
+                        ModeCard(
+                            title = "Challenge Campaign",
+                            badge = "8 TACTICAL LEVELS",
+                            description = "Conquer curated boards with suspended shelves, move budgets, and 3-star target thresholds.",
+                            icon = Icons.Filled.EmojiEvents,
+                            accent = AccentGold,
+                            buttonText = "Browse Levels",
+                            buttonStyle = ArcadeButtonStyle.GREEN,
+                            buttonTag = "mode_browse_challenges_button",
+                            onAction = onSelectChallengeLevels,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                } else {
+                    ModeCard(
+                        title = "Classic Endless",
+                        badge = "ENDLESS SURVIVAL",
+                        description = "Place polyominoes freely on the 8×8 grid, clear rows or columns, and chain gravity cascades for high scores.",
+                        icon = Icons.Filled.AllInclusive,
+                        accent = AccentCyan,
+                        buttonText = "Play Classic",
+                        buttonStyle = ArcadeButtonStyle.GOLD,
+                        buttonTag = "mode_play_classic_button",
+                        onAction = onPlayNewClassic
+                    )
+                    ModeCard(
+                        title = "Challenge Campaign",
+                        badge = "8 TACTICAL LEVELS",
+                        description = "Conquer curated boards with suspended shelves, move budgets, and 3-star target thresholds.",
+                        icon = Icons.Filled.EmojiEvents,
+                        accent = AccentGold,
+                        buttonText = "Browse Levels",
+                        buttonStyle = ArcadeButtonStyle.GREEN,
+                        buttonTag = "mode_browse_challenges_button",
+                        onAction = onSelectChallengeLevels
+                    )
+                }
 
-            ScenicModeCard(
-                title = "Challenge",
-                subtitle = "Complete targets\nin limited moves",
-                icon = Icons.Filled.EmojiEvents,
-                iconTint = AccentGold,
-                scenicBackground = { ChallengeModeScenicBackground() },
-                onClick = onSelectChallengeLevels,
-                testTag = "mode_browse_challenges_button"
-            )
+                Spacer(Modifier.height(6.dp))
+            }
         }
     }
 }
 
 @Composable
-private fun ScenicModeCard(
+private fun ModeCard(
     title: String,
-    subtitle: String,
+    badge: String,
+    description: String,
     icon: ImageVector,
-    iconTint: Color,
-    scenicBackground: @Composable () -> Unit,
-    onClick: () -> Unit,
-    testTag: String
+    accent: Color,
+    buttonText: String,
+    buttonStyle: ArcadeButtonStyle,
+    buttonTag: String,
+    onAction: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    val shape = RoundedCornerShape(24.dp)
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(172.dp)
-            .shadow(10.dp, shape, clip = false)
-            .clip(shape)
-            .border(1.5.dp, Color.White.copy(alpha = 0.55f), shape)
-            .clickable(onClick = onClick)
-            .testTag(testTag)
+    FrostedGlassCard(
+        cornerRadius = 22.dp,
+        borderColor = accent.copy(alpha = 0.42f),
+        modifier = modifier.fillMaxWidth()
     ) {
-        Box(modifier = Modifier.matchParentSize()) {
-            scenicBackground()
-        }
-
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(18.dp),
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 24.dp, vertical = 18.dp)
+        Column(
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+            modifier = Modifier.padding(20.dp)
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = iconTint,
-                modifier = Modifier.size(64.dp)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .size(52.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(accent.copy(alpha = 0.16f))
+                        .border(1.dp, accent.copy(alpha = 0.42f), RoundedCornerShape(16.dp))
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = accent,
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = badge,
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            fontFamily = OutfitFontFamily,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 11.sp,
+                            letterSpacing = 1.sp
+                        ),
+                        color = accent
+                    )
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            fontFamily = OutfitFontFamily,
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 21.sp
+                        ),
+                        color = TextPrimary
+                    )
+                }
+            }
+
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
+                color = TextSecondary
             )
 
-            Column(
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-                modifier = Modifier.weight(1f)
-            ) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.headlineMedium.copy(
-                        fontFamily = OutfitFontFamily,
-                        fontWeight = FontWeight.ExtraBold,
-                        fontSize = 26.sp
-                    ),
-                    color = Color.White
-                )
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontSize = 15.sp,
-                        lineHeight = 20.sp
-                    ),
-                    color = Color.White.copy(alpha = 0.95f)
-                )
-            }
+            GlossyArcadeButton(
+                text = buttonText,
+                icon = Icons.Filled.PlayArrow,
+                style = buttonStyle,
+                onClick = onAction,
+                height = 50.dp,
+                cornerRadius = 15.dp,
+                fontSize = 16.sp,
+                testTag = buttonTag,
+                modifier = Modifier.fillMaxWidth()
+            )
         }
     }
 }

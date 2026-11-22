@@ -7,17 +7,17 @@ import androidx.compose.ui.graphics.Color
 
 private val CascadeColorScheme = darkColorScheme(
     primary = AccentCyan,
-    onPrimary = Color.White,
+    onPrimary = GoldBtnText,
     secondary = AccentGold,
     onSecondary = GoldBtnText,
     tertiary = AccentEmerald,
-    background = RoyalBlueBottom,
+    background = StudioBgBottom,
     onBackground = TextPrimary,
     surface = SurfaceCard,
     onSurface = TextPrimary,
     surfaceVariant = SurfaceCardElevated,
     onSurfaceVariant = TextSecondary,
-    outline = BoardRim,
+    outline = GlassBorder,
     error = InvalidTint,
     onError = Color.White
 )
