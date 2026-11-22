@@ -26,13 +26,13 @@ class EconomyEngineTest {
         val result = requireSuccess(
             EconomyEngine.purchaseShopItem(
                 wallet = wallet,
-                itemId = "booster_hammer_1",
+                itemId = "booster_shuffle_1",
                 transactionId = "tx-purchase-1"
             )
         )
 
         assertEquals(150, result.updatedWallet.goldCoins)
-        assertEquals(4, result.updatedWallet.hammerCount)
+        assertEquals(4, result.updatedWallet.shuffleCount)
         assertTrue("tx-purchase-1" in result.updatedWallet.processedLedgerIds)
     }
 
@@ -41,21 +41,21 @@ class EconomyEngineTest {
         val first = requireSuccess(
             EconomyEngine.purchaseShopItem(
                 wallet = PlayerWallet(),
-                itemId = "booster_hammer_1",
+                itemId = "booster_shuffle_1",
                 transactionId = "tx-duplicate"
             )
         )
 
         val second = EconomyEngine.purchaseShopItem(
             wallet = first.updatedWallet,
-            itemId = "booster_hammer_1",
+            itemId = "booster_shuffle_1",
             transactionId = "tx-duplicate"
         )
 
         assertTrue(second is EconomyMutationResult.Rejected)
         // The first purchase stands; the duplicate never charges again.
         assertEquals(150, first.updatedWallet.goldCoins)
-        assertEquals(4, first.updatedWallet.hammerCount)
+        assertEquals(4, first.updatedWallet.shuffleCount)
     }
 
     @Test
@@ -64,7 +64,7 @@ class EconomyEngineTest {
 
         val result = EconomyEngine.purchaseShopItem(
             wallet = poorWallet,
-            itemId = "booster_hammer_1",
+            itemId = "booster_shuffle_1",
             transactionId = "tx-insufficient"
         )
 

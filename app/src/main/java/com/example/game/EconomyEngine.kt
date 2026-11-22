@@ -54,13 +54,19 @@ data class ShopItem(
     val rewardBooster: BoosterType? = null,
     val rewardBoosterCount: Int = 0,
     val grantEntitlementId: String? = null,
-    val badge: String? = null
+    val badge: String? = null,
+    /** False when the gameplay feature behind this item is not implemented yet. */
+    val available: Boolean = true
 )
 
+/** Future product shown as Coming Soon. Intentionally has no price and is never purchasable. */
+data class ComingSoonProduct(val id: String, val title: String, val subtitle: String)
+
 object ShopCatalog {
-    val items: List<ShopItem> = listOf(
+    private val allItems: List<ShopItem> = listOf(
         ShopItem(
             id = "booster_hammer_1",
+            available = false, // no gameplay implementation yet
             category = ShopCategory.BOOSTERS,
             title = "Hammer",
             subtitle = "Remove any 1 block",
@@ -70,6 +76,7 @@ object ShopCatalog {
         ),
         ShopItem(
             id = "booster_refresh_1",
+            available = false, // no gameplay implementation yet
             category = ShopCategory.BOOSTERS,
             title = "Refresh",
             subtitle = "Deal 3 new pieces",
@@ -88,6 +95,7 @@ object ShopCatalog {
         ),
         ShopItem(
             id = "booster_trio_bundle",
+            available = false, // bundles Hammer/Refresh which are not implemented
             category = ShopCategory.BOOSTERS,
             title = "Tactician Trio",
             subtitle = "+2 Hammer, +2 Refresh, +2 Shuffle",
@@ -128,6 +136,15 @@ object ShopCatalog {
             diamondCost = 45,
             grantEntitlementId = "cosmetic_cascade_aura"
         )
+    )
+
+    /** Items that can actually be bought and used today. */
+    val items: List<ShopItem> = allItems.filter { it.available }
+
+    /** Configurable future products. Prices are deliberately unset until the developer decides them. */
+    val comingSoon: List<ComingSoonProduct> = listOf(
+        ComingSoonProduct("vip_membership", "VIP Membership", "Coming Soon"),
+        ComingSoonProduct("team_play", "Team Pass", "Coming Soon")
     )
 
     fun findById(id: String): ShopItem? = items.firstOrNull { it.id == id }
@@ -216,10 +233,18 @@ object EconomyEngine {
             return EconomyMutationResult.Rejected("Not enough Diamonds")
         }
 
-        val nextGold = (wallet.goldCoins - item.goldCost + item.rewardGold)
-            .coerceIn(0, PlayerWallet.MAX_GOLD)
-        val nextDiamonds = (wallet.diamonds - item.diamondCost + item.rewardDiamonds)
-            .coerceIn(0, PlayerWallet.MAX_DIAMONDS)
+        val rawGold = wallet.goldCoins.toLong() - item.goldCost + item.rewardGold
+        val rawDiamonds = wallet.diamonds.toLong() - item.diamondCost + item.rewardDiamonds
+        if (rawGold > PlayerWallet.MAX_GOLD || rawDiamonds > PlayerWallet.MAX_DIAMONDS) {
+            return EconomyMutationResult.Rejected("Wallet is full")
+        }
+        if (item.rewardBooster != null &&
+            wallet.countFor(item.rewardBooster) + item.rewardBoosterCount > PlayerWallet.MAX_BOOSTER_STACK
+        ) {
+            return EconomyMutationResult.Rejected("Booster stack is full")
+        }
+        val nextGold = rawGold.toInt().coerceAtLeast(0)
+        val nextDiamonds = rawDiamonds.toInt().coerceAtLeast(0)
 
         var nextHammer = wallet.hammerCount
         var nextRefresh = wallet.refreshCount

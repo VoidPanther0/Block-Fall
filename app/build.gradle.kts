@@ -9,6 +9,18 @@ plugins {
   alias(libs.plugins.google.services)
 }
 
+val TEST_ADMOB_APP_ID = "ca-app-pub-3940256099942544~3347511713"
+val prodAdmobAppId: String = run {
+  val fromEnv = System.getenv("ADMOB_APP_ID")
+  val envFile = rootProject.file(".env")
+  val fromFile = if (envFile.exists()) {
+    envFile.readLines().firstOrNull { it.startsWith("ADMOB_APP_ID=") }?.substringAfter("=")?.trim()
+  } else null
+  listOf(fromEnv, fromFile)
+    .firstOrNull { it != null && Regex("^ca-app-pub-[0-9]{16}~[0-9]{10}$").matches(it) }
+    ?: TEST_ADMOB_APP_ID
+}
+
 android {
   namespace = "com.example"
   compileSdk { version = release(36) { minorApiLevel = 1 } }
@@ -22,11 +34,6 @@ android {
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-    // Google's official test AdMob App ID. Keep in sync with .env / local.properties.
-    // Never substitute a production AdMob App ID until the app is published.
-    // Declared explicitly so every variant (including unit-test manifests) resolves
-    // the ${ADMOB_APP_ID} placeholder, not just the main app manifest.
-    manifestPlaceholders["ADMOB_APP_ID"] = "ca-app-pub-3940256099942544~3347511713"
   }
 
   // Do not remove or modify these signingConfigs. They are necessary for building, installing,
@@ -49,6 +56,10 @@ android {
 
   buildTypes {
     release {
+      // Production AdMob App ID comes only from the ADMOB_APP_ID environment variable or the
+      // gitignored .env file. If neither supplies a real ID, Google's test ID is used so the
+      // build stays valid; no production ID is ever committed.
+      manifestPlaceholders["ADMOB_APP_ID"] = prodAdmobAppId
       isCrunchPngs = false
       isMinifyEnabled = true
       isShrinkResources = true
@@ -58,9 +69,17 @@ android {
       signingConfig = signingConfigs.getByName("release")
     }
     debug {
+      // Debug builds always use Google's official test AdMob App ID.
+      manifestPlaceholders["ADMOB_APP_ID"] = TEST_ADMOB_APP_ID
       // Do not remove or modify this signingConfig assignment. It is necessary for Android apps in
       // AI Studio.
-      signingConfig = signingConfigs.getByName("debugConfig")
+      // Falls back to the AGP-generated default debug keystore when no repo-root debug.keystore
+      // exists (fresh clones, Windows, CI), so debug builds never fail on a missing keystore.
+      signingConfig = if (file("${rootDir}/debug.keystore").exists()) {
+        signingConfigs.getByName("debugConfig")
+      } else {
+        signingConfigs.getByName("debug")
+      }
     }
   }
   compileOptions {

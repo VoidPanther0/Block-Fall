@@ -18,7 +18,8 @@ data class TurnExecutionResult(
     val nextTraySlots: List<TraySlot>,
     val nextBlockIdCounter: Long,
     val nextStatus: GameStatus,
-    val earnedChallengeStars: Int
+    val earnedChallengeStars: Int,
+    val feedback: ScoreFeedback = ScoreFeedback.NONE
 )
 
 class GameSessionEngine(
@@ -109,7 +110,8 @@ class GameSessionEngine(
             nextTraySlots = nextTraySlots,
             nextBlockIdCounter = nextIdCounter,
             nextStatus = nextStatus,
-            earnedChallengeStars = stars
+            earnedChallengeStars = stars,
+            feedback = ScoreFeedback.from(resolution)
         )
     }
 

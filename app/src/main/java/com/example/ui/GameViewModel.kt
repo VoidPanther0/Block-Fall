@@ -149,6 +149,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     private val sessionEngine = GameSessionEngine(pieceGenerator)
     private val dragController = DragController()
     val soundManager = SoundManager(application.applicationContext)
+    val haptics = com.example.audio.HapticsManager(application.applicationContext)
     private val animationRunner = CascadeAnimationRunner(soundManager)
     private val adManager by lazy { RewardedAdManager(getApplication<Application>()) }
 
@@ -168,6 +169,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             val saved = repository.loadInitialProgress()
             soundManager.soundEnabled = saved.settings.soundEnabled
             soundManager.musicEnabled = saved.settings.musicEnabled
+            haptics.enabled = saved.settings.hapticsEnabled
 
             val restored = saved.savedClassicGame
             val validSaved = if (restored != null && !GameSessionEngine.isClassicGameOver(restored.board, restored.trayPieces)) {
@@ -237,6 +239,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     fun playUiClick() {
         soundManager.playUiClick()
+        haptics.perform(com.example.audio.HapticEvent.TAP)
     }
 
     fun updateBoardBounds(rect: Rect, liftPx: Float) {
@@ -428,6 +431,8 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun toggleHaptics(enabled: Boolean) {
+        haptics.enabled = enabled
+        if (enabled) haptics.perform(com.example.audio.HapticEvent.TAP)
         updateSettings { it.copy(hapticsEnabled = enabled) }
     }
 
@@ -529,6 +534,31 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             if (result is EconomyMutationResult.Success) {
                 applyWalletMutation(result.updatedWallet)
             }
+        }
+    }
+
+    /** Shuffle booster: spends one charge and rerolls the remaining tray pieces. */
+    fun useShuffleBooster() {
+        val state = _uiState.value
+        if (state.status != GameStatus.PLAYING || state.wallet.shuffleCount <= 0) return
+        val remaining = state.traySlots.count { it.piece != null }
+        if (remaining == 0) return
+        viewModelScope.launch {
+            val result = EconomyEngine.consumeBooster(
+                wallet = _uiState.value.wallet,
+                type = BoosterType.SHUFFLE,
+                transactionId = UUID.randomUUID().toString()
+            )
+            if (result !is EconomyMutationResult.Success) return@launch
+            val (fresh, updatedId) = pieceGenerator.generateTray(_uiState.value.board, nextIdCounter)
+            nextIdCounter = updatedId
+            var i = 0
+            _uiState.update { st ->
+                st.copy(traySlots = st.traySlots.map { slot ->
+                    if (slot.piece != null) slot.copy(piece = fresh[i++ % fresh.size]) else slot
+                })
+            }
+            applyWalletMutation(result.updatedWallet)
         }
     }
 
@@ -671,6 +701,17 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         nextIdCounter = turn.nextBlockIdCounter
 
         soundManager.playBlockDrop()
+        haptics.perform(com.example.audio.HapticEvent.PLACE)
+        val fb = turn.feedback
+        if (fb.hasFeedback) {
+            when (fb.tier) {
+                com.example.game.FeedbackTier.PERFECT -> { soundManager.playPerfect(); haptics.perform(com.example.audio.HapticEvent.PERFECT) }
+                com.example.game.FeedbackTier.GREAT -> { soundManager.playGreat(); haptics.perform(com.example.audio.HapticEvent.CLEAR) }
+                else -> haptics.perform(if (fb.combo != com.example.game.ComboLabel.NONE) com.example.audio.HapticEvent.COMBO else com.example.audio.HapticEvent.CLEAR)
+            }
+        } else if (turn.resolution.hasClears) {
+            haptics.perform(com.example.audio.HapticEvent.CLEAR)
+        }
 
         val initialScore = turn.scoreAfterPlacement
         val newClassicBest = if (state.mode == GameMode.CLASSIC && initialScore > state.classicBestScore) {
@@ -767,6 +808,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             soundManager.playLevelComplete()
         } else if (nextStatus == GameStatus.GAME_OVER || nextStatus == GameStatus.CHALLENGE_LOST) {
             soundManager.playGameOver()
+            haptics.perform(com.example.audio.HapticEvent.GAME_OVER)
         }
 
         val nextUnlockedLevel = if (
@@ -949,6 +991,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     override fun onCleared() {
         super.onCleared()
         soundManager.release()
+        haptics.cancel()
     }
 
     companion object {
