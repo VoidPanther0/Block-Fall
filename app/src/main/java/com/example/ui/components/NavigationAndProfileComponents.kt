@@ -149,7 +149,7 @@ fun PremiumQuickNav(
                     verticalArrangement = Arrangement.Center,
                     modifier = Modifier
                         .weight(1f)
-                        .defaultMinSize(minHeight = 46.dp)
+                        .defaultMinSize(minHeight = 48.dp)
                         .clip(RoundedCornerShape(12.dp))
                         .background(if (isSelected) AccentCyan.copy(alpha = 0.12f) else Color.Transparent)
                         .clickable(role = Role.Tab, onClick = { onSelectTab(tab) })
@@ -276,7 +276,7 @@ fun PlayerProfileHeader(
                 IconActionButton(
                     icon = Icons.Filled.Leaderboard,
                     contentDescription = "Leaderboard & Cloud",
-                    size = 42.dp,
+                    size = 48.dp,
                     tint = if (isCloudSignedIn) AccentEmerald else AccentCyan,
                     borderColor = if (isCloudSignedIn) AccentEmerald.copy(alpha = 0.6f) else AccentCyan.copy(alpha = 0.45f),
                     onClick = onOpenLeaderboard,
@@ -285,7 +285,7 @@ fun PlayerProfileHeader(
                 IconActionButton(
                     icon = Icons.Filled.Settings,
                     contentDescription = "Settings",
-                    size = 42.dp,
+                    size = 48.dp,
                     onClick = onOpenSettings,
                     testTag = "home_top_settings_button"
                 )

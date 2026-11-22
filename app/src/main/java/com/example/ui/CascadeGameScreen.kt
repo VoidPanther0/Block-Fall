@@ -112,7 +112,11 @@ fun CascadeGameScreen(
                 .windowInsetsPadding(WindowInsets.safeDrawing)
                 .padding(horizontal = 16.dp, vertical = 10.dp)
         ) {
-            val isWideLayout = maxWidth >= 660.dp && maxWidth > maxHeight
+            // Short landscape phones cannot fit the vertical stack (HUD + board + tray),
+            // so they use the two-pane layout with a height-clamped board instead.
+            val isShortLandscape = maxHeight < 480.dp && maxWidth >= 480.dp
+            val isWideLayout = (maxWidth >= 660.dp && maxWidth > maxHeight) || isShortLandscape
+            val wideBoardMax = (maxHeight - 56.dp).coerceAtLeast(120.dp).coerceAtMost(500.dp)
 
             if (isWideLayout) {
                 Row(
@@ -163,7 +167,7 @@ fun CascadeGameScreen(
                                 boardBoundsInRoot = rect
                                 viewModel.updateBoardBounds(rect, dragLiftPx)
                             },
-                            modifier = Modifier.widthIn(max = 500.dp)
+                            modifier = Modifier.widthIn(max = wideBoardMax)
                         )
                     }
 
@@ -171,7 +175,7 @@ fun CascadeGameScreen(
                         modifier = Modifier
                             .weight(0.9f)
                             .widthIn(max = 420.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                        verticalArrangement = Arrangement.spacedBy(if (isShortLandscape) 8.dp else 16.dp)
                     ) {
                         TopGameBar(
                             state = state,

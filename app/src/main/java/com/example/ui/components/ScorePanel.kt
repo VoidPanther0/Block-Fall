@@ -337,15 +337,27 @@ fun ScorePanel(
  * UI-only feedback labels. The score and the core headline still come from the game engine;
  * this only maps the current cascade wave / clear count to a readable tier badge.
  */
-private fun feedbackTierFor(headline: String, wave: Int): Pair<String, Color> = when {
-    wave >= 5 -> "COMBO 5+" to AccentGold
-    wave == 4 -> "COMBO 4" to AccentGold
-    wave == 3 -> "COMBO 3" to AccentCoral
-    wave == 2 -> "COMBO 2" to AccentPurple
-    headline.contains("BOARD", ignoreCase = true) || headline.contains("TRIPLE", ignoreCase = true) ->
-        "PERFECT" to AccentGold
-    headline.contains("DOUBLE", ignoreCase = true) -> "GREAT" to AccentCyan
-    else -> "LINE CLEAR" to AccentCyan
+private fun feedbackTierFor(headline: String, wave: Int): Pair<String, Color> {
+    // The engine resets currentCascadeWave when the turn finalizes while the banner lingers.
+    // The banner headline ("GRAVITY CHAIN x2!", "MEGA CASCADE x3!") keeps the authoritative
+    // depth, so derive the combo tier from both sources instead of the transient wave alone.
+    val comboFromHeadline = Regex("x(\\d+)", RegexOption.IGNORE_CASE)
+        .find(headline)
+        ?.groupValues
+        ?.getOrNull(1)
+        ?.toIntOrNull()
+        ?: 0
+    val depth = maxOf(wave, comboFromHeadline)
+    return when {
+        depth >= 5 -> "COMBO 5+" to AccentGold
+        depth == 4 -> "COMBO 4" to AccentGold
+        depth == 3 -> "COMBO 3" to AccentCoral
+        depth == 2 -> "COMBO 2" to AccentPurple
+        headline.contains("BOARD", ignoreCase = true) || headline.contains("TRIPLE", ignoreCase = true) ->
+            "PERFECT" to AccentGold
+        headline.contains("DOUBLE", ignoreCase = true) -> "GREAT" to AccentCyan
+        else -> "LINE CLEAR" to AccentCyan
+    }
 }
 
 @Composable
@@ -411,7 +423,9 @@ fun CascadeCalloutBar(
                             letterSpacing = 0.4.sp
                         ),
                         color = Color.White,
-                        maxLines = 1
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
                     )
                     Text(
                         text = banner.pointsText,

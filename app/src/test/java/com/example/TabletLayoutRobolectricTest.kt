@@ -5,6 +5,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -41,7 +42,7 @@ class TabletLayoutRobolectricTest {
         composeRule.onNodeWithTag("challenge_selection_screen").assertIsDisplayed()
         composeRule.onNodeWithTag("challenge_level_card_1").assertIsDisplayed()
         composeRule.onNodeWithTag("challenge_target_summary_card").assertIsDisplayed()
-        composeRule.onNodeWithTag("challenge_play_button").performClick()
+        composeRule.onNodeWithTag("challenge_play_button").performScrollTo().performClick()
         composeRule.waitForIdle()
 
         // Landscape 2-pane Gameplay displays board + HUD + tray simultaneously

@@ -234,7 +234,11 @@ fun LevelCompleteScreen(
                 )
             } else {
                 Text(
-                    text = "ALL 8 CHALLENGES MASTERED!",
+                    text = if (state.isDailyChallenge) {
+                        "DAILY PUZZLE COMPLETE · COME BACK TOMORROW"
+                    } else {
+                        "ALL ${ChallengeLevels.levels.size} CHALLENGES MASTERED!"
+                    },
                     style = MaterialTheme.typography.labelLarge.copy(fontFamily = OutfitFontFamily),
                     color = AccentGold
                 )

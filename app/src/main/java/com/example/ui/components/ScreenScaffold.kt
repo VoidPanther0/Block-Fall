@@ -3,6 +3,7 @@ package com.example.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -92,16 +93,19 @@ fun ScreenTopBar(
     backTestTag: String = "screen_back_button",
     actions: @Composable RowScope.() -> Unit = {}
 ) {
-    Box(
+    // Three-slot Row keeps the title inside the space between back button and actions,
+    // so trailing chips can never overlap it on 320dp screens.
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(bottom = 12.dp)
+            .padding(bottom = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         if (onBack != null) {
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
-                    .align(Alignment.CenterStart)
                     .size(48.dp)
                     .clip(RoundedCornerShape(14.dp))
                     .background(
@@ -120,6 +124,8 @@ fun ScreenTopBar(
                     modifier = Modifier.size(26.dp)
                 )
             }
+        } else {
+            Spacer(Modifier.size(48.dp))
         }
 
         Text(
@@ -134,18 +140,12 @@ fun ScreenTopBar(
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center,
-            modifier = Modifier
-                .align(Alignment.Center)
-                .padding(horizontal = 48.dp)
+            modifier = Modifier.weight(1f)
         )
 
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.align(Alignment.CenterEnd),
             content = actions
         )
-        if (onBack == null) {
-            Spacer(Modifier.size(48.dp).align(Alignment.CenterStart))
-        }
     }
 }

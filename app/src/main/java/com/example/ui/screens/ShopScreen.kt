@@ -86,7 +86,12 @@ private enum class StoreSection(val label: String) {
 }
 
 /** Offers that grant boosters the current gameplay loop cannot consume yet. */
-private val HIDDEN_OFFER_IDS = setOf("booster_hammer_1", "booster_refresh_1")
+private val HIDDEN_OFFER_IDS = setOf(
+    "booster_hammer_1",
+    "booster_refresh_1",
+    // This bundle also grants Hammer + Refresh, which the current gameplay loop cannot use.
+    "booster_trio_bundle"
+)
 
 /**
  * Premium game storefront. Block Skins are intentionally hidden for this release.
@@ -187,7 +192,7 @@ fun ShopScreen(
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
-                        .defaultMinSize(minHeight = 44.dp)
+                        .defaultMinSize(minHeight = 48.dp)
                         .clip(shape)
                         .background(if (selected) accent.copy(alpha = 0.18f) else SurfaceCardElevated.copy(alpha = 0.72f))
                         .border(

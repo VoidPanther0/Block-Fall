@@ -411,16 +411,25 @@ private fun ChallengeInspectorCard(
                     color = TextSecondary
                 )
                 Text(
-                    text = "2★ $twoStarTarget+",
-                    style = CascadeTextStyles.NumericBalance.copy(fontSize = 11.sp),
-                    color = AccentCyan
+                    text = "2★ $twoStarTarget / 3m",
+                    style = CascadeTextStyles.NumericBalance.copy(fontSize = 10.sp),
+                    color = AccentCyan,
+                    maxLines = 1
                 )
                 Text(
-                    text = "3★ $threeStarTarget+",
-                    style = CascadeTextStyles.NumericBalance.copy(fontSize = 11.sp),
-                    color = AccentGold
+                    text = "3★ $threeStarTarget / 5m",
+                    style = CascadeTextStyles.NumericBalance.copy(fontSize = 10.sp),
+                    color = AccentGold,
+                    maxLines = 1
                 )
             }
+            Text(
+                text = "Star thresholds: target score OR moves left (3m / 5m).",
+                style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp),
+                color = TextSecondary,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
 
             val (rewardGold, rewardDiamonds) = EconomyEngine.calculateChallengeWinReward(3)
             Row(

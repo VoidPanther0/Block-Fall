@@ -411,10 +411,10 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     fun restartCurrentGame() {
         val state = _uiState.value
         if (state.status == GameStatus.RESOLVING_CASCADE) return
-        if (state.mode == GameMode.CLASSIC) {
-            startNewClassicGame()
-        } else {
-            startChallengeLevel(state.currentChallengeLevel.levelNumber)
+        when {
+            state.isDailyChallenge -> startDailyChallenge()
+            state.mode == GameMode.CLASSIC -> startNewClassicGame()
+            else -> startChallengeLevel(state.currentChallengeLevel.levelNumber)
         }
     }
 

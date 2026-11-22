@@ -78,6 +78,12 @@ import com.google.firebase.auth.auth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.flow.emptyFlow
 
+/**
+ * Single onboarding flag for the integrated app: this NavHost route is the only onboarding
+ * decision point. Do not pair it with a second pre-navigation sign-in gate or another
+ * SharedPreferences flag. Core branch's SignInOnboarding/OnboardingPrefs should be removed
+ * on integration; the existing Google auth APIs are reused by [OnboardingScreen].
+ */
 private const val KEY_ONBOARDING_COMPLETE = "onboarding_complete"
 
 @Composable
@@ -445,7 +451,9 @@ private fun CascadeNavHost(
                     },
                     onReplay = {
                         viewModel.playUiClick()
-                        viewModel.startChallengeLevel(state.currentChallengeLevel.levelNumber)
+                        // restartCurrentGame keeps Daily Gravity in daily mode; a raw
+                        // startChallengeLevel(0) would fall back to campaign Level 1.
+                        viewModel.restartCurrentGame()
                         navController.navigate(GameplayRoute) {
                             popUpTo<HomeRoute>()
                         }
