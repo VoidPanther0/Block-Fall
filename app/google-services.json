@@ -1,0 +1,121 @@
+{
+  "project_info": {
+    "project_number": "641354491628",
+    "project_id": "gen-lang-client-0120665296",
+    "storage_bucket": "gen-lang-client-0120665296.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:641354491628:android:7c30ebd5556d7194aba7c9",
+        "android_client_info": {
+          "package_name": "com.aistudio.cascadegrid.vqmxrt"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "641354491628-k68dbcmjksu2popsvc013a791vhn6nm6.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.aistudio.cascadegrid.vqmxrt",
+            "certificate_hash": "e79a4937725e42d454008174ab8f05ce7515e3a4"
+          }
+        },
+        {
+          "client_id": "641354491628-hc99kfidbur9mlv0g267k0fqn51i90du.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCzO1CgBeyS-gr2mmzxqtzf5PFHTqpMVRM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "641354491628-hc99kfidbur9mlv0g267k0fqn51i90du.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:641354491628:android:50519d89dbd32248aba7c9",
+        "android_client_info": {
+          "package_name": "com.aistudio.cubepuzzle3d.qmvrk"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "641354491628-pfqo2jj90fcnu94v3rmnsfht3pp3s1d7.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.aistudio.cubepuzzle3d.qmvrk",
+            "certificate_hash": "f15c597fe8458c2a8829f0bfe3235d11741bb4de"
+          }
+        },
+        {
+          "client_id": "641354491628-hc99kfidbur9mlv0g267k0fqn51i90du.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCzO1CgBeyS-gr2mmzxqtzf5PFHTqpMVRM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "641354491628-hc99kfidbur9mlv0g267k0fqn51i90du.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:641354491628:android:e100e9842acae909aba7c9",
+        "android_client_info": {
+          "package_name": "com.sachinstudio.cubepuzzle3d"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "641354491628-hk1s1ds400hvvq0fggpna79fl0buk742.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.sachinstudio.cubepuzzle3d",
+            "certificate_hash": "ba73cc791959897ae5c35165cadac8a7dcf98514"
+          }
+        },
+        {
+          "client_id": "641354491628-hc99kfidbur9mlv0g267k0fqn51i90du.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCzO1CgBeyS-gr2mmzxqtzf5PFHTqpMVRM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "641354491628-hc99kfidbur9mlv0g267k0fqn51i90du.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

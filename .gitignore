@@ -17,3 +17,8 @@ local.properties
 .env
 debug.keystore
 *-debug.log
+# CI workflows - not needed in source export
+/.github/
+# Accidental duplicate backups
+/gradle/libs.versions-1.toml
+/gradle/wrapper/gradle-wrapper-1.properties
