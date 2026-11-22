@@ -15,9 +15,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Shuffle
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -210,6 +215,13 @@ fun CascadeGameScreen(
                             onDragEnd = viewModel::endDrag,
                             onDragCancel = viewModel::cancelDrag
                         )
+                        ShuffleBoosterButton(
+                            count = state.wallet.shuffleCount,
+                            enabled = state.status == GameStatus.PLAYING &&
+                                state.wallet.shuffleCount > 0 &&
+                                state.traySlots.any { it.piece != null },
+                            onClick = viewModel::useShuffleBooster
+                        )
                         HintFooter(hasSelectedPiece = state.selectedSlotIndex != null)
                     }
                 }
@@ -320,6 +332,13 @@ fun CascadeGameScreen(
                             onDragEnd = viewModel::endDrag,
                             onDragCancel = viewModel::cancelDrag
                         )
+                        ShuffleBoosterButton(
+                            count = state.wallet.shuffleCount,
+                            enabled = state.status == GameStatus.PLAYING &&
+                                state.wallet.shuffleCount > 0 &&
+                                state.traySlots.any { it.piece != null },
+                            onClick = viewModel::useShuffleBooster
+                        )
                         HintFooter(hasSelectedPiece = state.selectedSlotIndex != null)
                         Spacer(Modifier.height(2.dp))
                     }
@@ -392,6 +411,19 @@ fun CascadeGameScreen(
         if (state.showRulesDialog) {
             GravityRulesDialog(onDismiss = { viewModel.toggleRulesDialog(false) })
         }
+    }
+}
+
+@Composable
+private fun ShuffleBoosterButton(count: Int, enabled: Boolean, onClick: () -> Unit) {
+    OutlinedButton(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = Modifier.testTag("shuffle_booster_button")
+    ) {
+        Icon(Icons.Filled.Shuffle, contentDescription = null)
+        Spacer(Modifier.width(6.dp))
+        Text("Shuffle ($count)")
     }
 }
 
