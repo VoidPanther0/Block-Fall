@@ -62,8 +62,11 @@ jobs:
             echo "STORE_PASSWORD=$SECRET_STORE_PASSWORD" >> "$GITHUB_ENV"
             echo "KEY_PASSWORD=$SECRET_KEY_PASSWORD" >> "$GITHUB_ENV"
             echo "Using repository secrets for release signing."
+          elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            echo "::error::Missing RELEASE_KEYSTORE_BASE64, STORE_PASSWORD, or KEY_PASSWORD secrets for production release tag build."
+            exit 1
           else
-            echo "::warning::RELEASE_KEYSTORE_BASE64, STORE_PASSWORD, or KEY_PASSWORD secrets are not set. Generating an ephemeral CI signing keystore for release APK verification."
+            echo "::warning::RELEASE_KEYSTORE_BASE64, STORE_PASSWORD, or KEY_PASSWORD secrets are not set. Generating an ephemeral CI signing keystore for non-tag verification only."
             keytool -genkeypair -v \
               -keystore "$KEYSTORE_FILE" \
               -storetype PKCS12 \

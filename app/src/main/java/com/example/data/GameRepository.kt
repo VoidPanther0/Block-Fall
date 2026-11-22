@@ -2,6 +2,7 @@ package com.example.data
 
 import android.content.Context
 import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
@@ -19,6 +20,8 @@ import com.example.game.GameSettings
 import com.example.game.GameStatistics
 import com.example.game.PieceShape
 import com.example.game.SavedClassicGame
+import com.example.security.DecryptionResult
+import com.example.security.EncryptedEntitlementCache
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -34,13 +37,25 @@ data class PersistedProgress(
     val savedClassicGame: SavedClassicGame? = null,
     val settings: GameSettings = GameSettings(hapticsEnabled = hapticsEnabled),
     val statistics: GameStatistics = GameStatistics(classicBestScore = classicBestScore),
-    val challengeProgress: Map<Int, ChallengeLevelProgress> = emptyMap()
+    val challengeProgress: Map<Int, ChallengeLevelProgress> = emptyMap(),
+    val localIntegrityTampered: Boolean = false
 )
 
-class GameRepository(private val context: Context) {
+private data class ProtectedProgressState(
+    val classicBestScore: Int,
+    val unlockedChallengeLevel: Int,
+    val statistics: GameStatistics,
+    val challengeProgress: Map<Int, ChallengeLevelProgress>,
+    val tampered: Boolean = false
+)
+
+class GameRepository(
+    private val context: Context,
+    private val cryptoCache: EncryptedEntitlementCache = EncryptedEntitlementCache(context)
+) {
 
     private object Keys {
-        // Legacy / existing keys — preserved for full DataStore compatibility
+        // Legacy / existing keys preserved for migration compatibility
         val CLASSIC_BEST = intPreferencesKey("classic_best_score")
         val UNLOCKED_CHALLENGE_LEVEL = intPreferencesKey("unlocked_challenge_level")
         val HAPTICS_ENABLED = booleanPreferencesKey("haptics_enabled")
@@ -60,10 +75,13 @@ class GameRepository(private val context: Context) {
         val MAX_CASCADE_DEPTH = intPreferencesKey("max_cascade_depth")
         val TOTAL_BLOCKS_PLACED = intPreferencesKey("total_blocks_placed")
         val CHALLENGE_PROGRESS_JSON = stringPreferencesKey("challenge_progress_json")
+
+        // AES-GCM authenticated envelope for protected progression & saved run
+        val PROTECTED_PROGRESS_ENVELOPE = stringPreferencesKey("protected_progress_envelope_v1")
+        val SAVED_CLASSIC_ENVELOPE = stringPreferencesKey("saved_classic_envelope_v1")
     }
 
     val progressFlow: Flow<PersistedProgress> = context.cascadeDataStore.data.map { prefs ->
-        val classicBest = prefs[Keys.CLASSIC_BEST] ?: 0
         val haptics = prefs[Keys.HAPTICS_ENABLED] ?: true
         val settings = GameSettings(
             soundEnabled = prefs[Keys.SOUND_ENABLED] ?: true,
@@ -74,45 +92,48 @@ class GameRepository(private val context: Context) {
             blockStyle = BlockStyle.fromId(prefs[Keys.BLOCK_STYLE]),
             boardPalette = BoardColorPalette.fromId(prefs[Keys.BOARD_PALETTE])
         )
-        val stats = GameStatistics(
-            totalGamesPlayed = prefs[Keys.TOTAL_GAMES_PLAYED] ?: 0,
-            totalLinesCleared = prefs[Keys.TOTAL_LINES_CLEARED] ?: 0,
-            totalCascadesTriggered = prefs[Keys.TOTAL_CASCADES] ?: 0,
-            maxCascadeDepth = prefs[Keys.MAX_CASCADE_DEPTH] ?: 0,
-            totalBlocksPlaced = prefs[Keys.TOTAL_BLOCKS_PLACED] ?: 0,
-            classicBestScore = classicBest
-        )
-        val challengeProgress = prefs[Keys.CHALLENGE_PROGRESS_JSON]
-            ?.let { deserializeChallengeProgress(it) }
-            ?: emptyMap()
+
+        val protectedState = readProtectedProgressState(prefs)
+        val savedClassic = readSavedClassicGame(prefs)
 
         PersistedProgress(
-            classicBestScore = classicBest,
-            unlockedChallengeLevel = prefs[Keys.UNLOCKED_CHALLENGE_LEVEL] ?: 1,
+            classicBestScore = protectedState.classicBestScore,
+            unlockedChallengeLevel = protectedState.unlockedChallengeLevel,
             hapticsEnabled = haptics,
-            savedClassicGame = prefs[Keys.SAVED_CLASSIC_JSON]?.let { deserializeClassicGame(it) },
+            savedClassicGame = savedClassic,
             settings = settings,
-            statistics = stats,
-            challengeProgress = challengeProgress
+            statistics = protectedState.statistics,
+            challengeProgress = protectedState.challengeProgress,
+            localIntegrityTampered = protectedState.tampered
         )
     }
 
     suspend fun loadInitialProgress(): PersistedProgress = progressFlow.first()
 
     suspend fun updateClassicBestScore(score: Int) {
+        if (score <= 0) return
         context.cascadeDataStore.edit { prefs ->
-            val current = prefs[Keys.CLASSIC_BEST] ?: 0
-            if (score > current) {
-                prefs[Keys.CLASSIC_BEST] = score
+            val current = readProtectedProgressState(prefs)
+            if (score > current.classicBestScore) {
+                val updated = current.copy(
+                    classicBestScore = score,
+                    statistics = current.statistics.copy(classicBestScore = score),
+                    tampered = false
+                )
+                writeProtectedProgressState(prefs, updated)
             }
         }
     }
 
     suspend fun unlockChallengeLevel(levelNumber: Int) {
         context.cascadeDataStore.edit { prefs ->
-            val current = prefs[Keys.UNLOCKED_CHALLENGE_LEVEL] ?: 1
-            if (levelNumber > current) {
-                prefs[Keys.UNLOCKED_CHALLENGE_LEVEL] = levelNumber
+            val current = readProtectedProgressState(prefs)
+            if (levelNumber > current.unlockedChallengeLevel) {
+                val updated = current.copy(
+                    unlockedChallengeLevel = levelNumber,
+                    tampered = false
+                )
+                writeProtectedProgressState(prefs, updated)
             }
         }
     }
@@ -125,14 +146,9 @@ class GameRepository(private val context: Context) {
         nextUnlockedLevel: Int
     ) {
         context.cascadeDataStore.edit { prefs ->
-            val currentUnlocked = prefs[Keys.UNLOCKED_CHALLENGE_LEVEL] ?: 1
-            if (nextUnlockedLevel > currentUnlocked) {
-                prefs[Keys.UNLOCKED_CHALLENGE_LEVEL] = nextUnlockedLevel
-            }
-            val currentMap = prefs[Keys.CHALLENGE_PROGRESS_JSON]
-                ?.let { deserializeChallengeProgress(it) }
-                ?.toMutableMap()
-                ?: mutableMapOf()
+            val current = readProtectedProgressState(prefs)
+            val updatedUnlocked = maxOf(current.unlockedChallengeLevel, nextUnlockedLevel)
+            val currentMap = current.challengeProgress.toMutableMap()
             val prev = currentMap[levelNumber]
             currentMap[levelNumber] = ChallengeLevelProgress(
                 levelNumber = levelNumber,
@@ -140,7 +156,14 @@ class GameRepository(private val context: Context) {
                 stars = maxOf(prev?.stars ?: 0, stars),
                 completed = (prev?.completed == true) || completed
             )
-            prefs[Keys.CHALLENGE_PROGRESS_JSON] = serializeChallengeProgress(currentMap)
+            writeProtectedProgressState(
+                prefs,
+                current.copy(
+                    unlockedChallengeLevel = updatedUnlocked,
+                    challengeProgress = currentMap,
+                    tampered = false
+                )
+            )
         }
     }
 
@@ -164,7 +187,14 @@ class GameRepository(private val context: Context) {
 
     suspend fun incrementGamesPlayed() {
         context.cascadeDataStore.edit { prefs ->
-            prefs[Keys.TOTAL_GAMES_PLAYED] = (prefs[Keys.TOTAL_GAMES_PLAYED] ?: 0) + 1
+            val current = readProtectedProgressState(prefs)
+            val updated = current.copy(
+                statistics = current.statistics.copy(
+                    totalGamesPlayed = current.statistics.totalGamesPlayed + 1
+                ),
+                tampered = false
+            )
+            writeProtectedProgressState(prefs, updated)
         }
     }
 
@@ -175,22 +205,30 @@ class GameRepository(private val context: Context) {
         maxDepthInTurn: Int
     ) {
         context.cascadeDataStore.edit { prefs ->
-            prefs[Keys.TOTAL_BLOCKS_PLACED] = (prefs[Keys.TOTAL_BLOCKS_PLACED] ?: 0) + blocksPlaced
-            prefs[Keys.TOTAL_LINES_CLEARED] = (prefs[Keys.TOTAL_LINES_CLEARED] ?: 0) + linesCleared
-            prefs[Keys.TOTAL_CASCADES] = (prefs[Keys.TOTAL_CASCADES] ?: 0) + cascadesTriggered
-            val currentMax = prefs[Keys.MAX_CASCADE_DEPTH] ?: 0
-            if (maxDepthInTurn > currentMax) {
-                prefs[Keys.MAX_CASCADE_DEPTH] = maxDepthInTurn
-            }
+            val current = readProtectedProgressState(prefs)
+            val s = current.statistics
+            val updated = current.copy(
+                statistics = s.copy(
+                    totalBlocksPlaced = s.totalBlocksPlaced + blocksPlaced,
+                    totalLinesCleared = s.totalLinesCleared + linesCleared,
+                    totalCascadesTriggered = s.totalCascadesTriggered + cascadesTriggered,
+                    maxCascadeDepth = maxOf(s.maxCascadeDepth, maxDepthInTurn)
+                ),
+                tampered = false
+            )
+            writeProtectedProgressState(prefs, updated)
         }
     }
 
     suspend fun saveClassicGame(snapshot: SavedClassicGame?) {
         context.cascadeDataStore.edit { prefs ->
+            prefs.remove(Keys.SAVED_CLASSIC_JSON)
             if (snapshot == null) {
-                prefs.remove(Keys.SAVED_CLASSIC_JSON)
+                prefs.remove(Keys.SAVED_CLASSIC_ENVELOPE)
             } else {
-                prefs[Keys.SAVED_CLASSIC_JSON] = serializeClassicGame(snapshot)
+                val json = serializeClassicGame(snapshot)
+                prefs[Keys.SAVED_CLASSIC_ENVELOPE] =
+                    cryptoCache.encrypt(RECORD_SAVED_CLASSIC, json)
             }
         }
     }
@@ -198,18 +236,149 @@ class GameRepository(private val context: Context) {
     suspend fun resetAllProgress() {
         context.cascadeDataStore.edit { prefs ->
             prefs.remove(Keys.CLASSIC_BEST)
-            prefs[Keys.UNLOCKED_CHALLENGE_LEVEL] = 1
+            prefs.remove(Keys.UNLOCKED_CHALLENGE_LEVEL)
             prefs.remove(Keys.SAVED_CLASSIC_JSON)
+            prefs.remove(Keys.SAVED_CLASSIC_ENVELOPE)
             prefs.remove(Keys.TOTAL_GAMES_PLAYED)
             prefs.remove(Keys.TOTAL_LINES_CLEARED)
             prefs.remove(Keys.TOTAL_CASCADES)
             prefs.remove(Keys.MAX_CASCADE_DEPTH)
             prefs.remove(Keys.TOTAL_BLOCKS_PLACED)
             prefs.remove(Keys.CHALLENGE_PROGRESS_JSON)
+            prefs.remove(Keys.PROTECTED_PROGRESS_ENVELOPE)
         }
     }
 
+    private fun readProtectedProgressState(prefs: Preferences): ProtectedProgressState {
+        val envelope = prefs[Keys.PROTECTED_PROGRESS_ENVELOPE]
+        if (envelope != null) {
+            return when (val result = cryptoCache.decrypt(RECORD_PROTECTED_PROGRESS, envelope)) {
+                is DecryptionResult.Verified -> deserializeProtectedProgress(result.plaintext)
+                    ?: ProtectedProgressState(
+                        classicBestScore = 0,
+                        unlockedChallengeLevel = 1,
+                        statistics = GameStatistics(),
+                        challengeProgress = emptyMap(),
+                        tampered = true
+                    )
+
+                is DecryptionResult.TamperedOrCorrupted -> ProtectedProgressState(
+                    classicBestScore = 0,
+                    unlockedChallengeLevel = 1,
+                    statistics = GameStatistics(),
+                    challengeProgress = emptyMap(),
+                    tampered = true
+                )
+
+                is DecryptionResult.Missing -> readLegacyUnencryptedProgress(prefs)
+            }
+        }
+        return readLegacyUnencryptedProgress(prefs)
+    }
+
+    private fun readLegacyUnencryptedProgress(prefs: Preferences): ProtectedProgressState {
+        val classicBest = (prefs[Keys.CLASSIC_BEST] ?: 0).coerceAtLeast(0)
+        val unlocked = (prefs[Keys.UNLOCKED_CHALLENGE_LEVEL] ?: 1).coerceIn(1, 50)
+        val stats = GameStatistics(
+            totalGamesPlayed = (prefs[Keys.TOTAL_GAMES_PLAYED] ?: 0).coerceAtLeast(0),
+            totalLinesCleared = (prefs[Keys.TOTAL_LINES_CLEARED] ?: 0).coerceAtLeast(0),
+            totalCascadesTriggered = (prefs[Keys.TOTAL_CASCADES] ?: 0).coerceAtLeast(0),
+            maxCascadeDepth = (prefs[Keys.MAX_CASCADE_DEPTH] ?: 0).coerceAtLeast(0),
+            totalBlocksPlaced = (prefs[Keys.TOTAL_BLOCKS_PLACED] ?: 0).coerceAtLeast(0),
+            classicBestScore = classicBest
+        )
+        val challengeMap = prefs[Keys.CHALLENGE_PROGRESS_JSON]
+            ?.let { deserializeChallengeProgress(it) }
+            ?: emptyMap()
+        return ProtectedProgressState(
+            classicBestScore = classicBest,
+            unlockedChallengeLevel = unlocked,
+            statistics = stats,
+            challengeProgress = challengeMap,
+            tampered = false
+        )
+    }
+
+    private fun writeProtectedProgressState(
+        prefs: MutablePreferences,
+        state: ProtectedProgressState
+    ) {
+        val json = serializeProtectedProgress(state)
+        prefs[Keys.PROTECTED_PROGRESS_ENVELOPE] =
+            cryptoCache.encrypt(RECORD_PROTECTED_PROGRESS, json)
+
+        // Remove unencrypted legacy keys once sealed in the authenticated AES-GCM envelope
+        prefs.remove(Keys.CLASSIC_BEST)
+        prefs.remove(Keys.UNLOCKED_CHALLENGE_LEVEL)
+        prefs.remove(Keys.TOTAL_GAMES_PLAYED)
+        prefs.remove(Keys.TOTAL_LINES_CLEARED)
+        prefs.remove(Keys.TOTAL_CASCADES)
+        prefs.remove(Keys.MAX_CASCADE_DEPTH)
+        prefs.remove(Keys.TOTAL_BLOCKS_PLACED)
+        prefs.remove(Keys.CHALLENGE_PROGRESS_JSON)
+    }
+
+    private fun readSavedClassicGame(prefs: Preferences): SavedClassicGame? {
+        val envelope = prefs[Keys.SAVED_CLASSIC_ENVELOPE]
+        if (envelope != null) {
+            return when (val result = cryptoCache.decrypt(RECORD_SAVED_CLASSIC, envelope)) {
+                is DecryptionResult.Verified -> deserializeClassicGame(result.plaintext)
+                is DecryptionResult.TamperedOrCorrupted -> null
+                is DecryptionResult.Missing -> null
+            }
+        }
+        return prefs[Keys.SAVED_CLASSIC_JSON]?.let { deserializeClassicGame(it) }
+    }
+
     companion object {
+        internal const val RECORD_PROTECTED_PROGRESS = "protected_progress_v1"
+        internal const val RECORD_SAVED_CLASSIC = "saved_classic_v1"
+
+        private fun serializeProtectedProgress(state: ProtectedProgressState): String {
+            val root = JSONObject()
+            root.put("classicBestScore", state.classicBestScore)
+            root.put("unlockedChallengeLevel", state.unlockedChallengeLevel)
+
+            val statsObj = JSONObject()
+            statsObj.put("totalGamesPlayed", state.statistics.totalGamesPlayed)
+            statsObj.put("totalLinesCleared", state.statistics.totalLinesCleared)
+            statsObj.put("totalCascadesTriggered", state.statistics.totalCascadesTriggered)
+            statsObj.put("maxCascadeDepth", state.statistics.maxCascadeDepth)
+            statsObj.put("totalBlocksPlaced", state.statistics.totalBlocksPlaced)
+            statsObj.put("classicBestScore", state.classicBestScore)
+            root.put("statistics", statsObj)
+
+            root.put("challengeProgress", JSONArray(serializeChallengeProgress(state.challengeProgress)))
+            return root.toString()
+        }
+
+        private fun deserializeProtectedProgress(json: String): ProtectedProgressState? {
+            return try {
+                val root = JSONObject(json)
+                val best = root.optInt("classicBestScore", 0).coerceAtLeast(0)
+                val unlocked = root.optInt("unlockedChallengeLevel", 1).coerceIn(1, 50)
+                val statsObj = root.optJSONObject("statistics")
+                val stats = GameStatistics(
+                    totalGamesPlayed = (statsObj?.optInt("totalGamesPlayed", 0) ?: 0).coerceAtLeast(0),
+                    totalLinesCleared = (statsObj?.optInt("totalLinesCleared", 0) ?: 0).coerceAtLeast(0),
+                    totalCascadesTriggered = (statsObj?.optInt("totalCascadesTriggered", 0) ?: 0).coerceAtLeast(0),
+                    maxCascadeDepth = (statsObj?.optInt("maxCascadeDepth", 0) ?: 0).coerceAtLeast(0),
+                    totalBlocksPlaced = (statsObj?.optInt("totalBlocksPlaced", 0) ?: 0).coerceAtLeast(0),
+                    classicBestScore = best
+                )
+                val challengeArr = root.optJSONArray("challengeProgress")?.toString() ?: "[]"
+                ProtectedProgressState(
+                    classicBestScore = best,
+                    unlockedChallengeLevel = unlocked,
+                    statistics = stats,
+                    challengeProgress = deserializeChallengeProgress(challengeArr),
+                    tampered = false
+                )
+            } catch (_: Exception) {
+                null
+            }
+        }
+
         fun serializeChallengeProgress(progress: Map<Int, ChallengeLevelProgress>): String {
             val arr = JSONArray()
             progress.values.sortedBy { it.levelNumber }.forEach { item ->

@@ -28,6 +28,59 @@ object LineClearEngine {
         return FullLinesResult(fullRows = rows, fullCols = cols)
     }
 
+    /**
+     * Predicts which rows and columns will clear if [piece] is placed at ([anchorRow], [anchorCol]),
+     * without allocating a temporary copy of the [Board].
+     */
+    fun findPredictedFullLines(
+        board: Board,
+        piece: GamePiece,
+        anchorRow: Int,
+        anchorCol: Int
+    ): FullLinesResult {
+        val offsets = piece.shape.offsets
+        val fullRows = mutableListOf<Int>()
+        val fullCols = mutableListOf<Int>()
+
+        for (r in 0 until Board.SIZE) {
+            var complete = true
+            for (c in 0 until Board.SIZE) {
+                if (board.get(r, c) == null && !pieceCovers(offsets, anchorRow, anchorCol, r, c)) {
+                    complete = false
+                    break
+                }
+            }
+            if (complete) fullRows.add(r)
+        }
+
+        for (c in 0 until Board.SIZE) {
+            var complete = true
+            for (r in 0 until Board.SIZE) {
+                if (board.get(r, c) == null && !pieceCovers(offsets, anchorRow, anchorCol, r, c)) {
+                    complete = false
+                    break
+                }
+            }
+            if (complete) fullCols.add(c)
+        }
+
+        return FullLinesResult(fullRows = fullRows, fullCols = fullCols)
+    }
+
+    private fun pieceCovers(
+        offsets: List<GridCoord>,
+        anchorRow: Int,
+        anchorCol: Int,
+        row: Int,
+        col: Int
+    ): Boolean {
+        for (i in 0 until offsets.size) {
+            val o = offsets[i]
+            if (anchorRow + o.row == row && anchorCol + o.col == col) return true
+        }
+        return false
+    }
+
     fun clearLines(board: Board, fullLines: FullLinesResult = findFullLines(board)): LineClearResult {
         if (fullLines.isEmpty) {
             return LineClearResult(

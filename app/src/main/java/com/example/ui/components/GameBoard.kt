@@ -1,5 +1,7 @@
 package com.example.ui.components
 
+import android.app.ActivityManager
+import android.content.Context
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -30,6 +32,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -86,14 +89,30 @@ fun GameBoard(
     val blockStyle = LocalBlockStyle.current
     val boardPalette = LocalBoardPalette.current
     val boardTheme = boardPalette.toBoardColors()
+    val context = LocalContext.current
+    val isLowRamDevice = remember(context) {
+        runCatching {
+            val am = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
+            am?.isLowRamDevice == true
+        }.getOrDefault(false)
+    }
+    val maxActiveParticles = if (isLowRamDevice) 48 else 96
+    val boardBrush = remember(boardTheme) {
+        Brush.verticalGradient(listOf(boardTheme.wellTop, boardTheme.wellBottom))
+    }
 
     LaunchedEffect(particleTriggerId, visualEffectsEnabled, boardPalette) {
         if (!visualEffectsEnabled || latestParticles.isEmpty()) return@LaunchedEffect
         val rng = Random(particleTriggerId)
+        val perBurstCountDust = if (isLowRamDevice) 2 else 4
+        val perBurstCountClear = if (isLowRamDevice) 4 else 7
         for (burst in latestParticles) {
             val baseColor = burst.color.toPalette(boardPalette).glow
-            val count = if (burst.isLandingDust) 4 else 7
+            val count = if (burst.isLandingDust) perBurstCountDust else perBurstCountClear
             repeat(count) {
+                if (activeParticles.size >= maxActiveParticles && activeParticles.isNotEmpty()) {
+                    activeParticles.removeAt(0)
+                }
                 val angle = if (burst.isLandingDust) {
                     val side = if (rng.nextBoolean()) 0f else PI.toFloat()
                     side + (rng.nextFloat() - 0.5f) * 0.9f
@@ -148,11 +167,7 @@ fun GameBoard(
             .aspectRatio(1f)
             .shadow(14.dp, boardShape, clip = false)
             .clip(boardShape)
-            .background(
-                Brush.verticalGradient(
-                    listOf(boardTheme.wellTop, boardTheme.wellBottom)
-                )
-            )
+            .background(boardBrush)
             .border(2.dp, boardTheme.rim, boardShape)
             .padding(11.dp)
             .testTag("game_board")
@@ -366,13 +381,12 @@ fun GameBoard(
                 }
 
                 is BoardVisualPhase.FallingGravity -> {
-                    val movingIds = visualPhase.movements.map { it.cell.id }.toSet()
                     val b = visualPhase.boardAfterClear
 
                     for (r in 0 until Board.SIZE) {
                         for (c in 0 until Board.SIZE) {
                             val cell = b.get(r, c) ?: continue
-                            if (cell.id in movingIds) continue
+                            if (visualPhase.movements.any { it.cell.id == cell.id }) continue
                             drawBevelBlock(
                                 left = c * cellSize + gap / 2f,
                                 top = r * cellSize + gap / 2f,

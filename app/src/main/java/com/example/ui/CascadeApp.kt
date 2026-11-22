@@ -7,6 +7,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -52,6 +56,7 @@ fun CascadeApp(
         }
     }
 
+    @OptIn(ExperimentalComposeUiApi::class)
     CompositionLocalProvider(
         LocalBlockStyle provides state.settings.blockStyle,
         LocalBoardPalette provides state.settings.boardPalette
@@ -59,6 +64,7 @@ fun CascadeApp(
         NavHost(
             navController = navController,
             startDestination = CascadeRoutes.SPLASH,
+            modifier = Modifier.semantics { testTagsAsResourceId = true },
             enterTransition = { fadeIn(animationSpec = tween(180)) },
             exitTransition = { fadeOut(animationSpec = tween(180)) },
             popEnterTransition = { fadeIn(animationSpec = tween(180)) },

@@ -11,7 +11,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.util.concurrent.ConcurrentHashMap
@@ -21,7 +20,8 @@ import kotlin.math.sin
 /**
  * SoundPool-backed sound manager for low-latency triggerable game SFX
  * (block drops, line clears, combo completions, level clear, game over, UI clicks)
- * plus optional ambient background music when enabled in Settings.
+ * plus low-overhead streaming ambient background music using a precomputed sine LUT
+ * and a single reused AudioTrack buffer (zero per-cycle allocations or blocking sleep).
  */
 class SoundManager(context: Context) {
 
@@ -145,14 +145,7 @@ class SoundManager(context: Context) {
     private fun startMusicLoop() {
         if (musicJob?.isActive == true) return
         musicJob = scope.launch {
-            val chordRoots = listOf(220.0, 261.63, 196.0, 174.61)
-            var idx = 0
-            while (isActive && musicEnabled && musicShouldPlay) {
-                val root = chordRoots[idx % chordRoots.size]
-                playAmbientPadSync(root = root, durationMs = 1400, volume = 0.05)
-                idx++
-                delay(180L)
-            }
+            streamAmbientChordPad()
         }
     }
 
@@ -161,23 +154,16 @@ class SoundManager(context: Context) {
         musicJob = null
     }
 
-    private fun playAmbientPadSync(root: Double, durationMs: Int, volume: Double) {
-        runCatching {
-            val sampleRate = 16000
-            val count = ((sampleRate * durationMs) / 1000).coerceAtLeast(1)
-            val samples = ShortArray(count)
-            val fifth = root * 1.498
-            for (i in 0 until count) {
-                val t = i.toDouble() / count.toDouble()
-                val env = sin(PI * t)
-                val sec = i.toDouble() / sampleRate.toDouble()
-                val wave = 0.65 * sin(2.0 * PI * root * sec) + 0.35 * sin(2.0 * PI * fifth * sec)
-                val value = (wave * env * volume * Short.MAX_VALUE).toInt()
-                    .coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt())
-                samples[i] = value.toShort()
-            }
-            val byteLen = samples.size * 2
-            val track = AudioTrack.Builder()
+    private fun kotlinx.coroutines.CoroutineScope.streamAmbientChordPad() {
+        var track: AudioTrack? = null
+        try {
+            val minBufBytes = AudioTrack.getMinBufferSize(
+                AMBIENT_SAMPLE_RATE,
+                AudioFormat.CHANNEL_OUT_MONO,
+                AudioFormat.ENCODING_PCM_16BIT
+            ).coerceAtLeast(AMBIENT_CHUNK_SAMPLES * 4)
+
+            val created = AudioTrack.Builder()
                 .setAudioAttributes(
                     AudioAttributes.Builder()
                         .setUsage(AudioAttributes.USAGE_GAME)
@@ -187,21 +173,76 @@ class SoundManager(context: Context) {
                 .setAudioFormat(
                     AudioFormat.Builder()
                         .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-                        .setSampleRate(sampleRate)
+                        .setSampleRate(AMBIENT_SAMPLE_RATE)
                         .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
                         .build()
                 )
-                .setBufferSizeInBytes(byteLen)
-                .setTransferMode(AudioTrack.MODE_STATIC)
+                .setBufferSizeInBytes(minBufBytes)
+                .setTransferMode(AudioTrack.MODE_STREAM)
                 .build()
 
-            if (track.state == AudioTrack.STATE_INITIALIZED) {
-                track.write(samples, 0, samples.size)
-                track.play()
-                Thread.sleep(durationMs.toLong() + 25L)
-                track.stop()
+            if (created.state != AudioTrack.STATE_INITIALIZED) {
+                created.release()
+                return
             }
-            track.release()
+
+            track = created
+            created.play()
+
+            val buffer = ShortArray(AMBIENT_CHUNK_SAMPLES)
+            var chordIndex = 0
+            var sampleInChord = 0
+            var phaseRoot = 0f
+            var phaseFifth = 0f
+
+            while (isActive && musicEnabled && musicShouldPlay) {
+                val rootFreq = CHORD_ROOTS[chordIndex]
+                val fifthFreq = rootFreq * 1.498f
+                val stepRoot = rootFreq / AMBIENT_SAMPLE_RATE
+                val stepFifth = fifthFreq / AMBIENT_SAMPLE_RATE
+
+                for (i in 0 until AMBIENT_CHUNK_SAMPLES) {
+                    if (sampleInChord < SAMPLES_PER_CHORD) {
+                        val envNorm = sampleInChord.toFloat() / SAMPLES_PER_CHORD.toFloat()
+                        val envIdx = (envNorm * HALF_LUT_LIMIT).toInt().coerceIn(0, HALF_LUT_LIMIT)
+                        val env = SINE_LUT[envIdx]
+
+                        val rootSample = SINE_LUT[(phaseRoot * LUT_SIZE).toInt() and LUT_MASK]
+                        val fifthSample = SINE_LUT[(phaseFifth * LUT_SIZE).toInt() and LUT_MASK]
+                        val mixed = (0.65f * rootSample + 0.35f * fifthSample) * env * AMBIENT_GAIN
+
+                        buffer[i] = (mixed * Short.MAX_VALUE)
+                            .toInt()
+                            .coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt())
+                            .toShort()
+
+                        phaseRoot += stepRoot
+                        if (phaseRoot >= 1f) phaseRoot -= 1f
+                        phaseFifth += stepFifth
+                        if (phaseFifth >= 1f) phaseFifth -= 1f
+                    } else {
+                        buffer[i] = 0
+                    }
+
+                    sampleInChord++
+                    if (sampleInChord >= TOTAL_CYCLE_SAMPLES) {
+                        sampleInChord = 0
+                        chordIndex = (chordIndex + 1) % CHORD_ROOTS.size
+                    }
+                }
+
+                val written = created.write(buffer, 0, AMBIENT_CHUNK_SAMPLES)
+                if (written < 0) break
+            }
+        } catch (_: Throwable) {
+            // AudioTrack unavailable on headless JVM/Robolectric
+        } finally {
+            runCatching {
+                track?.pause()
+                track?.flush()
+                track?.stop()
+                track?.release()
+            }
         }
     }
 
@@ -215,5 +256,17 @@ class SoundManager(context: Context) {
 
     companion object {
         private const val MAX_STREAMS = 6
+        private const val AMBIENT_SAMPLE_RATE = 16000
+        private const val AMBIENT_CHUNK_SAMPLES = 1024
+        private const val SAMPLES_PER_CHORD = (AMBIENT_SAMPLE_RATE * 1400) / 1000
+        private const val TOTAL_CYCLE_SAMPLES = SAMPLES_PER_CHORD + (AMBIENT_SAMPLE_RATE * 180) / 1000
+        private const val AMBIENT_GAIN = 0.05f
+        private const val LUT_SIZE = 512
+        private const val LUT_MASK = LUT_SIZE - 1
+        private const val HALF_LUT_LIMIT = (LUT_SIZE / 2) - 1
+        private val CHORD_ROOTS = floatArrayOf(220f, 261.63f, 196f, 174.61f)
+        private val SINE_LUT = FloatArray(LUT_SIZE) { i ->
+            sin(2.0 * PI * i.toDouble() / LUT_SIZE.toDouble()).toFloat()
+        }
     }
 }

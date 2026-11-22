@@ -142,8 +142,15 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     private val _uiState = MutableStateFlow(GameUiState())
     val uiState: StateFlow<GameUiState> = _uiState.asStateFlow()
 
+    private val _visualPhase = MutableStateFlow<BoardVisualPhase>(BoardVisualPhase.Idle)
+    val visualPhase: StateFlow<BoardVisualPhase> = _visualPhase.asStateFlow()
+
     private var boardBoundsInRoot: Rect = Rect.Zero
     private var dragLiftPx: Float = 176f
+    private var lastDragPredictionKey: Triple<Long, Board, GridCoord>? = null
+    private var lastDragPredictionValid: Boolean = false
+    private var lastDragPredictionRows: List<Int> = emptyList()
+    private var lastDragPredictionCols: List<Int> = emptyList()
 
     init {
         viewModelScope.launch {
@@ -220,6 +227,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         val (trayPieces, updatedId) = pieceGenerator.generateTray(emptyBoard, nextIdCounter)
         nextIdCounter = updatedId
 
+        _visualPhase.value = BoardVisualPhase.Idle
         _uiState.update {
             it.copy(
                 mode = GameMode.CLASSIC,
@@ -256,6 +264,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         val snapshot = _uiState.value.savedClassicSummary
         if (snapshot != null && !isClassicGameOver(snapshot.board, snapshot.trayPieces)) {
             nextIdCounter = snapshot.nextIdCounter.coerceAtLeast(nextIdCounter)
+            _visualPhase.value = BoardVisualPhase.Idle
             _uiState.update {
                 it.copy(
                     mode = GameMode.CLASSIC,
@@ -287,6 +296,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         val (trayPieces, updatedId) = pieceGenerator.generateTray(board, nextIdCounter)
         nextIdCounter = updatedId
 
+        _visualPhase.value = BoardVisualPhase.Idle
         _uiState.update {
             it.copy(
                 mode = GameMode.CHALLENGE,
@@ -327,6 +337,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                     val saved = repository.loadInitialProgress().savedClassicGame
                     if (saved != null && !isClassicGameOver(saved.board, saved.trayPieces)) {
                         nextIdCounter = saved.nextIdCounter.coerceAtLeast(nextIdCounter)
+                        _visualPhase.value = BoardVisualPhase.Idle
                         _uiState.update {
                             it.copy(
                                 mode = GameMode.CLASSIC,
@@ -444,6 +455,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             val emptyBoard = Board.empty()
             val (trayPieces, updatedId) = pieceGenerator.generateTray(emptyBoard, nextIdCounter)
             nextIdCounter = updatedId
+            _visualPhase.value = BoardVisualPhase.Idle
             _uiState.update {
                 it.copy(
                     mode = GameMode.CLASSIC,
@@ -642,16 +654,28 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         } else {
             GridCoord(rawRow, rawCol)
         }
-        val valid = PlacementValidator.canPlace(board, piece, anchor.row, anchor.col)
-        var predRows = emptyList<Int>()
-        var predCols = emptyList<Int>()
-        if (valid) {
-            val previewPlacement = PlacementValidator.placePiece(board, piece, anchor.row, anchor.col, 0L)
-            if (previewPlacement != null) {
-                val fullLines = LineClearEngine.findFullLines(previewPlacement.board)
+        val cacheKey = Triple(piece.instanceId, board, anchor)
+        val valid: Boolean
+        val predRows: List<Int>
+        val predCols: List<Int>
+        if (lastDragPredictionKey == cacheKey) {
+            valid = lastDragPredictionValid
+            predRows = lastDragPredictionRows
+            predCols = lastDragPredictionCols
+        } else {
+            valid = PlacementValidator.canPlace(board, piece, anchor.row, anchor.col)
+            if (valid) {
+                val fullLines = LineClearEngine.findPredictedFullLines(board, piece, anchor.row, anchor.col)
                 predRows = fullLines.fullRows
                 predCols = fullLines.fullCols
+            } else {
+                predRows = emptyList()
+                predCols = emptyList()
             }
+            lastDragPredictionKey = cacheKey
+            lastDragPredictionValid = valid
+            lastDragPredictionRows = predRows
+            lastDragPredictionCols = predCols
         }
 
         return DragState(
@@ -791,18 +815,14 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             }
 
             animateStep(durationMs = 210L) { progress ->
-                _uiState.update {
-                    it.copy(
-                        visualPhase = BoardVisualPhase.ClearingLines(
-                            boardBeforeClear = wave.boardBeforeClear,
-                            clearedCoords = wave.clearedCoords,
-                            clearedRows = wave.clearedRows,
-                            clearedCols = wave.clearedCols,
-                            waveIndex = wave.waveIndex,
-                            progress = progress
-                        )
-                    )
-                }
+                _visualPhase.value = BoardVisualPhase.ClearingLines(
+                    boardBeforeClear = wave.boardBeforeClear,
+                    clearedCoords = wave.clearedCoords,
+                    clearedRows = wave.clearedRows,
+                    clearedCols = wave.clearedCols,
+                    waveIndex = wave.waveIndex,
+                    progress = progress
+                )
             }
 
             runningScore += wave.scoreBreakdown.totalPoints
@@ -828,16 +848,12 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 val fallDuration = (190L + maxDist * 30L).coerceAtMost(360L)
                 animateStep(durationMs = fallDuration) { linear ->
                     val gravityEase = linear.pow(1.45f).coerceIn(0f, 1f)
-                    _uiState.update {
-                        it.copy(
-                            visualPhase = BoardVisualPhase.FallingGravity(
-                                boardAfterClear = wave.boardAfterClear,
-                                movements = wave.movements,
-                                waveIndex = wave.waveIndex,
-                                progress = gravityEase
-                            )
-                        )
-                    }
+                    _visualPhase.value = BoardVisualPhase.FallingGravity(
+                        boardAfterClear = wave.boardAfterClear,
+                        movements = wave.movements,
+                        waveIndex = wave.waveIndex,
+                        progress = gravityEase
+                    )
                 }
 
                 val landedCoords = wave.movements.map { GridCoord(it.toRow, it.col) }.toSet()
@@ -865,15 +881,11 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 soundManager.playBlockDrop(volume = 0.5f, rate = 0.88f)
 
                 animateStep(durationMs = 95L) { progress ->
-                    _uiState.update {
-                        it.copy(
-                            visualPhase = BoardVisualPhase.LandingSettled(
-                                board = wave.boardAfterGravity,
-                                landedCoords = landedCoords,
-                                progress = progress
-                            )
-                        )
-                    }
+                    _visualPhase.value = BoardVisualPhase.LandingSettled(
+                        board = wave.boardAfterGravity,
+                        landedCoords = landedCoords,
+                        progress = progress
+                    )
                 }
             } else {
                 _uiState.update { it.copy(board = wave.boardAfterGravity) }
@@ -881,6 +893,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
 
+        _visualPhase.value = BoardVisualPhase.Idle
         _uiState.update {
             it.copy(
                 board = resolution.finalBoard,

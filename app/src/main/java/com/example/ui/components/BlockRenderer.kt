@@ -18,6 +18,10 @@ import com.example.ui.theme.toPalette
  * Draws an arcade block using the active [BlockStyle] and [BoardColorPalette].
  * Supports scaling (for landing squash/bounce or clear shrink) and alpha.
  */
+private val scratchHighlightPath = ThreadLocal.withInitial { Path() }
+private val scratchTopLipPath = ThreadLocal.withInitial { Path() }
+private val scratchBottomLipPath = ThreadLocal.withInitial { Path() }
+
 fun DrawScope.drawBevelBlock(
     left: Float,
     top: Float,
@@ -87,7 +91,8 @@ private fun DrawScope.drawModernBevelBlock(
         cornerRadius = CornerRadius(radius, radius)
     )
 
-    val highlightPath = Path().apply {
+    val highlightPath = (scratchHighlightPath.get() ?: Path()).apply {
+        rewind()
         moveTo(x + radius * 0.55f, y + h - bevel * 0.85f)
         lineTo(x + bevel * 0.25f, y + radius * 0.55f)
         lineTo(x + radius * 0.55f, y + bevel * 0.25f)
@@ -174,7 +179,8 @@ private fun DrawScope.drawRetroPixelBlock(
     )
 
     // Stepped bright top and left 8-bit bevel edges
-    val topLip = Path().apply {
+    val topLip = (scratchTopLipPath.get() ?: Path()).apply {
+        rewind()
         moveTo(x, y)
         lineTo(x + w, y)
         lineTo(x + w - px, y + px)
@@ -186,7 +192,8 @@ private fun DrawScope.drawRetroPixelBlock(
     drawPath(topLip, color = palette.highlight.copy(alpha = 0.85f * alpha))
 
     // Stepped dark bottom and right 8-bit shadow edges
-    val bottomLip = Path().apply {
+    val bottomLip = (scratchBottomLipPath.get() ?: Path()).apply {
+        rewind()
         moveTo(x + w, y)
         lineTo(x + w, y + h)
         lineTo(x, y + h)

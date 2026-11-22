@@ -65,6 +65,7 @@ fun CascadeGameScreen(
     onExitToHome: () -> Unit = {}
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val visualPhase by viewModel.visualPhase.collectAsStateWithLifecycle()
     val density = LocalDensity.current
     val haptics = LocalHapticFeedback.current
     // Clearance between pointer finger and bottom edge of lifted floating piece
@@ -128,7 +129,7 @@ fun CascadeGameScreen(
                         Spacer(Modifier.height(4.dp))
                         GameBoard(
                             board = state.board,
-                            visualPhase = state.visualPhase,
+                            visualPhase = visualPhase,
                             dragState = state.dragState,
                             floatingBanner = state.floatingBanner,
                             particleTriggerId = state.particleTriggerId,
@@ -242,7 +243,7 @@ fun CascadeGameScreen(
                             Spacer(Modifier.height(4.dp))
                             GameBoard(
                                 board = state.board,
-                                visualPhase = state.visualPhase,
+                                visualPhase = visualPhase,
                                 dragState = state.dragState,
                                 floatingBanner = state.floatingBanner,
                                 particleTriggerId = state.particleTriggerId,

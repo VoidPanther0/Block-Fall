@@ -25,3 +25,4 @@ dependencyResolutionManagement {
 rootProject.name = "Block Falls"
 
 include(":app")
+include(":benchmark")
