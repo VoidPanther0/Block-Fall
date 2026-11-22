@@ -43,3 +43,6 @@ data object RulesRoute
 
 @Serializable
 data object LeaderboardRoute
+
+@Serializable
+data object ShopRoute

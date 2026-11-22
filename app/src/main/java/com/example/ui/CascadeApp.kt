@@ -1,5 +1,6 @@
 package com.example.ui
 
+import android.app.Activity
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -29,6 +30,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.R
+import com.example.ads.AdState
 import com.example.data.cloud.CloudSyncRepository
 import com.example.data.cloud.LeaderboardEntry
 import com.example.data.cloud.attemptAutoSignIn
@@ -47,6 +49,7 @@ import com.example.ui.navigation.ModeSelectionRoute
 import com.example.ui.navigation.PauseRoute
 import com.example.ui.navigation.RulesRoute
 import com.example.ui.navigation.SettingsRoute
+import com.example.ui.navigation.ShopRoute
 import com.example.ui.navigation.SplashRoute
 import com.example.ui.navigation.StatisticsRoute
 import com.example.ui.screens.ChallengeSelectionScreen
@@ -59,6 +62,7 @@ import com.example.ui.screens.ModeSelectionScreen
 import com.example.ui.screens.PauseScreen
 import com.example.ui.screens.RulesScreen
 import com.example.ui.screens.SettingsScreen
+import com.example.ui.screens.ShopScreen
 import com.example.ui.screens.SplashScreen
 import com.example.ui.screens.StatisticsScreen
 import com.example.ui.theme.LocalBlockStyle
@@ -179,6 +183,8 @@ private fun CascadeNavHost(
 ) {
     val navController = rememberNavController()
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val adState by viewModel.adState.collectAsStateWithLifecycle()
+    val activity = LocalContext.current as? Activity
     val lifecycleOwner = LocalLifecycleOwner.current
 
     DisposableEffect(lifecycleOwner) {
@@ -241,6 +247,10 @@ private fun CascadeNavHost(
                     onOpenChallenges = {
                         viewModel.playUiClick()
                         navController.navigate(ChallengeSelectionRoute)
+                    },
+                    onOpenShop = {
+                        viewModel.playUiClick()
+                        navController.navigate(ShopRoute)
                     },
                     onOpenLeaderboard = {
                         viewModel.playUiClick()
@@ -426,6 +436,19 @@ private fun CascadeNavHost(
                                 onVerifyIntegrity = { cloudViewModel.verifyAppIntegrity() }
                             )
                         }
+                    }
+                )
+            }
+
+            composable<ShopRoute> {
+                ShopScreen(
+                    state = state,
+                    onBack = { navController.popBackStack() },
+                    onPurchase = viewModel::purchaseShopItem,
+                    onWatchAd = if (adState is AdState.Ready && activity != null) {
+                        { viewModel.watchRewardedAd(activity) }
+                    } else {
+                        null
                     }
                 )
             }

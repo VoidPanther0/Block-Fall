@@ -43,6 +43,8 @@ import com.example.ui.theme.InvalidTint
 import com.example.ui.theme.LocalBlockStyle
 import com.example.ui.theme.LocalBoardPalette
 import com.example.ui.theme.toBoardColors
+import kotlin.math.PI
+import kotlin.math.sin
 
 @Composable
 fun GameBoard(

@@ -46,6 +46,7 @@ uiautomator = "2.3.0"
 kotlinxSerializationJson = "1.8.0"
 playIntegrity = "1.4.0"
 kotlinxCoroutinesPlayServices = "1.10.2"
+playServicesAds = "23.3.0"
 
 
 [libraries]
@@ -107,6 +108,7 @@ androidx-benchmark-macro-junit4 = { group = "androidx.benchmark", name = "benchm
 androidx-uiautomator = { group = "androidx.test.uiautomator", name = "uiautomator", version.ref = "uiautomator" }
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
 play-integrity = { group = "com.google.android.play", name = "integrity", version.ref = "playIntegrity" }
+play-services-ads = { group = "com.google.android.gms", name = "play-services-ads", version.ref = "playServicesAds" }
 
 
 [plugins]

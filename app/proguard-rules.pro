@@ -58,3 +58,25 @@
 -keepattributes Signature,RuntimeVisibleAnnotations,AnnotationDefault
 -dontwarn org.codehaus.mojo.animal_sniffer.IgnoreJRERequirement
 
+# AdMob / Google Mobile Ads
+-keep class com.google.android.gms.ads.** { *; }
+-keep class com.google.ads.** { *; }
+
+# Keep Economy models for serialization
+-keep class com.example.game.PlayerWallet { *; }
+-keep class com.example.game.ShopItem { *; }
+-keep class com.example.game.EconomyMutationResult { *; }
+
+# kotlinx.serialization generated serializers for the persisted wallet
+-keep,includedescriptorclasses class com.example.game.**$$serializer { *; }
+-keepclassmembers class com.example.game.** {
+    *** Companion;
+}
+-keepclasseswithmembers class com.example.game.** {
+    kotlinx.serialization.KSerializer serializer(...);
+}
+
+# Keep AdState sealed class
+-keep class com.example.ads.AdState { *; }
+-keep class com.example.ads.AdState$* { *; }
+

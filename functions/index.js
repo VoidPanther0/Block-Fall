@@ -1,4 +1,4 @@
-const { onCall, HttpsError } = require("firebase-functions/v2/https");
+const { onCall, onRequest, HttpsError } = require("firebase-functions/v2/https");
 const admin = require("firebase-admin");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 const { google } = require("googleapis");
@@ -101,5 +101,57 @@ exports.verifyPlayIntegrityToken = onCall(
       appRecognitionVerdict: appIntegrity.appRecognitionVerdict || "UNKNOWN",
       deviceRecognitionVerdict: deviceIntegrity.deviceRecognitionVerdict || [],
     };
+  }
+);
+
+/**
+ * AdMob Server-Side Verification (SSV) callback — STUB.
+ *
+ * Google calls this HTTPS endpoint after a user earns a rewarded-ad reward. Configure the
+ * SSV callback URL (with an optional custom_data value identifying the user) in the AdMob
+ * console.
+ *
+ * SECURITY: This stub does not yet verify Google's ECDSA signature, so it MUST NOT be used
+ * to credit currency in production. Until signature verification and replay protection are
+ * implemented, it only acknowledges the callback so Google does not retry.
+ */
+exports.admobSsvCallback = onRequest(
+  { region: "us-central1" },
+  async (req, res) => {
+    const {
+      ad_network,
+      ad_unit,
+      custom_data,
+      key_id,
+      reward_amount,
+      reward_item,
+      timestamp,
+      transaction_id,
+      user_id,
+      signature,
+    } = req.query;
+
+    console.log("SSV callback received", {
+      ad_network,
+      ad_unit,
+      custom_data,
+      key_id,
+      reward_amount,
+      reward_item,
+      timestamp,
+      transaction_id,
+      user_id,
+      hasSignature: Boolean(signature),
+    });
+
+    // TODO: 1. Fetch Google's public keys from
+    //          https://gstatic.com/admob/reward/verifier-keys.json
+    // TODO: 2. Rebuild the signed query string and verify the ECDSA signature with key_id.
+    // TODO: 3. Reject stale timestamps and check transaction_id uniqueness in Firestore
+    //          (replay protection).
+    // TODO: 4. Credit gold to the authenticated player via a Firestore atomic transaction.
+    // TODO: 5. Append the reward to a server-side reward ledger for auditing.
+
+    res.status(200).send("OK");
   }
 );

@@ -21,6 +21,12 @@ android {
     versionName = "1.0"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+    // Google's official test AdMob App ID. Keep in sync with .env / local.properties.
+    // Never substitute a production AdMob App ID until the app is published.
+    // Declared explicitly so every variant (including unit-test manifests) resolves
+    // the ${ADMOB_APP_ID} placeholder, not just the main app manifest.
+    manifestPlaceholders["ADMOB_APP_ID"] = "ca-app-pub-3940256099942544~3347511713"
   }
 
   // Do not remove or modify these signingConfigs. They are necessary for building, installing,
@@ -119,6 +125,7 @@ dependencies {
   implementation(libs.firebase.appcheck.playintegrity)
   debugImplementation(libs.firebase.appcheck.debug)
   implementation(libs.play.integrity)
+  implementation(libs.play.services.ads)
   implementation(libs.kotlinx.coroutines.android)
   implementation(libs.kotlinx.coroutines.core)
   implementation(libs.kotlinx.coroutines.play.services)

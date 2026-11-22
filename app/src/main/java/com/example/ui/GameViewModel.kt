@@ -1,10 +1,13 @@
 package com.example.ui
 
+import android.app.Activity
 import android.app.Application
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.ads.AdState
+import com.example.ads.RewardedAdManager
 import com.example.audio.SoundManager
 import com.example.data.GameRepository
 import com.example.game.AchievementEvaluator
@@ -12,9 +15,12 @@ import com.example.game.BlockColor
 import com.example.game.BlockStyle
 import com.example.game.Board
 import com.example.game.BoardColorPalette
+import com.example.game.BoosterType
 import com.example.game.ChallengeLevel
 import com.example.game.ChallengeLevelProgress
 import com.example.game.ChallengeLevels
+import com.example.game.EconomyEngine
+import com.example.game.EconomyMutationResult
 import com.example.game.FallingBlockMove
 import com.example.game.GameMode
 import com.example.game.GamePiece
@@ -26,6 +32,7 @@ import com.example.game.GridCoord
 import com.example.game.PieceGenerator
 import com.example.game.PlayerRankCalculator
 import com.example.game.PlayerRankInfo
+import com.example.game.PlayerWallet
 import com.example.game.SavedClassicGame
 import com.example.game.TraySlot
 import com.example.game.TurnExecutionResult
@@ -34,6 +41,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.util.UUID
 import kotlin.random.Random
 
 sealed interface BoardVisualPhase {
@@ -121,6 +129,7 @@ data class GameUiState(
     val floatingBanner: FloatingBanner? = null,
     val particleTriggerId: Long = 0L,
     val latestParticles: List<ParticleBurst> = emptyList(),
+    val wallet: PlayerWallet = PlayerWallet(),
     val showRulesDialog: Boolean = false
 ) {
     val movesRemaining: Int
@@ -141,6 +150,9 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     private val dragController = DragController()
     val soundManager = SoundManager(application.applicationContext)
     private val animationRunner = CascadeAnimationRunner(soundManager)
+    private val adManager by lazy { RewardedAdManager(getApplication<Application>()) }
+
+    val adState: StateFlow<AdState> = adManager.adState
 
     private var nextIdCounter: Long = 100L
 
@@ -151,6 +163,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     val visualPhase: StateFlow<BoardVisualPhase> = _visualPhase.asStateFlow()
 
     init {
+        adManager.loadAd()
         viewModelScope.launch {
             val saved = repository.loadInitialProgress()
             soundManager.soundEnabled = saved.settings.soundEnabled
@@ -187,6 +200,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                         challengeProgress = saved.challengeProgress,
                         unlockedAchievements = achievements,
                         playerRank = rank,
+                        wallet = saved.wallet,
                         savedClassicSummary = validSaved
                     )
                 }
@@ -209,6 +223,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                         challengeProgress = saved.challengeProgress,
                         unlockedAchievements = achievements,
                         playerRank = rank,
+                        wallet = saved.wallet,
                         savedClassicSummary = null
                     )
                 }
@@ -480,6 +495,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                     playerRank = rank,
                     lastChallengeStarsEarned = 0,
                     savedClassicSummary = null,
+                    wallet = PlayerWallet(),
                     visualPhase = BoardVisualPhase.Idle,
                     dragState = null,
                     floatingBanner = null,
@@ -487,6 +503,67 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 )
             }
         }
+    }
+
+    fun purchaseShopItem(itemId: String) {
+        viewModelScope.launch {
+            val result = EconomyEngine.purchaseShopItem(
+                wallet = _uiState.value.wallet,
+                itemId = itemId,
+                transactionId = UUID.randomUUID().toString()
+            )
+            if (result is EconomyMutationResult.Success) {
+                applyWalletMutation(result.updatedWallet)
+            }
+            // Rejected mutations intentionally leave the wallet untouched.
+        }
+    }
+
+    fun consumeBooster(type: BoosterType) {
+        viewModelScope.launch {
+            val result = EconomyEngine.consumeBooster(
+                wallet = _uiState.value.wallet,
+                type = type,
+                transactionId = UUID.randomUUID().toString()
+            )
+            if (result is EconomyMutationResult.Success) {
+                applyWalletMutation(result.updatedWallet)
+            }
+        }
+    }
+
+    fun claimAdReward(goldAmount: Int, transactionId: String) {
+        viewModelScope.launch {
+            val result = EconomyEngine.creditReward(
+                wallet = _uiState.value.wallet,
+                goldDelta = goldAmount,
+                diamondDelta = 0,
+                transactionId = transactionId,
+                reason = "Rewarded ad"
+            )
+            if (result is EconomyMutationResult.Success) {
+                applyWalletMutation(result.updatedWallet)
+            }
+        }
+    }
+
+    fun watchRewardedAd(activity: Activity) {
+        adManager.showAd(
+            activity = activity,
+            onRewarded = {
+                claimAdReward(
+                    goldAmount = AD_REWARD_GOLD,
+                    transactionId = UUID.randomUUID().toString()
+                )
+            },
+            onDismissed = { /* Ad closed without or after reward */ },
+            onFailed = { /* Ad unavailable — button stays disabled until next load */ }
+        )
+    }
+
+    private suspend fun applyWalletMutation(wallet: PlayerWallet) {
+        _uiState.update { it.copy(wallet = wallet) }
+        repository.updateWallet(wallet)
     }
 
     fun selectTraySlot(slotIndex: Int) {
@@ -875,6 +952,8 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     companion object {
+        const val AD_REWARD_GOLD = 50
+
         fun calculateChallengeStars(score: Int, targetScore: Int, movesRemaining: Int): Int =
             GameSessionEngine.calculateChallengeStars(score, targetScore, movesRemaining)
     }

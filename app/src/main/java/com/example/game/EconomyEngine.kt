@@ -1,5 +1,7 @@
 package com.example.game
 
+import kotlinx.serialization.Serializable
+
 enum class BoosterType(
     val id: String,
     val title: String,
@@ -131,6 +133,7 @@ object ShopCatalog {
     fun findById(id: String): ShopItem? = items.firstOrNull { it.id == id }
 }
 
+@Serializable
 data class PlayerWallet(
     val goldCoins: Int = DEFAULT_STARTER_GOLD,
     val diamonds: Int = DEFAULT_STARTER_DIAMONDS,

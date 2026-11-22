@@ -7,8 +7,10 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import android.util.Log
+import com.example.ads.AdConfig
 import com.example.ui.CascadeApp
 import com.example.ui.theme.CascadeTheme
+import com.google.android.gms.ads.MobileAds
 import com.google.firebase.Firebase
 import com.google.firebase.appcheck.AppCheckProviderFactory
 import com.google.firebase.appcheck.appCheck
@@ -18,6 +20,7 @@ import com.google.firebase.initialize
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        initializeMobileAds()
         configureFirebaseAppCheck()
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
@@ -28,6 +31,15 @@ class MainActivity : ComponentActivity() {
                 CascadeApp()
             }
         }
+    }
+
+    private fun initializeMobileAds() {
+        if (!AdConfig.isAppIdValid) {
+            Log.w("MainActivity", "AdMob skipped: ADMOB_APP_ID is missing or not a complete ID")
+            return
+        }
+        runCatching { MobileAds.initialize(this) { } }
+            .onFailure { Log.w("MainActivity", "AdMob initialization failed: ${it.message}") }
     }
 
     private fun configureFirebaseAppCheck() {

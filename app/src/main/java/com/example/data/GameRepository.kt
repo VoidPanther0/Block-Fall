@@ -19,12 +19,14 @@ import com.example.game.GamePiece
 import com.example.game.GameSettings
 import com.example.game.GameStatistics
 import com.example.game.PieceShape
+import com.example.game.PlayerWallet
 import com.example.game.SavedClassicGame
 import com.example.security.DecryptionResult
 import com.example.security.EncryptedEntitlementCache
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.serialization.json.Json
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -38,7 +40,13 @@ data class PersistedProgress(
     val settings: GameSettings = GameSettings(hapticsEnabled = hapticsEnabled),
     val statistics: GameStatistics = GameStatistics(classicBestScore = classicBestScore),
     val challengeProgress: Map<Int, ChallengeLevelProgress> = emptyMap(),
+    val wallet: PlayerWallet = PlayerWallet(),
     val localIntegrityTampered: Boolean = false
+)
+
+private data class WalletState(
+    val wallet: PlayerWallet,
+    val tampered: Boolean = false
 )
 
 private data class ProtectedProgressState(
@@ -79,6 +87,7 @@ class GameRepository(
         // AES-GCM authenticated envelope for protected progression & saved run
         val PROTECTED_PROGRESS_ENVELOPE = stringPreferencesKey("protected_progress_envelope_v1")
         val SAVED_CLASSIC_ENVELOPE = stringPreferencesKey("saved_classic_envelope_v1")
+        val WALLET_ENVELOPE = stringPreferencesKey("wallet_envelope_v1")
     }
 
     val progressFlow: Flow<PersistedProgress> = context.cascadeDataStore.data.map { prefs ->
@@ -95,6 +104,7 @@ class GameRepository(
 
         val protectedState = readProtectedProgressState(prefs)
         val savedClassic = readSavedClassicGame(prefs)
+        val walletState = readWalletState(prefs)
 
         PersistedProgress(
             classicBestScore = protectedState.classicBestScore,
@@ -104,7 +114,8 @@ class GameRepository(
             settings = settings,
             statistics = protectedState.statistics,
             challengeProgress = protectedState.challengeProgress,
-            localIntegrityTampered = protectedState.tampered
+            wallet = walletState.wallet,
+            localIntegrityTampered = protectedState.tampered || walletState.tampered
         )
     }
 
@@ -284,6 +295,21 @@ class GameRepository(
         }
     }
 
+    /**
+     * Persists the player wallet inside the same AES-GCM authenticated envelope used for
+     * protected progression. Values are sanitized before sealing so a corrupted or edited
+     * payload can never inflate balances beyond the engine's hard caps.
+     */
+    suspend fun updateWallet(wallet: PlayerWallet) {
+        context.cascadeDataStore.edit { prefs ->
+            val sanitized = sanitizeWallet(wallet)
+            prefs[Keys.WALLET_ENVELOPE] = cryptoCache.encrypt(
+                RECORD_WALLET,
+                Json.encodeToString(PlayerWallet.serializer(), sanitized)
+            )
+        }
+    }
+
     suspend fun resetAllProgress() {
         context.cascadeDataStore.edit { prefs ->
             prefs.remove(Keys.CLASSIC_BEST)
@@ -297,6 +323,7 @@ class GameRepository(
             prefs.remove(Keys.TOTAL_BLOCKS_PLACED)
             prefs.remove(Keys.CHALLENGE_PROGRESS_JSON)
             prefs.remove(Keys.PROTECTED_PROGRESS_ENVELOPE)
+            prefs.remove(Keys.WALLET_ENVELOPE)
         }
     }
 
@@ -381,9 +408,41 @@ class GameRepository(
         return prefs[Keys.SAVED_CLASSIC_JSON]?.let { deserializeClassicGame(it) }
     }
 
+    private fun readWalletState(prefs: Preferences): WalletState {
+        val envelope = prefs[Keys.WALLET_ENVELOPE] ?: return WalletState(PlayerWallet())
+        return when (val result = cryptoCache.decrypt(RECORD_WALLET, envelope)) {
+            is DecryptionResult.Verified -> {
+                val wallet = try {
+                    Json.decodeFromString(PlayerWallet.serializer(), result.plaintext)
+                } catch (_: Exception) {
+                    null
+                }
+                if (wallet != null) {
+                    WalletState(sanitizeWallet(wallet))
+                } else {
+                    WalletState(PlayerWallet(), tampered = true)
+                }
+            }
+
+            is DecryptionResult.TamperedOrCorrupted -> WalletState(PlayerWallet(), tampered = true)
+            is DecryptionResult.Missing -> WalletState(PlayerWallet())
+        }
+    }
+
+    private fun sanitizeWallet(wallet: PlayerWallet): PlayerWallet = wallet.copy(
+        goldCoins = wallet.goldCoins.coerceIn(0, PlayerWallet.MAX_GOLD),
+        diamonds = wallet.diamonds.coerceIn(0, PlayerWallet.MAX_DIAMONDS),
+        hammerCount = wallet.hammerCount.coerceIn(0, PlayerWallet.MAX_BOOSTER_STACK),
+        refreshCount = wallet.refreshCount.coerceIn(0, PlayerWallet.MAX_BOOSTER_STACK),
+        shuffleCount = wallet.shuffleCount.coerceIn(0, PlayerWallet.MAX_BOOSTER_STACK),
+        unlockedEntitlements = wallet.unlockedEntitlements.take(64).toSet(),
+        processedLedgerIds = wallet.processedLedgerIds.toList().takeLast(64).toSet()
+    )
+
     companion object {
         internal const val RECORD_PROTECTED_PROGRESS = "protected_progress_v1"
         internal const val RECORD_SAVED_CLASSIC = "saved_classic_v1"
+        internal const val RECORD_WALLET = "wallet_v1"
 
         private fun serializeProtectedProgress(state: ProtectedProgressState): String {
             val root = JSONObject()

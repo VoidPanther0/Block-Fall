@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.Leaderboard
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Replay
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -75,6 +76,7 @@ fun HomeScreen(
     onOpenModes: () -> Unit,
     onOpenChallenges: () -> Unit,
     onOpenLeaderboard: () -> Unit = {},
+    onOpenShop: () -> Unit = {},
     onOpenSettings: () -> Unit,
     onOpenStatistics: () -> Unit
 ) {
@@ -212,8 +214,11 @@ fun HomeScreen(
                                 maxStars = maxStars,
                                 unlockedLevel = state.unlockedChallengeLevel,
                                 totalLines = state.statistics.totalLinesCleared,
+                                goldCoins = state.wallet.goldCoins,
+                                diamonds = state.wallet.diamonds,
                                 onOpenModes = onOpenModes,
                                 onOpenChallenges = onOpenChallenges,
+                                onOpenShop = onOpenShop,
                                 onOpenStatistics = onOpenStatistics,
                                 onOpenSettings = onOpenSettings
                             )
@@ -235,8 +240,11 @@ fun HomeScreen(
                         maxStars = maxStars,
                         unlockedLevel = state.unlockedChallengeLevel,
                         totalLines = state.statistics.totalLinesCleared,
+                        goldCoins = state.wallet.goldCoins,
+                        diamonds = state.wallet.diamonds,
                         onOpenModes = onOpenModes,
                         onOpenChallenges = onOpenChallenges,
+                        onOpenShop = onOpenShop,
                         onOpenStatistics = onOpenStatistics,
                         onOpenSettings = onOpenSettings
                     )
@@ -372,12 +380,25 @@ private fun HomeStudioGrid(
     maxStars: Int,
     unlockedLevel: Int,
     totalLines: Int,
+    goldCoins: Int,
+    diamonds: Int,
     onOpenModes: () -> Unit,
     onOpenChallenges: () -> Unit,
+    onOpenShop: () -> Unit,
     onOpenStatistics: () -> Unit,
     onOpenSettings: () -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        StudioMenuTile(
+            title = "Shop",
+            subtitle = "$goldCoins Gold · $diamonds Gems",
+            icon = Icons.Filled.ShoppingCart,
+            accent = AccentGold,
+            onClick = onOpenShop,
+            testTag = "home_shop_button",
+            modifier = Modifier.fillMaxWidth()
+        )
+
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
