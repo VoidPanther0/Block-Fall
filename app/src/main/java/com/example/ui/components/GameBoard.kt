@@ -460,6 +460,15 @@ fun GameBoard(
                     }
                 }
             }
+
+            // Inner glass rim — subtle depth without an expensive blur.
+            drawRoundRect(
+                color = Color.White.copy(alpha = 0.10f),
+                topLeft = Offset(1f, 1f),
+                size = Size(size.width - 2f, size.height - 2f),
+                cornerRadius = slotRadius,
+                style = Stroke(width = 1f)
+            )
         }
     }
 }

@@ -21,6 +21,10 @@ class TabletLayoutRobolectricTest {
     @Test
     fun `16_tablet_landscape_renders_adaptive_home_challenges_and_gameplay`() {
         composeRule.waitForIdle()
+        if (composeRule.onAllNodesWithTag("onboarding_skip_button").fetchSemanticsNodes().isNotEmpty()) {
+            composeRule.onNodeWithTag("onboarding_skip_button").performClick()
+            composeRule.waitForIdle()
+        }
         if (composeRule.onAllNodesWithTag("splash_screen").fetchSemanticsNodes().isNotEmpty()) {
             composeRule.onNodeWithTag("splash_screen").performClick()
             composeRule.waitForIdle()

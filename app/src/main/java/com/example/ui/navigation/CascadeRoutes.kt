@@ -6,6 +6,9 @@ import kotlinx.serialization.Serializable
  * Type-safe Navigation Compose route keys for Block Falls.
  */
 @Serializable
+data object OnboardingRoute
+
+@Serializable
 data object SplashRoute
 
 @Serializable

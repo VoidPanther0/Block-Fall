@@ -22,7 +22,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.VolumeUp
 import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.GridOn
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Palette
@@ -34,10 +33,6 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -59,11 +54,8 @@ import com.example.game.BlockColor
 import com.example.game.BlockStyle
 import com.example.game.BoardColorPalette
 import com.example.ui.GameUiState
-import com.example.ui.components.ArcadeButtonStyle
 import com.example.ui.components.CascadeScreenContainer
 import com.example.ui.components.PremiumCard
-import com.example.ui.components.PremiumPrimaryButton
-import com.example.ui.components.ResetProgressConfirmationDialog
 import com.example.ui.components.ScreenTopBar
 import com.example.ui.components.SectionHeader
 import com.example.ui.components.drawBevelBlock
@@ -97,7 +89,6 @@ fun SettingsScreen(
     onResetProgressConfirmed: () -> Unit,
     cloudAccountContent: @Composable () -> Unit = {}
 ) {
-    var showResetConfirm by remember { mutableStateOf(false) }
     val settings = state.settings
 
     CascadeScreenContainer(
@@ -116,12 +107,7 @@ fun SettingsScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            SectionHeader(
-                kicker = "Preferences",
-                title = "Audio & Tactile",
-                accent = AccentCyan
-            )
-
+            SectionHeader(kicker = "Audio", title = "Sound & Music", accent = AccentCyan)
             PremiumCard(cornerRadius = 20.dp, modifier = Modifier.fillMaxWidth()) {
                 Column {
                     SettingToggleRow(
@@ -141,29 +127,27 @@ fun SettingsScreen(
                         onCheckedChange = onToggleSound,
                         switchTag = "setting_sound_switch"
                     )
-                    HorizontalDivider(color = DividerSubtle.copy(alpha = 0.6f))
-                    SettingToggleRow(
-                        title = "Vibration",
-                        subtitle = "Tactile haptic feedback on placement",
-                        icon = Icons.Filled.Vibration,
-                        checked = settings.hapticsEnabled,
-                        onCheckedChange = onToggleHaptics,
-                        switchTag = "setting_haptics_switch"
-                    )
                 }
             }
 
-            SectionHeader(
-                kicker = "Assists & FX",
-                title = "Gameplay & Visuals",
-                accent = AccentEmerald
-            )
+            SectionHeader(kicker = "Touch", title = "Haptic Feedback", accent = AccentEmerald)
+            PremiumCard(cornerRadius = 20.dp, modifier = Modifier.fillMaxWidth()) {
+                SettingToggleRow(
+                    title = "Vibration & Haptics",
+                    subtitle = "Tactile feedback on placement and cascades",
+                    icon = Icons.Filled.Vibration,
+                    checked = settings.hapticsEnabled,
+                    onCheckedChange = onToggleHaptics,
+                    switchTag = "setting_haptics_switch"
+                )
+            }
 
+            SectionHeader(kicker = "Graphics", title = "Visuals & Performance", accent = AccentGold)
             PremiumCard(cornerRadius = 20.dp, modifier = Modifier.fillMaxWidth()) {
                 Column {
                     SettingToggleRow(
                         title = "Visual Effects",
-                        subtitle = "Line sweep flashes & particle bursts",
+                        subtitle = "Line sweeps, particles & board glow",
                         icon = Icons.Filled.AutoAwesome,
                         checked = settings.visualEffectsEnabled,
                         onCheckedChange = onToggleVisualEffects,
@@ -181,12 +165,7 @@ fun SettingsScreen(
                 }
             }
 
-            SectionHeader(
-                kicker = "Appearance",
-                title = "Board & Block Theme",
-                accent = AccentGold
-            )
-
+            SectionHeader(kicker = "Appearance", title = "Board & Block Theme", accent = AccentCyan)
             ThemeSwitcherCard(
                 selectedBlockStyle = settings.blockStyle,
                 selectedBoardPalette = settings.boardPalette,
@@ -194,39 +173,11 @@ fun SettingsScreen(
                 onSelectBoardPalette = onSelectBoardPalette
             )
 
-            SectionHeader(
-                kicker = "Account",
-                title = "Cloud Sync & Integrity",
-                accent = AccentCyan
-            )
-
+            SectionHeader(kicker = "Account", title = "Cloud Sync", accent = AccentEmerald)
             cloudAccountContent()
 
-            Spacer(Modifier.height(2.dp))
-
-            PremiumPrimaryButton(
-                text = "Reset Progress",
-                icon = Icons.Filled.DeleteForever,
-                style = ArcadeButtonStyle.RED,
-                onClick = { showResetConfirm = true },
-                height = 54.dp,
-                cornerRadius = 18.dp,
-                fontSize = 17.sp,
-                testTag = "settings_reset_progress_button",
-                modifier = Modifier.fillMaxWidth()
-            )
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(8.dp))
         }
-    }
-
-    if (showResetConfirm) {
-        ResetProgressConfirmationDialog(
-            onConfirm = {
-                showResetConfirm = false
-                onResetProgressConfirmed()
-            },
-            onDismiss = { showResetConfirm = false }
-        )
     }
 }
 
@@ -262,12 +213,7 @@ private fun ThemeSwitcherCard(
                         .background(AccentGold.copy(alpha = 0.16f))
                         .border(1.dp, AccentGold.copy(alpha = 0.35f), RoundedCornerShape(10.dp))
                 ) {
-                    Icon(
-                        imageVector = Icons.Filled.Palette,
-                        contentDescription = null,
-                        tint = AccentGold,
-                        modifier = Modifier.size(20.dp)
-                    )
+                    Icon(Icons.Filled.Palette, null, tint = AccentGold, modifier = Modifier.size(20.dp))
                 }
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
@@ -293,16 +239,8 @@ private fun ThemeSwitcherCard(
                 boardPalette = selectedBoardPalette
             )
 
-            Text(
-                text = "Block Style",
-                style = MaterialTheme.typography.labelLarge.copy(fontSize = 12.sp),
-                color = TextSecondary
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
+            Text("Block Style", style = MaterialTheme.typography.labelLarge.copy(fontSize = 12.sp), color = TextSecondary)
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 BlockStyle.entries.forEach { style ->
                     val selected = style == selectedBlockStyle
                     val chipShape = RoundedCornerShape(14.dp)
@@ -313,16 +251,8 @@ private fun ThemeSwitcherCard(
                             .defaultMinSize(minHeight = 48.dp)
                             .clip(chipShape)
                             .background(
-                                if (selected) {
-                                    Brush.verticalGradient(listOf(BlueBtnTop, BlueBtnBottom))
-                                } else {
-                                    Brush.verticalGradient(
-                                        listOf(
-                                            SurfaceCardElevated.copy(alpha = 0.7f),
-                                            SurfaceCard.copy(alpha = 0.85f)
-                                        )
-                                    )
-                                }
+                                if (selected) Brush.verticalGradient(listOf(BlueBtnTop, BlueBtnBottom))
+                                else Brush.verticalGradient(listOf(SurfaceCardElevated.copy(alpha = 0.7f), SurfaceCard.copy(alpha = 0.85f)))
                             )
                             .border(
                                 width = if (selected) 1.5.dp else 1.dp,
@@ -348,16 +278,8 @@ private fun ThemeSwitcherCard(
                 }
             }
 
-            Text(
-                text = "Board Palette",
-                style = MaterialTheme.typography.labelLarge.copy(fontSize = 12.sp),
-                color = TextSecondary
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
+            Text("Board Palette", style = MaterialTheme.typography.labelLarge.copy(fontSize = 12.sp), color = TextSecondary)
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 BoardColorPalette.entries.forEach { palette ->
                     val selected = palette == selectedBoardPalette
                     val boardColors = palette.toBoardColors()
@@ -369,13 +291,7 @@ private fun ThemeSwitcherCard(
                             .weight(1f)
                             .defaultMinSize(minHeight = 56.dp)
                             .clip(chipShape)
-                            .background(
-                                if (selected) {
-                                    SurfaceCardElevated.copy(alpha = 0.94f)
-                                } else {
-                                    SurfaceCard.copy(alpha = 0.78f)
-                                }
-                            )
+                            .background(if (selected) SurfaceCardElevated.copy(alpha = 0.94f) else SurfaceCard.copy(alpha = 0.78f))
                             .border(
                                 width = if (selected) 1.5.dp else 1.dp,
                                 color = if (selected) AccentGold else GlassBorder.copy(alpha = 0.45f),
@@ -389,11 +305,7 @@ private fun ThemeSwitcherCard(
                             modifier = Modifier
                                 .size(22.dp)
                                 .clip(CircleShape)
-                                .background(
-                                    Brush.linearGradient(
-                                        listOf(boardColors.swatchPrimary, boardColors.swatchSecondary)
-                                    )
-                                )
+                                .background(Brush.linearGradient(listOf(boardColors.swatchPrimary, boardColors.swatchSecondary)))
                                 .border(1.5.dp, Color.White.copy(alpha = 0.78f), CircleShape)
                         )
                         Spacer(Modifier.height(4.dp))
@@ -416,10 +328,7 @@ private fun ThemeSwitcherCard(
 }
 
 @Composable
-private fun ThemeLivePreviewStrip(
-    blockStyle: BlockStyle,
-    boardPalette: BoardColorPalette
-) {
+private fun ThemeLivePreviewStrip(blockStyle: BlockStyle, boardPalette: BoardColorPalette) {
     val boardColors = boardPalette.toBoardColors()
     val shape = RoundedCornerShape(if (blockStyle == BlockStyle.RETRO) 8.dp else 14.dp)
     Box(
@@ -445,42 +354,17 @@ private fun ThemeLivePreviewStrip(
             } else {
                 CornerRadius(tileSize * 0.18f, tileSize * 0.18f)
             }
-
             val sampleColors = listOf(
-                BlockColor.CYAN,
-                BlockColor.AMBER,
-                BlockColor.CORAL,
-                BlockColor.EMERALD,
-                BlockColor.VIOLET,
-                null
+                BlockColor.CYAN, BlockColor.AMBER, BlockColor.CORAL,
+                BlockColor.EMERALD, BlockColor.VIOLET, null
             )
-
             for (c in 0 until cols) {
                 val left = startX + c * cellSize + gap / 2f
                 val top = startY + gap / 2f
-                drawRoundRect(
-                    color = boardColors.slotFill,
-                    topLeft = Offset(left, top),
-                    size = Size(tileSize, tileSize),
-                    cornerRadius = slotRadius
-                )
-                drawRoundRect(
-                    color = boardColors.slotBorder,
-                    topLeft = Offset(left, top),
-                    size = Size(tileSize, tileSize),
-                    cornerRadius = slotRadius,
-                    style = Stroke(width = 1f)
-                )
-                val blockColor = sampleColors[c]
-                if (blockColor != null) {
-                    drawBevelBlock(
-                        left = left,
-                        top = top,
-                        cellSize = tileSize,
-                        color = blockColor,
-                        blockStyle = blockStyle,
-                        boardPalette = boardPalette
-                    )
+                drawRoundRect(boardColors.slotFill, Offset(left, top), Size(tileSize, tileSize), slotRadius)
+                drawRoundRect(boardColors.slotBorder, Offset(left, top), Size(tileSize, tileSize), slotRadius, style = Stroke(width = 1f))
+                sampleColors[c]?.let { color ->
+                    drawBevelBlock(left, top, tileSize, color, blockStyle = blockStyle, boardPalette = boardPalette)
                 }
             }
         }
@@ -503,12 +387,7 @@ private fun SettingToggleRow(
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = TextPrimary,
-            modifier = Modifier.size(22.dp)
-        )
+        Icon(icon, null, tint = TextPrimary, modifier = Modifier.size(22.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
@@ -523,7 +402,7 @@ private fun SettingToggleRow(
                 text = subtitle,
                 style = MaterialTheme.typography.bodySmall,
                 color = TextSecondary,
-                maxLines = 1,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
         }

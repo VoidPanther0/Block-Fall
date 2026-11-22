@@ -18,16 +18,18 @@ import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.example.game.BlockColor
 import com.example.game.ChallengeLevels
+import com.example.game.DailyChallengeGenerator
 import com.example.ui.GameUiState
 import com.example.ui.components.ArcadeButtonStyle
 import com.example.ui.components.CascadeScreenContainer
 import com.example.ui.components.GameModeCard
-import com.example.ui.components.PremiumBottomNavigation
+import com.example.ui.components.PremiumQuickNav
 import com.example.ui.components.PrimaryNavTab
 import com.example.ui.components.ScreenTopBar
 import com.example.ui.components.SectionHeader
@@ -44,6 +46,7 @@ fun ModeSelectionScreen(
     onBack: () -> Unit,
     onPlayNewClassic: () -> Unit,
     onSelectChallengeLevels: () -> Unit,
+    onPlayDaily: () -> Unit = {},
     state: GameUiState = GameUiState(),
     onNavigateTab: ((PrimaryNavTab) -> Unit)? = null
 ) {
@@ -56,7 +59,7 @@ fun ModeSelectionScreen(
         maxContentWidth = 880.dp,
         bottomBar = if (onNavigateTab != null) {
             {
-                PremiumBottomNavigation(
+                PremiumQuickNav(
                     selectedTab = PrimaryNavTab.PLAY,
                     onSelectTab = onNavigateTab
                 )
@@ -149,10 +152,15 @@ fun ModeSelectionScreen(
                 }
 
                 SectionHeader(
-                    kicker = "On The Horizon",
-                    title = "Upcoming Modes",
-                    accent = TextMuted
+                    kicker = "Daily & Upcoming",
+                    title = "More Ways To Play",
+                    accent = AccentPurple
                 )
+
+                val dailySpec = remember {
+                    DailyChallengeGenerator.forDateKey(DailyChallengeGenerator.todayDateKey())
+                }
+                val dailyStat = "${dailySpec.displayDate} · Target ${dailySpec.level.targetScore} · ${dailySpec.level.moveLimit} moves"
 
                 if (isWide) {
                     Row(
@@ -161,15 +169,15 @@ fun ModeSelectionScreen(
                     ) {
                         GameModeCard(
                             title = "Daily Gravity",
-                            badge = "Coming Soon",
-                            description = "One seeded 8×8 puzzle every 24 hours with a global streak ladder.",
+                            badge = "New Puzzle Every Day",
+                            description = "One seeded 8×8 puzzle shared by every player each day. Chain gravity cascades within your move budget.",
                             icon = Icons.Filled.CalendarToday,
                             accent = AccentPurple,
-                            buttonText = "Coming Soon",
-                            buttonStyle = ArcadeButtonStyle.SLATE,
-                            buttonTag = "mode_daily_upcoming_button",
-                            onAction = {},
-                            enabled = false,
+                            buttonText = "Play Today's Puzzle",
+                            buttonStyle = ArcadeButtonStyle.BLUE,
+                            buttonTag = "mode_play_daily_button",
+                            onAction = onPlayDaily,
+                            secondaryStat = dailyStat,
                             modifier = Modifier.weight(1f)
                         )
                         GameModeCard(
@@ -189,13 +197,25 @@ fun ModeSelectionScreen(
                 } else {
                     GameModeCard(
                         title = "Daily Gravity",
-                        badge = "Coming Soon",
-                        description = "One seeded 8×8 puzzle every 24 hours with a global streak ladder.",
+                        badge = "New Puzzle Every Day",
+                        description = "One seeded 8×8 puzzle shared by every player each day. Chain gravity cascades within your move budget.",
                         icon = Icons.Filled.CalendarToday,
                         accent = AccentPurple,
+                        buttonText = "Play Today's Puzzle",
+                        buttonStyle = ArcadeButtonStyle.BLUE,
+                        buttonTag = "mode_play_daily_button",
+                        onAction = onPlayDaily,
+                        secondaryStat = dailyStat
+                    )
+                    GameModeCard(
+                        title = "Blitz 180",
+                        badge = "Coming Soon",
+                        description = "Race a 3-minute timer where cascade waves extend your clock.",
+                        icon = Icons.Filled.Timer,
+                        accent = TextMuted,
                         buttonText = "Coming Soon",
                         buttonStyle = ArcadeButtonStyle.SLATE,
-                        buttonTag = "mode_daily_upcoming_button",
+                        buttonTag = "mode_blitz_upcoming_button",
                         onAction = {},
                         enabled = false
                     )

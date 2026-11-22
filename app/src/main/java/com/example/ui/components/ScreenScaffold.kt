@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
@@ -62,27 +63,24 @@ fun CascadeScreenContainer(
 
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier
+                .fillMaxSize()
+                .windowInsetsPadding(WindowInsets.safeDrawing)
+                .padding(horizontal = 16.dp, vertical = 10.dp)
+                .widthIn(max = maxContentWidth)
         ) {
-            val contentInsets = if (bottomBar != null) {
-                WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)
-            } else {
-                WindowInsets.safeDrawing
+            // The former bottom navigation slot now hosts the compact top quick-nav.
+            if (bottomBar != null) {
+                bottomBar()
+                Spacer(Modifier.height(10.dp))
             }
 
             Column(
                 modifier = Modifier
                     .weight(1f)
-                    .fillMaxWidth()
-                    .windowInsetsPadding(contentInsets)
-                    .padding(horizontal = 16.dp, vertical = 10.dp)
-                    .widthIn(max = maxContentWidth),
+                    .fillMaxWidth(),
                 content = content
             )
-
-            if (bottomBar != null) {
-                bottomBar()
-            }
         }
     }
 }
@@ -129,7 +127,7 @@ fun ScreenTopBar(
             style = MaterialTheme.typography.headlineMedium.copy(
                 fontFamily = OutfitFontFamily,
                 fontWeight = FontWeight.ExtraBold,
-                fontSize = 21.sp,
+                fontSize = 19.sp,
                 letterSpacing = 0.2.sp
             ),
             color = Color.White,
@@ -138,7 +136,7 @@ fun ScreenTopBar(
             textAlign = TextAlign.Center,
             modifier = Modifier
                 .align(Alignment.Center)
-                .padding(horizontal = 56.dp)
+                .padding(horizontal = 48.dp)
         )
 
         Row(

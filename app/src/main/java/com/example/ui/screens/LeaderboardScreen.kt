@@ -43,6 +43,7 @@ import com.example.ui.components.GoogleSignInCard
 import com.example.ui.components.LoadingIndicator
 import com.example.ui.components.PremiumCard
 import com.example.ui.components.ScreenTopBar
+import com.example.ui.components.SectionHeader
 import com.example.ui.theme.AccentCoral
 import com.example.ui.theme.AccentCyan
 import com.example.ui.theme.AccentGold
@@ -135,6 +136,13 @@ fun LeaderboardScreen(
                             verticalArrangement = Arrangement.spacedBy(8.dp),
                             modifier = Modifier.fillMaxSize()
                         ) {
+                            item(key = "leaderboard_header") {
+                                SectionHeader(
+                                    kicker = "Verified Standings",
+                                    title = "Top Classic Players",
+                                    accent = AccentGold
+                                )
+                            }
                             if (entries.size >= 3) {
                                 item(key = "podium_header") {
                                     LeaderboardPodium(

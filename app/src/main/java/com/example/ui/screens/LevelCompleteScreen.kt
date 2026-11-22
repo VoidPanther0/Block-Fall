@@ -79,7 +79,8 @@ fun LevelCompleteScreen(
     onReplay: () -> Unit,
     onHome: () -> Unit
 ) {
-    val hasNextLevel = state.currentChallengeLevel.levelNumber < ChallengeLevels.levels.size
+    val hasNextLevel = !state.isDailyChallenge &&
+        state.currentChallengeLevel.levelNumber < ChallengeLevels.levels.size
     val stars = state.lastChallengeStarsEarned.coerceIn(1, 3)
     val (rewardGold, rewardDiamonds) = EconomyEngine.calculateChallengeWinReward(stars)
 
@@ -148,7 +149,11 @@ fun LevelCompleteScreen(
             )
 
             Text(
-                text = "Level ${state.currentChallengeLevel.levelNumber} · ${state.currentChallengeLevel.title}",
+                text = if (state.isDailyChallenge) {
+                    "Daily Gravity · ${state.currentChallengeLevel.title}"
+                } else {
+                    "Level ${state.currentChallengeLevel.levelNumber} · ${state.currentChallengeLevel.title}"
+                },
                 style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
                 color = TextSecondary
             )

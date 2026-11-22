@@ -19,6 +19,7 @@ import com.example.game.BoosterType
 import com.example.game.ChallengeLevel
 import com.example.game.ChallengeLevelProgress
 import com.example.game.ChallengeLevels
+import com.example.game.DailyChallengeGenerator
 import com.example.game.EconomyEngine
 import com.example.game.EconomyMutationResult
 import com.example.game.FallingBlockMove
@@ -130,7 +131,9 @@ data class GameUiState(
     val particleTriggerId: Long = 0L,
     val latestParticles: List<ParticleBurst> = emptyList(),
     val wallet: PlayerWallet = PlayerWallet(),
-    val showRulesDialog: Boolean = false
+    val showRulesDialog: Boolean = false,
+    /** True while the seeded Daily Gravity puzzle is being played. UI-only routing flag. */
+    val isDailyChallenge: Boolean = false
 ) {
     val movesRemaining: Int
         get() = (currentChallengeLevel.moveLimit - movesPlayed).coerceAtLeast(0)
@@ -252,6 +255,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update {
             it.copy(
                 mode = GameMode.CLASSIC,
+                isDailyChallenge = false,
                 status = GameStatus.PLAYING,
                 board = emptyBoard,
                 traySlots = trayPieces.mapIndexed { i, p -> TraySlot(i, p) },
@@ -289,6 +293,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             _uiState.update {
                 it.copy(
                     mode = GameMode.CLASSIC,
+                    isDailyChallenge = false,
                     status = GameStatus.PLAYING,
                     board = snapshot.board,
                     traySlots = snapshot.trayPieces.mapIndexed { i, p -> TraySlot(i, p) },
@@ -311,7 +316,24 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun startChallengeLevel(levelNumber: Int, countAsNewGame: Boolean = true) {
-        val level = ChallengeLevels.getLevel(levelNumber)
+        startConfiguredChallenge(ChallengeLevels.getLevel(levelNumber), countAsNewGame, isDaily = false)
+    }
+
+    /**
+     * Starts today's deterministic Daily Gravity puzzle. Uses the same [GameUiState] and
+     * turn pipeline as the challenge campaign; it is only routed separately so it never
+     * writes campaign progress.
+     */
+    fun startDailyChallenge(countAsNewGame: Boolean = true) {
+        val spec = DailyChallengeGenerator.forDateKey(DailyChallengeGenerator.todayDateKey())
+        startConfiguredChallenge(spec.level, countAsNewGame, isDaily = true)
+    }
+
+    private fun startConfiguredChallenge(
+        level: com.example.game.ChallengeLevel,
+        countAsNewGame: Boolean,
+        isDaily: Boolean
+    ) {
         val board = level.buildBoard(startId = nextIdCounter)
         nextIdCounter += 100L
         val (trayPieces, updatedId) = pieceGenerator.generateTray(board, nextIdCounter)
@@ -321,6 +343,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update {
             it.copy(
                 mode = GameMode.CHALLENGE,
+                isDailyChallenge = isDaily,
                 status = GameStatus.PLAYING,
                 board = board,
                 traySlots = trayPieces.mapIndexed { i, p -> TraySlot(i, p) },
@@ -769,8 +792,10 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             soundManager.playGameOver()
         }
 
+        val isCampaignLevel = state.mode == GameMode.CHALLENGE && !state.isDailyChallenge
+
         val nextUnlockedLevel = if (
-            state.mode == GameMode.CHALLENGE && nextStatus == GameStatus.CHALLENGE_WON
+            isCampaignLevel && nextStatus == GameStatus.CHALLENGE_WON
         ) {
             maxOf(
                 state.unlockedChallengeLevel,
@@ -784,7 +809,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         val cascadesInTurn = if (maxDepthInTurn >= 2) 1 else 0
         val fullClearAdded = if (turn.fullClearOccurred) 1 else 0
 
-        val updatedChallengeMap = if (state.mode == GameMode.CHALLENGE && nextStatus == GameStatus.CHALLENGE_WON) {
+        val updatedChallengeMap = if (isCampaignLevel && nextStatus == GameStatus.CHALLENGE_WON) {
             val lvlNum = state.currentChallengeLevel.levelNumber
             val prev = state.challengeProgress[lvlNum]
             state.challengeProgress + (
@@ -795,7 +820,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                     completed = true
                 )
             )
-        } else if (state.mode == GameMode.CHALLENGE && nextStatus == GameStatus.CHALLENGE_LOST) {
+        } else if (isCampaignLevel && nextStatus == GameStatus.CHALLENGE_LOST) {
             val lvlNum = state.currentChallengeLevel.levelNumber
             val prev = state.challengeProgress[lvlNum]
             if (turn.finalScore > (prev?.bestScore ?: 0)) {
@@ -820,6 +845,8 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             totalCascadesTriggered = state.statistics.totalCascadesTriggered + cascadesInTurn,
             maxCascadeDepth = maxOf(state.statistics.maxCascadeDepth, maxDepthInTurn),
             fullBoardClears = state.statistics.fullBoardClears + fullClearAdded,
+            dailyCompletedCount = state.statistics.dailyCompletedCount +
+                if (state.isDailyChallenge && nextStatus == GameStatus.CHALLENGE_WON) 1 else 0,
             classicBestScore = maxOf(
                 state.statistics.classicBestScore,
                 if (state.mode == GameMode.CLASSIC) turn.finalScore else 0
@@ -861,7 +888,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 } else {
                     persistClassicSnapshot()
                 }
-            } else if (nextStatus == GameStatus.CHALLENGE_WON || nextStatus == GameStatus.CHALLENGE_LOST) {
+            } else if (isCampaignLevel && (nextStatus == GameStatus.CHALLENGE_WON || nextStatus == GameStatus.CHALLENGE_LOST)) {
                 repository.saveChallengeLevelResult(
                     levelNumber = state.currentChallengeLevel.levelNumber,
                     score = turn.finalScore,

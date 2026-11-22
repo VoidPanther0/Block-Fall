@@ -59,6 +59,7 @@ import com.example.ui.theme.AccentCoral
 import com.example.ui.theme.AccentCyan
 import com.example.ui.theme.AccentEmerald
 import com.example.ui.theme.AccentGold
+import com.example.ui.theme.AccentPurple
 import com.example.ui.theme.BlueBtnBottom
 import com.example.ui.theme.BlueBtnTop
 import com.example.ui.theme.BoardWellBg
@@ -79,11 +80,16 @@ fun TopGameBar(
     modifier: Modifier = Modifier,
     onBack: (() -> Unit)? = null
 ) {
-    val modeBadgeText = when (state.mode) {
-        GameMode.CLASSIC -> stringResource(R.string.mode_classic)
-        GameMode.CHALLENGE -> "Level ${state.currentChallengeLevel.levelNumber}"
+    val modeBadgeText = when {
+        state.isDailyChallenge -> "DAILY GRAVITY"
+        state.mode == GameMode.CLASSIC -> stringResource(R.string.mode_classic)
+        else -> "Level ${state.currentChallengeLevel.levelNumber}"
     }
-    val modeAccent = if (state.mode == GameMode.CLASSIC) AccentCyan else AccentGold
+    val modeAccent = when {
+        state.isDailyChallenge -> AccentPurple
+        state.mode == GameMode.CLASSIC -> AccentCyan
+        else -> AccentGold
+    }
 
     Row(
         modifier = modifier.fillMaxWidth(),
@@ -327,10 +333,26 @@ fun ScorePanel(
  * Fixed-height callout slot placed above the game board so line-clear / combo callouts
  * never push or shift the 8x8 board vertically and never overlap board cells.
  */
+/**
+ * UI-only feedback labels. The score and the core headline still come from the game engine;
+ * this only maps the current cascade wave / clear count to a readable tier badge.
+ */
+private fun feedbackTierFor(headline: String, wave: Int): Pair<String, Color> = when {
+    wave >= 5 -> "COMBO 5+" to AccentGold
+    wave == 4 -> "COMBO 4" to AccentGold
+    wave == 3 -> "COMBO 3" to AccentCoral
+    wave == 2 -> "COMBO 2" to AccentPurple
+    headline.contains("BOARD", ignoreCase = true) || headline.contains("TRIPLE", ignoreCase = true) ->
+        "PERFECT" to AccentGold
+    headline.contains("DOUBLE", ignoreCase = true) -> "GREAT" to AccentCyan
+    else -> "LINE CLEAR" to AccentCyan
+}
+
 @Composable
 fun CascadeCalloutBar(
     floatingBanner: FloatingBanner?,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    cascadeWave: Int = 0
 ) {
     Box(
         contentAlignment = Alignment.Center,
@@ -344,10 +366,11 @@ fun CascadeCalloutBar(
             exit = fadeOut(tween(180)) + scaleOut(targetScale = 0.92f, animationSpec = tween(180))
         ) {
             floatingBanner?.let { banner ->
-                val accent = if (banner.isChain) AccentGold else AccentCyan
+                val (tierLabel, tierColor) = feedbackTierFor(banner.headline, cascadeWave)
+                val accent = if (banner.isChain) AccentGold else tierColor
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(7.dp),
                     modifier = Modifier
                         .clip(CircleShape)
                         .background(
@@ -359,16 +382,33 @@ fun CascadeCalloutBar(
                             )
                         )
                         .border(1.25.dp, accent.copy(alpha = 0.85f), CircleShape)
-                        .padding(horizontal = 14.dp, vertical = 5.dp)
+                        .padding(horizontal = 10.dp, vertical = 4.dp)
                         .testTag("cascade_banner")
                 ) {
+                    Text(
+                        text = tierLabel,
+                        style = MaterialTheme.typography.labelLarge.copy(
+                            fontFamily = OutfitFontFamily,
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 11.sp,
+                            letterSpacing = 0.6.sp
+                        ),
+                        color = tierColor,
+                        maxLines = 1
+                    )
+                    Box(
+                        modifier = Modifier
+                            .size(3.dp)
+                            .clip(CircleShape)
+                            .background(GlassBorder)
+                    )
                     Text(
                         text = banner.headline,
                         style = MaterialTheme.typography.labelLarge.copy(
                             fontFamily = OutfitFontFamily,
                             fontWeight = FontWeight.ExtraBold,
-                            fontSize = 12.sp,
-                            letterSpacing = 0.7.sp
+                            fontSize = 11.sp,
+                            letterSpacing = 0.4.sp
                         ),
                         color = Color.White,
                         maxLines = 1
@@ -378,7 +418,7 @@ fun CascadeCalloutBar(
                         style = MaterialTheme.typography.labelLarge.copy(
                             fontFamily = JetBrainsMonoFontFamily,
                             fontWeight = FontWeight.Bold,
-                            fontSize = 12.sp
+                            fontSize = 11.sp
                         ),
                         color = accent,
                         maxLines = 1

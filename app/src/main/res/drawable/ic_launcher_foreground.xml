@@ -1,8 +1,59 @@
 <?xml version="1.0" encoding="utf-8"?>
-<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <item
-        android:width="66dp"
-        android:height="66dp"
-        android:drawable="@drawable/ic_cascade_foreground"
-        android:gravity="center" />
-</layer-list>
+<!--
+  Original BLOCK FALL launcher artwork: four beveled puzzle blocks arranged as a
+  falling tetromino. Geometry stays inside the 66dp adaptive-icon safe zone.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <group android:rotation="-6" android:pivotX="54" android:pivotY="54">
+
+        <!-- Cyan block -->
+        <path
+            android:pathData="M34,30h14a4,4 0 0 1 4,4v14a4,4 0 0 1 -4,4h-14a4,4 0 0 1 -4,-4v-14a4,4 0 0 1 4,-4z"
+            android:fillColor="#0874C2" />
+        <path
+            android:pathData="M34,29h14a4,4 0 0 1 4,4v14a4,4 0 0 1 -4,4h-14a4,4 0 0 1 -4,-4v-14a4,4 0 0 1 4,-4z"
+            android:fillColor="#2EE6FF" />
+        <path
+            android:pathData="M37,32h8a2.5,2.5 0 0 1 2.5,2.5v1a2.5,2.5 0 0 1 -2.5,2.5h-8a2.5,2.5 0 0 1 -2.5,-2.5v-1a2.5,2.5 0 0 1 2.5,-2.5z"
+            android:fillColor="#B8F5FF" />
+
+        <!-- Gold block -->
+        <path
+            android:pathData="M58,30h14a4,4 0 0 1 4,4v14a4,4 0 0 1 -4,4h-14a4,4 0 0 1 -4,-4v-14a4,4 0 0 1 4,-4z"
+            android:fillColor="#C97B00" />
+        <path
+            android:pathData="M58,29h14a4,4 0 0 1 4,4v14a4,4 0 0 1 -4,4h-14a4,4 0 0 1 -4,-4v-14a4,4 0 0 1 4,-4z"
+            android:fillColor="#FFCA3A" />
+        <path
+            android:pathData="M61,32h8a2.5,2.5 0 0 1 2.5,2.5v1a2.5,2.5 0 0 1 -2.5,2.5h-8a2.5,2.5 0 0 1 -2.5,-2.5v-1a2.5,2.5 0 0 1 2.5,-2.5z"
+            android:fillColor="#FFF0A8" />
+
+        <!-- Violet block -->
+        <path
+            android:pathData="M34,54h14a4,4 0 0 1 4,4v14a4,4 0 0 1 -4,4h-14a4,4 0 0 1 -4,-4v-14a4,4 0 0 1 4,-4z"
+            android:fillColor="#5E1EB5" />
+        <path
+            android:pathData="M34,53h14a4,4 0 0 1 4,4v14a4,4 0 0 1 -4,4h-14a4,4 0 0 1 -4,-4v-14a4,4 0 0 1 4,-4z"
+            android:fillColor="#A78BFA" />
+        <path
+            android:pathData="M37,56h8a2.5,2.5 0 0 1 2.5,2.5v1a2.5,2.5 0 0 1 -2.5,2.5h-8a2.5,2.5 0 0 1 -2.5,-2.5v-1a2.5,2.5 0 0 1 2.5,-2.5z"
+            android:fillColor="#E3D2FF" />
+
+        <!-- Emerald block -->
+        <path
+            android:pathData="M58,54h14a4,4 0 0 1 4,4v14a4,4 0 0 1 -4,4h-14a4,4 0 0 1 -4,-4v-14a4,4 0 0 1 4,-4z"
+            android:fillColor="#0F8E43" />
+        <path
+            android:pathData="M58,53h14a4,4 0 0 1 4,4v14a4,4 0 0 1 -4,4h-14a4,4 0 0 1 -4,-4v-14a4,4 0 0 1 4,-4z"
+            android:fillColor="#2EE59D" />
+        <path
+            android:pathData="M61,56h8a2.5,2.5 0 0 1 2.5,2.5v1a2.5,2.5 0 0 1 -2.5,2.5h-8a2.5,2.5 0 0 1 -2.5,-2.5v-1a2.5,2.5 0 0 1 2.5,-2.5z"
+            android:fillColor="#C0FFE2" />
+
+    </group>
+</vector>

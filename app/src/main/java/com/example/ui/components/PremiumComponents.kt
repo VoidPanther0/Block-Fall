@@ -264,23 +264,25 @@ private fun CurrencyPill(
     compact: Boolean,
     modifier: Modifier = Modifier
 ) {
+    val shape = RoundedCornerShape(if (compact) 12.dp else 14.dp)
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(if (compact) 5.dp else 7.dp),
         modifier = modifier
-            .clip(CircleShape)
+            .defaultMinSize(minHeight = if (compact) 30.dp else 36.dp)
+            .clip(shape)
             .background(BoardWellBg.copy(alpha = 0.92f))
-            .border(1.dp, tint.copy(alpha = 0.4f), CircleShape)
+            .border(1.dp, tint.copy(alpha = 0.38f), shape)
             .padding(
-                horizontal = if (compact) 10.dp else 12.dp,
-                vertical = if (compact) 5.dp else 7.dp
+                horizontal = if (compact) 9.dp else 12.dp,
+                vertical = if (compact) 4.dp else 6.dp
             )
     ) {
         Icon(
             imageVector = icon,
             contentDescription = label,
             tint = tint,
-            modifier = Modifier.size(if (compact) 16.dp else 19.dp)
+            modifier = Modifier.size(if (compact) 15.dp else 18.dp)
         )
         Text(
             text = amountText,
@@ -288,11 +290,17 @@ private fun CurrencyPill(
                 fontSize = if (compact) 13.sp else 15.sp
             ),
             color = TextPrimary,
-            maxLines = 1
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
         )
     }
 }
 
+/**
+ * Aligned Gold + Diamond wallet. Each pill sizes to its own content and neither value can
+ * overlap the other, even at 320dp. Pass [modifier] (e.g. `Modifier.weight(1f)`) to distribute
+ * space in a parent row.
+ */
 @Composable
 fun CurrencyWallet(
     goldCoins: Int,
@@ -306,18 +314,20 @@ fun CurrencyWallet(
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = modifier.then(
-            if (onClick != null) {
-                Modifier
-                    .clip(CircleShape)
-                    .clickable(onClick = onClick)
-            } else {
-                Modifier
-            }
-        )
+        modifier = modifier.then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
     ) {
-        GoldBalance(amount = goldCoins, compact = compact, testTag = goldTag)
-        DiamondBalance(amount = diamonds, compact = compact, testTag = diamondTag)
+        GoldBalance(
+            amount = goldCoins,
+            compact = compact,
+            testTag = goldTag,
+            modifier = Modifier.weight(1f, fill = false)
+        )
+        DiamondBalance(
+            amount = diamonds,
+            compact = compact,
+            testTag = diamondTag,
+            modifier = Modifier.weight(1f, fill = false)
+        )
     }
 }
 

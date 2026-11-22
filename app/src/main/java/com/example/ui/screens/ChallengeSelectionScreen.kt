@@ -48,11 +48,12 @@ import androidx.compose.ui.unit.sp
 import com.example.game.ChallengeLevel
 import com.example.game.ChallengeLevelProgress
 import com.example.game.ChallengeLevels
+import com.example.game.EconomyEngine
 import com.example.ui.GameUiState
 import com.example.ui.components.ArcadeButtonStyle
 import com.example.ui.components.BoardPreview
 import com.example.ui.components.CascadeScreenContainer
-import com.example.ui.components.PremiumBottomNavigation
+import com.example.ui.components.PremiumQuickNav
 import com.example.ui.components.PremiumCard
 import com.example.ui.components.PremiumPrimaryButton
 import com.example.ui.components.PrimaryNavTab
@@ -97,7 +98,7 @@ fun ChallengeSelectionScreen(
         maxContentWidth = 940.dp,
         bottomBar = if (onNavigateTab != null) {
             {
-                PremiumBottomNavigation(
+                PremiumQuickNav(
                     selectedTab = PrimaryNavTab.CHALLENGES,
                     onSelectTab = onNavigateTab
                 )
@@ -418,6 +419,77 @@ private fun ChallengeInspectorCard(
                     text = "3★ $threeStarTarget+",
                     style = CascadeTextStyles.NumericBalance.copy(fontSize = 11.sp),
                     color = AccentGold
+                )
+            }
+
+            val (rewardGold, rewardDiamonds) = EconomyEngine.calculateChallengeWinReward(3)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(BoardWellBg)
+                    .border(1.dp, GlassBorder.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
+                    .padding(horizontal = 10.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "OBJECTIVES",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 0.6.sp,
+                            fontSize = 9.5.sp
+                        ),
+                        color = AccentCyan
+                    )
+                    Text(
+                        text = level.subtitle,
+                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                        color = TextSecondary,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        text = "3★ REWARD",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 0.6.sp,
+                            fontSize = 9.5.sp
+                        ),
+                        color = AccentGold
+                    )
+                    Text(
+                        text = "$rewardGold Gold · $rewardDiamonds Gems",
+                        style = CascadeTextStyles.NumericBalance.copy(fontSize = 11.sp),
+                        color = AccentGold,
+                        maxLines = 1
+                    )
+                }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                val completionText = when {
+                    progress?.completed == true -> "COMPLETED · ${"★".repeat(progress.stars.coerceIn(0, 3))}"
+                    (progress?.bestScore ?: 0) > 0 -> "IN PROGRESS · BEST ${progress?.bestScore}"
+                    else -> "NOT STARTED"
+                }
+                Text(
+                    text = completionText,
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        fontFamily = JetBrainsMonoFontFamily,
+                        fontSize = 10.sp
+                    ),
+                    color = if (progress?.completed == true) AccentEmerald else TextSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
                 )
             }
 
