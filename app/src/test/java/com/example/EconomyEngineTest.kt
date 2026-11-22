@@ -72,18 +72,24 @@ class EconomyEngineTest {
     }
 
     @Test
-    fun `consume_hammer_booster_decrements_count_by_one`() {
+    fun `consume_shuffle_booster_decrements_count_by_one`() {
         val result = requireSuccess(
             EconomyEngine.consumeBooster(
                 wallet = PlayerWallet(),
-                type = BoosterType.HAMMER,
-                transactionId = "tx-consume-hammer"
+                type = BoosterType.SHUFFLE,
+                transactionId = "tx-consume-shuffle"
             )
         )
-
-        assertEquals(2, result.updatedWallet.hammerCount)
+        assertEquals(2, result.updatedWallet.shuffleCount)
+        assertEquals(3, result.updatedWallet.hammerCount)
         assertEquals(3, result.updatedWallet.refreshCount)
-        assertEquals(3, result.updatedWallet.shuffleCount)
+    }
+
+    @Test
+    fun `disabled_boosters_cannot_be_consumed`() {
+        for (t in listOf(BoosterType.HAMMER, BoosterType.REFRESH)) {
+            assertTrue(EconomyEngine.consumeBooster(PlayerWallet(), t, "tx-$t") is EconomyMutationResult.Rejected)
+        }
     }
 
     @Test

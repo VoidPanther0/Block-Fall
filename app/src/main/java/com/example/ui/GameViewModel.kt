@@ -14,6 +14,7 @@ import com.example.game.AchievementEvaluator
 import com.example.game.BlockColor
 import com.example.game.BlockStyle
 import com.example.game.Board
+import com.example.game.DailyChallengeGenerator
 import com.example.game.BoardColorPalette
 import com.example.game.BoosterType
 import com.example.game.ChallengeLevel
@@ -156,6 +157,8 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     val adState: StateFlow<AdState> = adManager.adState
 
     private var nextIdCounter: Long = 100L
+    private var activeDailyKey: String? = null
+    private var comboStreak: Int = 0
 
     private val _uiState = MutableStateFlow(GameUiState())
     val uiState: StateFlow<GameUiState> = _uiState.asStateFlow()
@@ -247,6 +250,9 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun startNewClassicGame(countAsNewGame: Boolean = true) {
+        pieceGenerator.reseed(null)
+        activeDailyKey = null
+        comboStreak = 0
         val emptyBoard = Board.empty()
         val (trayPieces, updatedId) = pieceGenerator.generateTray(emptyBoard, nextIdCounter)
         nextIdCounter = updatedId
@@ -313,8 +319,31 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         return false
     }
 
-    fun startChallengeLevel(levelNumber: Int, countAsNewGame: Boolean = true) {
-        val level = ChallengeLevels.getLevel(levelNumber)
+    /** Daily Gravity: today's seeded puzzle (same board and piece stream for every player). */
+    fun startDailyGravity() {
+        val todayKey = DailyChallengeGenerator.todayDateKey()
+        val spec = DailyChallengeGenerator.forDateKey(todayKey)
+        pieceGenerator.reseed(spec.seed)
+        activeDailyKey = todayKey
+        comboStreak = 0
+        viewModelScope.launch {
+            repository.updateDailyProgress { it.withAttemptStarted(todayKey) }
+        }
+        startChallengeLevel(0, countAsNewGame = true, levelOverride = spec.level, keepSeed = true)
+    }
+
+    fun startChallengeLevel(
+        levelNumber: Int,
+        countAsNewGame: Boolean = true,
+        levelOverride: ChallengeLevel? = null,
+        keepSeed: Boolean = false
+    ) {
+        if (!keepSeed) {
+            pieceGenerator.reseed(null)
+            activeDailyKey = null
+            comboStreak = 0
+        }
+        val level = levelOverride ?: ChallengeLevels.getLevel(levelNumber)
         val board = level.buildBoard(startId = nextIdCounter)
         nextIdCounter += 100L
         val (trayPieces, updatedId) = pieceGenerator.generateTray(board, nextIdCounter)
@@ -394,7 +423,8 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         if (state.mode == GameMode.CLASSIC) {
             startNewClassicGame()
         } else {
-            startChallengeLevel(state.currentChallengeLevel.levelNumber)
+            if (activeDailyKey != null && state.currentChallengeLevel.levelNumber == 0) startDailyGravity()
+            else startChallengeLevel(state.currentChallengeLevel.levelNumber)
         }
     }
 
@@ -696,9 +726,11 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             movesPlayed = state.movesPlayed,
             mode = state.mode,
             challengeLevel = state.currentChallengeLevel,
-            startingBlockId = nextIdCounter
+            startingBlockId = nextIdCounter,
+            comboStreak = comboStreak
         ) ?: return
         nextIdCounter = turn.nextBlockIdCounter
+        comboStreak = turn.comboStreak
 
         soundManager.playBlockDrop()
         haptics.perform(com.example.audio.HapticEvent.PLACE)
@@ -811,8 +843,9 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             haptics.perform(com.example.audio.HapticEvent.GAME_OVER)
         }
 
+        val isDaily = activeDailyKey != null && state.currentChallengeLevel.levelNumber == 0
         val nextUnlockedLevel = if (
-            state.mode == GameMode.CHALLENGE && nextStatus == GameStatus.CHALLENGE_WON
+            !isDaily && state.mode == GameMode.CHALLENGE && nextStatus == GameStatus.CHALLENGE_WON
         ) {
             maxOf(
                 state.unlockedChallengeLevel,
@@ -826,7 +859,9 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         val cascadesInTurn = if (maxDepthInTurn >= 2) 1 else 0
         val fullClearAdded = if (turn.fullClearOccurred) 1 else 0
 
-        val updatedChallengeMap = if (state.mode == GameMode.CHALLENGE && nextStatus == GameStatus.CHALLENGE_WON) {
+        val updatedChallengeMap = if (isDaily) {
+            state.challengeProgress
+        } else if (state.mode == GameMode.CHALLENGE && nextStatus == GameStatus.CHALLENGE_WON) {
             val lvlNum = state.currentChallengeLevel.levelNumber
             val prev = state.challengeProgress[lvlNum]
             state.challengeProgress + (
@@ -885,6 +920,15 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 unlockedAchievements = achievements,
                 playerRank = rank
             )
+        }
+
+        if (isDaily && (nextStatus == GameStatus.CHALLENGE_WON || nextStatus == GameStatus.CHALLENGE_LOST)) {
+            val key = activeDailyKey!!
+            viewModelScope.launch {
+                repository.updateDailyProgress {
+                    it.withResult(key, turn.finalScore, nextStatus == GameStatus.CHALLENGE_WON)
+                }
+            }
         }
 
         viewModelScope.launch {

@@ -88,6 +88,7 @@ class GameRepository(
         val PROTECTED_PROGRESS_ENVELOPE = stringPreferencesKey("protected_progress_envelope_v1")
         val SAVED_CLASSIC_ENVELOPE = stringPreferencesKey("saved_classic_envelope_v1")
         val WALLET_ENVELOPE = stringPreferencesKey("wallet_envelope_v1")
+        val DAILY_PROGRESS = stringPreferencesKey("daily_gravity_progress_v1")
     }
 
     val progressFlow: Flow<PersistedProgress> = context.cascadeDataStore.data.map { prefs ->
@@ -120,6 +121,19 @@ class GameRepository(
     }
 
     suspend fun loadInitialProgress(): PersistedProgress = progressFlow.first()
+
+    suspend fun loadDailyProgress(): com.example.game.DailyProgress =
+        com.example.game.DailyProgress.fromJson(context.cascadeDataStore.data.first()[Keys.DAILY_PROGRESS])
+
+    /** Atomic read-modify-write so concurrent updates never lose a better score. */
+    suspend fun updateDailyProgress(
+        transform: (com.example.game.DailyProgress) -> com.example.game.DailyProgress
+    ) {
+        context.cascadeDataStore.edit { prefs ->
+            val cur = com.example.game.DailyProgress.fromJson(prefs[Keys.DAILY_PROGRESS])
+            prefs[Keys.DAILY_PROGRESS] = transform(cur).toJson()
+        }
+    }
 
     suspend fun updateClassicBestScore(score: Int) {
         if (score <= 0) return

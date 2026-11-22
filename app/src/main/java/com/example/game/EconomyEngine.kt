@@ -31,6 +31,9 @@ enum class BoosterType(
         starterCount = 3
     );
 
+    /** Only boosters with real gameplay behaviour may be bought or consumed. */
+    val isImplemented: Boolean get() = this == SHUFFLE
+
     companion object {
         fun fromId(id: String?): BoosterType? = entries.firstOrNull { it.id == id }
     }
@@ -299,6 +302,9 @@ object EconomyEngine {
         }
         if (transactionId in wallet.processedLedgerIds) {
             return EconomyMutationResult.Rejected("Duplicate booster consumption ignored")
+        }
+        if (!type.isImplemented) {
+            return EconomyMutationResult.Rejected("${type.title} is not available yet")
         }
         if (wallet.countFor(type) <= 0) {
             return EconomyMutationResult.Rejected("No ${type.title} boosters left")

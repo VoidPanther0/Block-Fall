@@ -91,12 +91,19 @@ jobs:
           fi
 
       - name: Build Release APK
+        env:
+          ADMOB_APP_ID: ${{ secrets.ADMOB_APP_ID }}
+          ADMOB_REWARDED_GOLD_UNIT_ID: ${{ secrets.ADMOB_REWARDED_GOLD_UNIT_ID }}
         run: |
-          if [ -x ./gradlew ]; then
-            ./gradlew :app:assembleRelease --no-daemon
-          else
-            gradle :app:assembleRelease --no-daemon
+          # Tag builds require real AdMob IDs; other builds may use test IDs (non-shipping).
+          # Secrets Gradle Plugin reads .env for BuildConfig fields (file is gitignored).
+          if [ -n "$ADMOB_APP_ID" ] && [ -n "$ADMOB_REWARDED_GOLD_UNIT_ID" ]; then
+            echo "ADMOB_APP_ID=$ADMOB_APP_ID" > .env
+            echo "ADMOB_REWARDED_GOLD_UNIT_ID=$ADMOB_REWARDED_GOLD_UNIT_ID" >> .env
           fi
+          EXTRA=""
+          if [[ "${{ github.ref }}" != refs/tags/v* ]]; then EXTRA="-PallowTestAds=true"; fi
+          ./gradlew :app:assembleRelease --no-daemon $EXTRA
 
       - name: Upload Release APK Artifact
         uses: actions/upload-artifact@v4

@@ -18,7 +18,8 @@ enum class ComboLabel(val minDepth: Int, val display: String) {
  * Per-turn feedback derived purely from our own rules:
  * - PERFECT: the turn left the board completely empty.
  * - GREAT: three or more lines were cleared in a single turn.
- * - Combo: depth of the gravity cascade chain (2+ waves).
+ * - Combo: the larger of the cascade depth (gravity chains are possible but rare) and the
+ *   clear streak (consecutive turns that cleared lines), so combos are reachable in normal play.
  * - multiplier: highest wave multiplier applied this turn (equals cascade depth).
  */
 data class ScoreFeedback(
@@ -34,7 +35,7 @@ data class ScoreFeedback(
         const val GREAT_MIN_LINES = 3
         val NONE = ScoreFeedback(FeedbackTier.NONE, ComboLabel.NONE, 1, 0, 0)
 
-        fun from(resolution: CascadeResolution): ScoreFeedback {
+        fun from(resolution: CascadeResolution, comboStreak: Int = 0): ScoreFeedback {
             if (!resolution.hasClears) return NONE
             val tier = when {
                 resolution.didFullClear -> FeedbackTier.PERFECT
@@ -43,7 +44,7 @@ data class ScoreFeedback(
             }
             return ScoreFeedback(
                 tier = tier,
-                combo = ComboLabel.forDepth(resolution.maxCascadeDepth),
+                combo = ComboLabel.forDepth(maxOf(resolution.maxCascadeDepth, comboStreak)),
                 multiplier = resolution.waves.maxOf { it.scoreBreakdown.multiplier },
                 cascadeBonus = resolution.waves.sumOf { it.scoreBreakdown.cascadeBonus },
                 linesCleared = resolution.totalLinesCleared
