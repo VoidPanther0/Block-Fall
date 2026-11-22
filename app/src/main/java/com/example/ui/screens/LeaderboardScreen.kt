@@ -17,9 +17,9 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -31,19 +31,23 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.cloud.LeaderboardEntry
 import com.example.ui.CloudStreamState
 import com.example.ui.components.CascadeScreenContainer
-import com.example.ui.components.FrostedGlassCard
+import com.example.ui.components.EmptyState
 import com.example.ui.components.GoogleSignInCard
+import com.example.ui.components.LoadingIndicator
+import com.example.ui.components.PremiumCard
 import com.example.ui.components.ScreenTopBar
+import com.example.ui.theme.AccentCoral
 import com.example.ui.theme.AccentCyan
 import com.example.ui.theme.AccentGold
 import com.example.ui.theme.AccentPurple
-import com.example.ui.theme.AccentCoral
+import com.example.ui.theme.BoardWellBg
 import com.example.ui.theme.GlassBorder
 import com.example.ui.theme.JetBrainsMonoFontFamily
 import com.example.ui.theme.OutfitFontFamily
@@ -100,71 +104,45 @@ fun LeaderboardScreen(
                         contentAlignment = Alignment.Center,
                         modifier = Modifier.fillMaxSize()
                     ) {
-                        CircularProgressIndicator(color = AccentCyan)
+                        LoadingIndicator(message = "Loading global standings...")
                     }
                 }
 
                 is CloudStreamState.Error -> {
-                    FrostedGlassCard(
-                        cornerRadius = 20.dp,
-                        borderColor = AccentCoral.copy(alpha = 0.45f),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(6.dp),
-                            modifier = Modifier.padding(16.dp)
-                        ) {
-                            Text(
-                                text = "Unable to load leaderboard",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = AccentCoral
-                            )
-                            Text(
-                                text = leaderboardState.message,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = TextSecondary
-                            )
-                        }
-                    }
+                    EmptyState(
+                        icon = Icons.Filled.CloudOff,
+                        title = "Unable to load leaderboard",
+                        description = leaderboardState.message,
+                        accent = AccentCoral,
+                        actionLabel = "Retry Sync",
+                        onAction = onSyncScore
+                    )
                 }
 
                 is CloudStreamState.Success -> {
                     val entries = leaderboardState.data
                     if (entries.isEmpty()) {
-                        FrostedGlassCard(
-                            cornerRadius = 20.dp,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(8.dp),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(24.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Filled.EmojiEvents,
-                                    contentDescription = null,
-                                    tint = AccentGold,
-                                    modifier = Modifier.size(36.dp)
-                                )
-                                Text(
-                                    text = "No scores posted yet",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = TextPrimary
-                                )
-                                Text(
-                                    text = "Play Classic mode and tap refresh to publish your best score.",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = TextSecondary
-                                )
-                            }
-                        }
+                        EmptyState(
+                            icon = Icons.Filled.EmojiEvents,
+                            title = "No scores posted yet",
+                            description = "Play Classic mode and tap refresh to publish your best score.",
+                            accent = AccentGold,
+                            actionLabel = "Sync Best Score",
+                            onAction = onSyncScore
+                        )
                     } else {
                         LazyColumn(
                             verticalArrangement = Arrangement.spacedBy(8.dp),
                             modifier = Modifier.fillMaxSize()
                         ) {
+                            if (entries.size >= 3) {
+                                item(key = "podium_header") {
+                                    LeaderboardPodium(
+                                        topThree = entries.take(3),
+                                        currentUserId = currentUserId
+                                    )
+                                }
+                            }
                             itemsIndexed(entries, key = { _, item -> item.userId }) { index, entry ->
                                 val isCurrentUser = entry.userId == currentUserId
                                 val rankColor = when (index) {
@@ -173,7 +151,7 @@ fun LeaderboardScreen(
                                     2 -> AccentPurple
                                     else -> GlassBorder
                                 }
-                                FrostedGlassCard(
+                                PremiumCard(
                                     cornerRadius = 16.dp,
                                     borderColor = if (isCurrentUser) AccentGold else rankColor.copy(alpha = 0.35f),
                                     modifier = Modifier.fillMaxWidth()
@@ -247,5 +225,118 @@ fun LeaderboardScreen(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun LeaderboardPodium(
+    topThree: List<LeaderboardEntry>,
+    currentUserId: String?
+) {
+    PremiumCard(
+        cornerRadius = 20.dp,
+        borderColor = AccentGold.copy(alpha = 0.42f),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 4.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 14.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.Bottom
+        ) {
+            PodiumSlot(
+                rank = 2,
+                entry = topThree[1],
+                accent = AccentCyan,
+                isCurrentUser = topThree[1].userId == currentUserId,
+                elevated = false,
+                modifier = Modifier.weight(1f)
+            )
+            PodiumSlot(
+                rank = 1,
+                entry = topThree[0],
+                accent = AccentGold,
+                isCurrentUser = topThree[0].userId == currentUserId,
+                elevated = true,
+                modifier = Modifier.weight(1.1f)
+            )
+            PodiumSlot(
+                rank = 3,
+                entry = topThree[2],
+                accent = AccentPurple,
+                isCurrentUser = topThree[2].userId == currentUserId,
+                elevated = false,
+                modifier = Modifier.weight(1f)
+            )
+        }
+    }
+}
+
+@Composable
+private fun PodiumSlot(
+    rank: Int,
+    entry: LeaderboardEntry,
+    accent: Color,
+    isCurrentUser: Boolean,
+    elevated: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val initials = entry.displayName
+        .trim()
+        .split(" ")
+        .filter { it.isNotEmpty() }
+        .take(2)
+        .joinToString("") { it.first().uppercase() }
+        .ifEmpty { "P$rank" }
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(5.dp),
+        modifier = modifier
+            .clip(RoundedCornerShape(16.dp))
+            .background(BoardWellBg)
+            .border(
+                width = if (isCurrentUser || elevated) 1.5.dp else 1.dp,
+                color = accent.copy(alpha = if (elevated) 0.72f else 0.38f),
+                shape = RoundedCornerShape(16.dp)
+            )
+            .padding(horizontal = 8.dp, vertical = if (elevated) 14.dp else 10.dp)
+    ) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .size(if (elevated) 44.dp else 36.dp)
+                .clip(CircleShape)
+                .background(accent.copy(alpha = 0.18f))
+                .border(1.5.dp, accent, CircleShape)
+        ) {
+            Text(
+                text = initials,
+                style = MaterialTheme.typography.labelLarge.copy(fontFamily = OutfitFontFamily),
+                color = accent
+            )
+        }
+        Text(
+            text = "#$rank",
+            style = MaterialTheme.typography.labelSmall.copy(fontFamily = JetBrainsMonoFontFamily),
+            color = accent
+        )
+        Text(
+            text = entry.displayName,
+            style = MaterialTheme.typography.labelMedium,
+            color = TextPrimary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center
+        )
+        Text(
+            text = "${entry.classicBestScore}",
+            style = MaterialTheme.typography.titleSmall.copy(fontFamily = JetBrainsMonoFontFamily),
+            color = AccentGold,
+            maxLines = 1
+        )
     }
 }

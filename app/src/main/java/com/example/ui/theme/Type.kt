@@ -28,24 +28,51 @@ val JetBrainsMonoFontFamily = FontFamily(
 )
 
 val CascadeTypography = Typography(
+    displayLarge = TextStyle(
+        fontFamily = OutfitFontFamily,
+        fontWeight = FontWeight.ExtraBold,
+        fontSize = 42.sp,
+        lineHeight = 46.sp,
+        letterSpacing = (-0.5).sp
+    ),
+    displayMedium = TextStyle(
+        fontFamily = OutfitFontFamily,
+        fontWeight = FontWeight.ExtraBold,
+        fontSize = 36.sp,
+        lineHeight = 40.sp,
+        letterSpacing = (-0.5).sp
+    ),
     displaySmall = TextStyle(
         fontFamily = OutfitFontFamily,
         fontWeight = FontWeight.Bold,
-        fontSize = 32.sp,
-        lineHeight = 36.sp,
-        letterSpacing = (-0.5).sp
+        fontSize = 30.sp,
+        lineHeight = 34.sp,
+        letterSpacing = (-0.4).sp
+    ),
+    headlineLarge = TextStyle(
+        fontFamily = OutfitFontFamily,
+        fontWeight = FontWeight.ExtraBold,
+        fontSize = 26.sp,
+        lineHeight = 32.sp,
+        letterSpacing = (-0.25).sp
     ),
     headlineMedium = TextStyle(
         fontFamily = OutfitFontFamily,
         fontWeight = FontWeight.Bold,
-        fontSize = 24.sp,
+        fontSize = 22.sp,
         lineHeight = 28.sp,
-        letterSpacing = (-0.25).sp
+        letterSpacing = (-0.2).sp
+    ),
+    headlineSmall = TextStyle(
+        fontFamily = OutfitFontFamily,
+        fontWeight = FontWeight.Bold,
+        fontSize = 18.sp,
+        lineHeight = 24.sp
     ),
     titleLarge = TextStyle(
         fontFamily = OutfitFontFamily,
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 20.sp,
+        fontWeight = FontWeight.Bold,
+        fontSize = 19.sp,
         lineHeight = 24.sp
     ),
     titleMedium = TextStyle(
@@ -54,10 +81,34 @@ val CascadeTypography = Typography(
         fontSize = 15.sp,
         lineHeight = 20.sp
     ),
+    titleSmall = TextStyle(
+        fontFamily = OutfitFontFamily,
+        fontWeight = FontWeight.Bold,
+        fontSize = 14.sp,
+        lineHeight = 18.sp
+    ),
+    bodyLarge = TextStyle(
+        fontFamily = PlusJakartaFontFamily,
+        fontWeight = FontWeight.Normal,
+        fontSize = 15.sp,
+        lineHeight = 22.sp
+    ),
     bodyMedium = TextStyle(
         fontFamily = PlusJakartaFontFamily,
         fontWeight = FontWeight.Normal,
-        fontSize = 14.sp,
+        fontSize = 13.5.sp,
+        lineHeight = 19.sp
+    ),
+    bodySmall = TextStyle(
+        fontFamily = PlusJakartaFontFamily,
+        fontWeight = FontWeight.Normal,
+        fontSize = 12.sp,
+        lineHeight = 16.sp
+    ),
+    labelLarge = TextStyle(
+        fontFamily = JetBrainsMonoFontFamily,
+        fontWeight = FontWeight.Bold,
+        fontSize = 15.sp,
         lineHeight = 20.sp
     ),
     labelMedium = TextStyle(
@@ -65,12 +116,42 @@ val CascadeTypography = Typography(
         fontWeight = FontWeight.SemiBold,
         fontSize = 11.sp,
         lineHeight = 14.sp,
-        letterSpacing = 1.1.sp
+        letterSpacing = 0.9.sp
     ),
-    labelLarge = TextStyle(
-        fontFamily = JetBrainsMonoFontFamily,
+    labelSmall = TextStyle(
+        fontFamily = PlusJakartaFontFamily,
         fontWeight = FontWeight.Bold,
-        fontSize = 18.sp,
-        lineHeight = 22.sp
+        fontSize = 10.sp,
+        lineHeight = 13.sp,
+        letterSpacing = 0.8.sp
     )
 )
+
+object CascadeTextStyles {
+    val NumericStatLarge = TextStyle(
+        fontFamily = JetBrainsMonoFontFamily,
+        fontWeight = FontWeight.Bold,
+        fontSize = 28.sp,
+        lineHeight = 32.sp
+    )
+    val NumericBalance = TextStyle(
+        fontFamily = JetBrainsMonoFontFamily,
+        fontWeight = FontWeight.Bold,
+        fontSize = 15.sp,
+        lineHeight = 18.sp
+    )
+    val ButtonLabel = TextStyle(
+        fontFamily = OutfitFontFamily,
+        fontWeight = FontWeight.ExtraBold,
+        fontSize = 16.sp,
+        lineHeight = 20.sp,
+        letterSpacing = 0.3.sp
+    )
+    val SectionKicker = TextStyle(
+        fontFamily = OutfitFontFamily,
+        fontWeight = FontWeight.Bold,
+        fontSize = 11.sp,
+        lineHeight = 14.sp,
+        letterSpacing = 1.2.sp
+    )
+}

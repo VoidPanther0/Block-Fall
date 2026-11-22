@@ -24,8 +24,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.components.CascadeScreenContainer
-import com.example.ui.components.FrostedGlassCard
+import com.example.ui.components.PremiumCard
 import com.example.ui.components.ScreenTopBar
+import com.example.ui.components.SectionHeader
 import com.example.ui.theme.AccentCoral
 import com.example.ui.theme.AccentCyan
 import com.example.ui.theme.AccentEmerald
@@ -33,7 +34,6 @@ import com.example.ui.theme.AccentGold
 import com.example.ui.theme.BoardWellBg
 import com.example.ui.theme.GlassBorder
 import com.example.ui.theme.JetBrainsMonoFontFamily
-import com.example.ui.theme.OutfitFontFamily
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
 
@@ -58,6 +58,7 @@ fun RulesScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             RuleSectionCard(
+                kicker = "Basics",
                 title = "Core Gameplay",
                 accent = AccentCyan,
                 bullets = listOf(
@@ -68,6 +69,7 @@ fun RulesScreen(
             )
 
             RuleSectionCard(
+                kicker = "Cascades",
                 title = "Line Clearing & Vertical Gravity",
                 accent = AccentEmerald,
                 bullets = listOf(
@@ -78,7 +80,7 @@ fun RulesScreen(
                 )
             )
 
-            FrostedGlassCard(
+            PremiumCard(
                 cornerRadius = 20.dp,
                 borderColor = AccentGold.copy(alpha = 0.42f),
                 modifier = Modifier.fillMaxWidth()
@@ -87,14 +89,10 @@ fun RulesScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.padding(18.dp)
                 ) {
-                    Text(
-                        text = "SCORING FORMULA",
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            fontFamily = OutfitFontFamily,
-                            fontWeight = FontWeight.ExtraBold,
-                            letterSpacing = 1.sp
-                        ),
-                        color = AccentGold
+                    SectionHeader(
+                        kicker = "Points & Multipliers",
+                        title = "Scoring Formula",
+                        accent = AccentGold
                     )
                     ScoreRow("Place a Piece", "+1 pt / cell")
                     ScoreRow("Clear a Line", "+10 pts / line")
@@ -106,6 +104,7 @@ fun RulesScreen(
             }
 
             RuleSectionCard(
+                kicker = "Progression",
                 title = "Modes & Star Thresholds",
                 accent = AccentCoral,
                 bullets = listOf(
@@ -121,11 +120,12 @@ fun RulesScreen(
 
 @Composable
 private fun RuleSectionCard(
+    kicker: String,
     title: String,
     accent: Color,
     bullets: List<String>
 ) {
-    FrostedGlassCard(
+    PremiumCard(
         cornerRadius = 20.dp,
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -133,14 +133,10 @@ private fun RuleSectionCard(
             verticalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.padding(18.dp)
         ) {
-            Text(
-                text = title.uppercase(),
-                style = MaterialTheme.typography.labelMedium.copy(
-                    fontFamily = OutfitFontFamily,
-                    fontWeight = FontWeight.ExtraBold,
-                    letterSpacing = 1.sp
-                ),
-                color = accent
+            SectionHeader(
+                kicker = kicker,
+                title = title,
+                accent = accent
             )
             bullets.forEach { bullet ->
                 Text(

@@ -1,9 +1,7 @@
 package com.example.ui.screens
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -11,47 +9,59 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AllInclusive
+import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.EmojiEvents
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.example.game.BlockColor
+import com.example.game.ChallengeLevels
+import com.example.ui.GameUiState
 import com.example.ui.components.ArcadeButtonStyle
 import com.example.ui.components.CascadeScreenContainer
-import com.example.ui.components.FrostedGlassCard
-import com.example.ui.components.GlossyArcadeButton
+import com.example.ui.components.GameModeCard
+import com.example.ui.components.PremiumBottomNavigation
+import com.example.ui.components.PrimaryNavTab
 import com.example.ui.components.ScreenTopBar
+import com.example.ui.components.SectionHeader
+import com.example.ui.components.drawBevelBlock
 import com.example.ui.theme.AccentCyan
 import com.example.ui.theme.AccentGold
-import com.example.ui.theme.OutfitFontFamily
-import com.example.ui.theme.TextPrimary
-import com.example.ui.theme.TextSecondary
+import com.example.ui.theme.AccentPurple
+import com.example.ui.theme.LocalBlockStyle
+import com.example.ui.theme.LocalBoardPalette
+import com.example.ui.theme.TextMuted
 
 @Composable
 fun ModeSelectionScreen(
     onBack: () -> Unit,
     onPlayNewClassic: () -> Unit,
-    onSelectChallengeLevels: () -> Unit
+    onSelectChallengeLevels: () -> Unit,
+    state: GameUiState = GameUiState(),
+    onNavigateTab: ((PrimaryNavTab) -> Unit)? = null
 ) {
+    val totalStars = state.challengeProgress.values.sumOf { it.stars }
+    val maxStars = ChallengeLevels.levels.size * 3
+    val classicStat = if (state.classicBestScore > 0) "Best Score: ${state.classicBestScore}" else "No limit · Beat your best"
+    val challengeStat = "★ $totalStars/$maxStars · Level ${state.unlockedChallengeLevel} unlocked"
+
     CascadeScreenContainer(
-        maxContentWidth = 860.dp,
+        maxContentWidth = 880.dp,
+        bottomBar = if (onNavigateTab != null) {
+            {
+                PremiumBottomNavigation(
+                    selectedTab = PrimaryNavTab.PLAY,
+                    onSelectTab = onNavigateTab
+                )
+            }
+        } else null,
         modifier = Modifier.testTag("mode_selection_screen")
     ) {
         ScreenTopBar(
@@ -69,14 +79,20 @@ fun ModeSelectionScreen(
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+                SectionHeader(
+                    kicker = "Playable Modes",
+                    title = "Choose Your Challenge",
+                    accent = AccentCyan
+                )
+
                 if (isWide) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        ModeCard(
+                        GameModeCard(
                             title = "Classic Endless",
-                            badge = "ENDLESS SURVIVAL",
+                            badge = "Endless Survival",
                             description = "Place polyominoes freely on the 8×8 grid, clear rows or columns, and chain gravity cascades for high scores.",
                             icon = Icons.Filled.AllInclusive,
                             accent = AccentCyan,
@@ -84,11 +100,13 @@ fun ModeSelectionScreen(
                             buttonStyle = ArcadeButtonStyle.GOLD,
                             buttonTag = "mode_play_classic_button",
                             onAction = onPlayNewClassic,
+                            secondaryStat = classicStat,
+                            artwork = { MiniModeBlocksArtwork(isClassic = true) },
                             modifier = Modifier.weight(1f)
                         )
-                        ModeCard(
+                        GameModeCard(
                             title = "Challenge Campaign",
-                            badge = "8 TACTICAL LEVELS",
+                            badge = "8 Tactical Levels",
                             description = "Conquer curated boards with suspended shelves, move budgets, and 3-star target thresholds.",
                             icon = Icons.Filled.EmojiEvents,
                             accent = AccentGold,
@@ -96,31 +114,90 @@ fun ModeSelectionScreen(
                             buttonStyle = ArcadeButtonStyle.GREEN,
                             buttonTag = "mode_browse_challenges_button",
                             onAction = onSelectChallengeLevels,
+                            secondaryStat = challengeStat,
+                            artwork = { MiniModeBlocksArtwork(isClassic = false) },
                             modifier = Modifier.weight(1f)
                         )
                     }
                 } else {
-                    ModeCard(
+                    GameModeCard(
                         title = "Classic Endless",
-                        badge = "ENDLESS SURVIVAL",
+                        badge = "Endless Survival",
                         description = "Place polyominoes freely on the 8×8 grid, clear rows or columns, and chain gravity cascades for high scores.",
                         icon = Icons.Filled.AllInclusive,
                         accent = AccentCyan,
                         buttonText = "Play Classic",
                         buttonStyle = ArcadeButtonStyle.GOLD,
                         buttonTag = "mode_play_classic_button",
-                        onAction = onPlayNewClassic
+                        onAction = onPlayNewClassic,
+                        secondaryStat = classicStat,
+                        artwork = { MiniModeBlocksArtwork(isClassic = true) }
                     )
-                    ModeCard(
+                    GameModeCard(
                         title = "Challenge Campaign",
-                        badge = "8 TACTICAL LEVELS",
+                        badge = "8 Tactical Levels",
                         description = "Conquer curated boards with suspended shelves, move budgets, and 3-star target thresholds.",
                         icon = Icons.Filled.EmojiEvents,
                         accent = AccentGold,
                         buttonText = "Browse Levels",
                         buttonStyle = ArcadeButtonStyle.GREEN,
                         buttonTag = "mode_browse_challenges_button",
-                        onAction = onSelectChallengeLevels
+                        onAction = onSelectChallengeLevels,
+                        secondaryStat = challengeStat,
+                        artwork = { MiniModeBlocksArtwork(isClassic = false) }
+                    )
+                }
+
+                SectionHeader(
+                    kicker = "On The Horizon",
+                    title = "Upcoming Modes",
+                    accent = TextMuted
+                )
+
+                if (isWide) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        GameModeCard(
+                            title = "Daily Gravity",
+                            badge = "Coming Soon",
+                            description = "One seeded 8×8 puzzle every 24 hours with a global streak ladder.",
+                            icon = Icons.Filled.CalendarToday,
+                            accent = AccentPurple,
+                            buttonText = "Coming Soon",
+                            buttonStyle = ArcadeButtonStyle.SLATE,
+                            buttonTag = "mode_daily_upcoming_button",
+                            onAction = {},
+                            enabled = false,
+                            modifier = Modifier.weight(1f)
+                        )
+                        GameModeCard(
+                            title = "Blitz 180",
+                            badge = "Coming Soon",
+                            description = "Race a 3-minute timer where cascade waves extend your clock.",
+                            icon = Icons.Filled.Timer,
+                            accent = TextMuted,
+                            buttonText = "Coming Soon",
+                            buttonStyle = ArcadeButtonStyle.SLATE,
+                            buttonTag = "mode_blitz_upcoming_button",
+                            onAction = {},
+                            enabled = false,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                } else {
+                    GameModeCard(
+                        title = "Daily Gravity",
+                        badge = "Coming Soon",
+                        description = "One seeded 8×8 puzzle every 24 hours with a global streak ladder.",
+                        icon = Icons.Filled.CalendarToday,
+                        accent = AccentPurple,
+                        buttonText = "Coming Soon",
+                        buttonStyle = ArcadeButtonStyle.SLATE,
+                        buttonTag = "mode_daily_upcoming_button",
+                        onAction = {},
+                        enabled = false
                     )
                 }
 
@@ -131,85 +208,39 @@ fun ModeSelectionScreen(
 }
 
 @Composable
-private fun ModeCard(
-    title: String,
-    badge: String,
-    description: String,
-    icon: ImageVector,
-    accent: Color,
-    buttonText: String,
-    buttonStyle: ArcadeButtonStyle,
-    buttonTag: String,
-    onAction: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    FrostedGlassCard(
-        cornerRadius = 22.dp,
-        borderColor = accent.copy(alpha = 0.42f),
-        modifier = modifier.fillMaxWidth()
-    ) {
-        Column(
-            verticalArrangement = Arrangement.spacedBy(14.dp),
-            modifier = Modifier.padding(20.dp)
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(14.dp)
-            ) {
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier
-                        .size(52.dp)
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(accent.copy(alpha = 0.16f))
-                        .border(1.dp, accent.copy(alpha = 0.42f), RoundedCornerShape(16.dp))
-                ) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        tint = accent,
-                        modifier = Modifier.size(28.dp)
-                    )
-                }
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = badge,
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            fontFamily = OutfitFontFamily,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 11.sp,
-                            letterSpacing = 1.sp
-                        ),
-                        color = accent
-                    )
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.titleLarge.copy(
-                            fontFamily = OutfitFontFamily,
-                            fontWeight = FontWeight.ExtraBold,
-                            fontSize = 21.sp
-                        ),
-                        color = TextPrimary
-                    )
-                }
-            }
-
-            Text(
-                text = description,
-                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
-                color = TextSecondary
+private fun MiniModeBlocksArtwork(isClassic: Boolean) {
+    val blockStyle = LocalBlockStyle.current
+    val boardPalette = LocalBoardPalette.current
+    Canvas(modifier = Modifier.size(38.dp)) {
+        val cell = size.width / 3f
+        val gap = cell * 0.14f
+        val tile = cell - gap
+        val pattern = if (isClassic) {
+            listOf(
+                Triple(0, 1, BlockColor.CYAN),
+                Triple(1, 1, BlockColor.CYAN),
+                Triple(2, 0, BlockColor.AMBER),
+                Triple(2, 1, BlockColor.CYAN),
+                Triple(2, 2, BlockColor.EMERALD)
             )
-
-            GlossyArcadeButton(
-                text = buttonText,
-                icon = Icons.Filled.PlayArrow,
-                style = buttonStyle,
-                onClick = onAction,
-                height = 50.dp,
-                cornerRadius = 15.dp,
-                fontSize = 16.sp,
-                testTag = buttonTag,
-                modifier = Modifier.fillMaxWidth()
+        } else {
+            listOf(
+                Triple(0, 0, BlockColor.CORAL),
+                Triple(0, 2, BlockColor.VIOLET),
+                Triple(1, 0, BlockColor.CORAL),
+                Triple(1, 1, BlockColor.AMBER),
+                Triple(1, 2, BlockColor.VIOLET),
+                Triple(2, 1, BlockColor.AMBER)
+            )
+        }
+        for ((r, c, color) in pattern) {
+            drawBevelBlock(
+                left = c * cell + gap / 2f,
+                top = r * cell + gap / 2f,
+                cellSize = tile,
+                color = color,
+                blockStyle = blockStyle,
+                boardPalette = boardPalette
             )
         }
     }

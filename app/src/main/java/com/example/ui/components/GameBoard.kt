@@ -1,5 +1,8 @@
 package com.example.ui.components
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -11,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -38,12 +42,15 @@ import com.example.ui.BoardVisualPhase
 import com.example.ui.DragState
 import com.example.ui.FloatingBanner
 import com.example.ui.ParticleBurst
+import com.example.ui.theme.AccentCyan
 import com.example.ui.theme.AccentGold
 import com.example.ui.theme.InvalidTint
 import com.example.ui.theme.LocalBlockStyle
 import com.example.ui.theme.LocalBoardPalette
 import com.example.ui.theme.toBoardColors
+import com.example.ui.theme.toPalette
 import kotlin.math.PI
+import kotlin.math.cos
 import kotlin.math.sin
 
 @Composable
@@ -67,20 +74,39 @@ fun GameBoard(
 ) {
     val blockStyle = LocalBlockStyle.current
     val boardPalette = LocalBoardPalette.current
-    val boardTheme = boardPalette.toBoardColors()
+    val boardTheme = remember(boardPalette) { boardPalette.toBoardColors() }
     val boardBrush = remember(boardTheme) {
         Brush.verticalGradient(listOf(boardTheme.wellTop, boardTheme.wellBottom))
     }
     val boardCorner = if (blockStyle == BlockStyle.RETRO) 10.dp else 24.dp
     val boardShape = RoundedCornerShape(boardCorner)
+
+    val particleProgress = remember { Animatable(1f) }
+    LaunchedEffect(particleTriggerId, visualEffectsEnabled) {
+        if (visualEffectsEnabled && particleTriggerId > 0L && latestParticles.isNotEmpty()) {
+            particleProgress.snapTo(0f)
+            particleProgress.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(durationMillis = 320, easing = FastOutSlowInEasing)
+            )
+        }
+    }
+
+    val isInvalidHover = dragState != null && dragState.hoverAnchor != null && !dragState.isHoverValid
+    val rimColor = when {
+        isInvalidHover -> InvalidTint.copy(alpha = 0.85f)
+        hasSelectedSlot && dragState == null -> AccentCyan.copy(alpha = 0.72f)
+        else -> boardTheme.rim
+    }
+
     Box(
         modifier = modifier
             .aspectRatio(1f)
             .shadow(14.dp, boardShape, clip = false)
             .clip(boardShape)
             .background(boardBrush)
-            .border(2.dp, boardTheme.rim, boardShape)
-            .padding(11.dp)
+            .border(2.dp, rimColor, boardShape)
+            .padding(10.dp)
             .testTag("game_board")
             .semantics {
                 contentDescription = "8 by 8 Block Falls puzzle board"
@@ -145,7 +171,7 @@ fun GameBoard(
                 }
         ) {
             val cellSize = size.width / Board.SIZE.toFloat()
-            val gap = (cellSize * 0.09f).coerceAtLeast(2.5f)
+            val gap = (cellSize * 0.085f).coerceAtLeast(2.5f)
             val tileSize = cellSize - gap
             val slotRadius = if (blockStyle == BlockStyle.RETRO) {
                 CornerRadius(2f, 2f)
@@ -153,7 +179,7 @@ fun GameBoard(
                 CornerRadius(tileSize * 0.2f, tileSize * 0.2f)
             }
 
-            // 1. Draw sculpted 8x8 recessed cell wells
+            // 1. Sculpted 8x8 recessed cell wells with subtle checkerboard contrast
             for (r in 0 until Board.SIZE) {
                 for (c in 0 until Board.SIZE) {
                     val left = c * cellSize + gap / 2f
@@ -161,7 +187,7 @@ fun GameBoard(
                     val subtleChecker = if ((r + c) % 2 == 0) {
                         boardTheme.slotFill
                     } else {
-                        boardTheme.slotFill.copy(alpha = 0.84f)
+                        boardTheme.slotFill.copy(alpha = 0.82f)
                     }
                     drawRoundRect(
                         color = subtleChecker,
@@ -170,7 +196,7 @@ fun GameBoard(
                         cornerRadius = slotRadius
                     )
                     drawRoundRect(
-                        color = boardTheme.slotBorder.copy(alpha = 0.72f),
+                        color = boardTheme.slotBorder.copy(alpha = 0.68f),
                         topLeft = Offset(left, top),
                         size = Size(tileSize, tileSize),
                         cornerRadius = slotRadius,
@@ -189,7 +215,7 @@ fun GameBoard(
                         cornerRadius = CornerRadius(8f, 8f)
                     )
                     drawRoundRect(
-                        color = AccentGold.copy(alpha = 0.75f),
+                        color = AccentGold.copy(alpha = 0.78f),
                         topLeft = Offset(1f, rowIdx * cellSize + 1f),
                         size = Size(size.width - 2f, cellSize - 2f),
                         cornerRadius = CornerRadius(8f, 8f),
@@ -204,7 +230,7 @@ fun GameBoard(
                         cornerRadius = CornerRadius(8f, 8f)
                     )
                     drawRoundRect(
-                        color = AccentGold.copy(alpha = 0.75f),
+                        color = AccentGold.copy(alpha = 0.78f),
                         topLeft = Offset(colIdx * cellSize + 1f, 1f),
                         size = Size(cellSize - 2f, size.height - 2f),
                         cornerRadius = CornerRadius(8f, 8f),
@@ -235,7 +261,7 @@ fun GameBoard(
                     val p = visualPhase.progress
                     val b = visualPhase.boardBeforeClear
 
-                    val sweepAlpha = (1f - p) * 0.55f
+                    val sweepAlpha = (1f - p) * 0.58f
                     for (r in visualPhase.clearedRows) {
                         drawRoundRect(
                             brush = Brush.horizontalGradient(
@@ -273,7 +299,7 @@ fun GameBoard(
                                     alpha = fade,
                                     scaleX = shrink,
                                     scaleY = shrink,
-                                    glowBoost = 1.2f,
+                                    glowBoost = 1.25f,
                                     blockStyle = blockStyle,
                                     boardPalette = boardPalette
                                 )
@@ -317,7 +343,7 @@ fun GameBoard(
                             top = interpRow * cellSize + gap / 2f,
                             cellSize = tileSize,
                             color = move.cell.color,
-                            glowBoost = 0.25f,
+                            glowBoost = 0.28f,
                             blockStyle = blockStyle,
                             boardPalette = boardPalette
                         )
@@ -347,7 +373,7 @@ fun GameBoard(
                 }
             }
 
-            // 4. Ghost placement preview during drag
+            // 4. Ghost placement preview & invalid placement feedback during drag
             if (placementPreviewEnabled && dragState != null && dragState.hoverAnchor != null) {
                 val anchor = dragState.hoverAnchor
                 val coords = dragState.piece.cellsAt(anchor.row, anchor.col)
@@ -361,25 +387,76 @@ fun GameBoard(
                             top = top,
                             cellSize = tileSize,
                             color = dragState.piece.color,
-                            alpha = 0.45f,
-                            glowBoost = if (visualEffectsEnabled) 0.5f else 0f,
+                            alpha = 0.46f,
+                            glowBoost = if (visualEffectsEnabled) 0.52f else 0f,
                             blockStyle = blockStyle,
                             boardPalette = boardPalette
                         )
                     } else {
                         drawRoundRect(
-                            color = InvalidTint.copy(alpha = 0.25f),
+                            color = InvalidTint.copy(alpha = 0.28f),
                             topLeft = Offset(left, top),
                             size = Size(tileSize, tileSize),
                             cornerRadius = slotRadius
                         )
                         drawRoundRect(
-                            color = InvalidTint.copy(alpha = 0.8f),
+                            color = InvalidTint.copy(alpha = 0.88f),
                             topLeft = Offset(left, top),
                             size = Size(tileSize, tileSize),
                             cornerRadius = slotRadius,
-                            style = Stroke(width = 2f)
+                            style = Stroke(width = 2.2f)
                         )
+                        // Non-color-only cross indicator inside invalid cell
+                        val inset = tileSize * 0.28f
+                        drawLine(
+                            color = Color.White.copy(alpha = 0.72f),
+                            start = Offset(left + inset, top + inset),
+                            end = Offset(left + tileSize - inset, top + tileSize - inset),
+                            strokeWidth = 2f
+                        )
+                        drawLine(
+                            color = Color.White.copy(alpha = 0.72f),
+                            start = Offset(left + tileSize - inset, top + inset),
+                            end = Offset(left + inset, top + tileSize - inset),
+                            strokeWidth = 2f
+                        )
+                    }
+                }
+            }
+
+            // 5. Lightweight allocation-free particle bursts on clear / landing
+            val pProg = particleProgress.value
+            if (visualEffectsEnabled && pProg < 0.99f && latestParticles.isNotEmpty()) {
+                val alpha = (1f - pProg).coerceIn(0f, 1f)
+                val sparkRadius = (cellSize * 0.085f * (1f - pProg * 0.45f)).coerceAtLeast(1.5f)
+                for (burst in latestParticles) {
+                    val cx = burst.col * cellSize
+                    val cy = burst.row * cellSize
+                    val palette = burst.color.toPalette(boardPalette)
+                    if (burst.isLandingDust) {
+                        val spread = cellSize * 0.34f * pProg
+                        drawCircle(
+                            color = palette.highlight.copy(alpha = alpha * 0.55f),
+                            radius = sparkRadius * 0.85f,
+                            center = Offset(cx - spread, cy)
+                        )
+                        drawCircle(
+                            color = palette.highlight.copy(alpha = alpha * 0.55f),
+                            radius = sparkRadius * 0.85f,
+                            center = Offset(cx + spread, cy)
+                        )
+                    } else {
+                        val dist = cellSize * 0.58f * pProg
+                        for (k in 0 until 4) {
+                            val angle = (k * (PI / 2.0) + (burst.id % 4) * 0.35).toFloat()
+                            val px = cx + cos(angle) * dist
+                            val py = cy + sin(angle) * dist
+                            drawCircle(
+                                color = palette.glow.copy(alpha = alpha * 0.85f),
+                                radius = sparkRadius,
+                                center = Offset(px, py)
+                            )
+                        }
                     }
                 }
             }

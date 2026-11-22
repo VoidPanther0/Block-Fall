@@ -17,10 +17,13 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Diamond
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.MonetizationOn
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Star
@@ -36,8 +39,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -46,17 +51,20 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
 import com.example.game.ChallengeLevels
+import com.example.game.EconomyEngine
 import com.example.ui.GameUiState
 import com.example.ui.components.ArcadeButtonStyle
 import com.example.ui.components.CascadeScreenContainer
-import com.example.ui.components.FrostedGlassCard
-import com.example.ui.components.GlossyArcadeButton
+import com.example.ui.components.PremiumCard
+import com.example.ui.components.PremiumPrimaryButton
 import com.example.ui.components.RoyalSkyBackdrop
 import com.example.ui.theme.AccentCoral
 import com.example.ui.theme.AccentCyan
+import com.example.ui.theme.AccentDiamond
 import com.example.ui.theme.AccentEmerald
 import com.example.ui.theme.AccentGold
 import com.example.ui.theme.BoardWellBg
+import com.example.ui.theme.CascadeTextStyles
 import com.example.ui.theme.GlassBorder
 import com.example.ui.theme.JetBrainsMonoFontFamily
 import com.example.ui.theme.OutfitFontFamily
@@ -73,6 +81,7 @@ fun LevelCompleteScreen(
 ) {
     val hasNextLevel = state.currentChallengeLevel.levelNumber < ChallengeLevels.levels.size
     val stars = state.lastChallengeStarsEarned.coerceIn(1, 3)
+    val (rewardGold, rewardDiamonds) = EconomyEngine.calculateChallengeWinReward(stars)
 
     val starScales = remember { List(3) { Animatable(0.4f) } }
     LaunchedEffect(stars) {
@@ -88,7 +97,9 @@ fun LevelCompleteScreen(
         maxContentWidth = 440.dp,
         backdrop = {
             RoyalSkyBackdrop()
-            ConfettiCelebrationOverlay()
+            if (state.settings.visualEffectsEnabled) {
+                ConfettiCelebrationOverlay()
+            }
         },
         modifier = Modifier.testTag("level_complete_screen")
     ) {
@@ -144,7 +155,7 @@ fun LevelCompleteScreen(
 
             Spacer(Modifier.height(16.dp))
 
-            FrostedGlassCard(
+            PremiumCard(
                 cornerRadius = 22.dp,
                 borderColor = AccentGold.copy(alpha = 0.45f),
                 modifier = Modifier.fillMaxWidth()
@@ -172,6 +183,22 @@ fun LevelCompleteScreen(
                     )
 
                     Row(
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RewardEarnedPill(
+                            icon = Icons.Filled.MonetizationOn,
+                            tint = AccentGold,
+                            text = "+$rewardGold Gold"
+                        )
+                        RewardEarnedPill(
+                            icon = Icons.Filled.Diamond,
+                            tint = AccentDiamond,
+                            text = "+$rewardDiamonds Gems"
+                        )
+                    }
+
+                    Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
@@ -189,7 +216,7 @@ fun LevelCompleteScreen(
             Spacer(Modifier.height(16.dp))
 
             if (hasNextLevel) {
-                GlossyArcadeButton(
+                PremiumPrimaryButton(
                     text = stringResource(R.string.next_level),
                     icon = Icons.Filled.PlayArrow,
                     style = ArcadeButtonStyle.GREEN,
@@ -214,7 +241,7 @@ fun LevelCompleteScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                GlossyArcadeButton(
+                PremiumPrimaryButton(
                     text = "Replay",
                     icon = Icons.Filled.Refresh,
                     style = ArcadeButtonStyle.GOLD,
@@ -225,7 +252,7 @@ fun LevelCompleteScreen(
                     testTag = "level_complete_replay_button",
                     modifier = Modifier.weight(1f)
                 )
-                GlossyArcadeButton(
+                PremiumPrimaryButton(
                     text = stringResource(R.string.nav_home),
                     icon = Icons.Filled.Home,
                     style = ArcadeButtonStyle.BLUE,
@@ -238,6 +265,35 @@ fun LevelCompleteScreen(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun RewardEarnedPill(
+    icon: ImageVector,
+    tint: Color,
+    text: String
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(5.dp),
+        modifier = Modifier
+            .clip(CircleShape)
+            .background(BoardWellBg)
+            .border(1.dp, tint.copy(alpha = 0.4f), CircleShape)
+            .padding(horizontal = 10.dp, vertical = 5.dp)
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = tint,
+            modifier = Modifier.size(15.dp)
+        )
+        Text(
+            text = text,
+            style = CascadeTextStyles.NumericBalance.copy(fontSize = 12.sp),
+            color = TextPrimary
+        )
     }
 }
 

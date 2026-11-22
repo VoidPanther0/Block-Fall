@@ -8,17 +8,20 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.GridOff
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -40,10 +43,12 @@ import com.example.ui.GameUiState
 import com.example.ui.components.ArcadeButtonStyle
 import com.example.ui.components.CascadeScreenContainer
 import com.example.ui.components.FloatingModalBadge
-import com.example.ui.components.FrostedGlassCard
-import com.example.ui.components.GlossyArcadeButton
+import com.example.ui.components.PremiumCard
+import com.example.ui.components.PremiumPrimaryButton
+import com.example.ui.components.SecondaryButton
 import com.example.ui.theme.AccentCoral
 import com.example.ui.theme.AccentCyan
+import com.example.ui.theme.AccentEmerald
 import com.example.ui.theme.AccentGold
 import com.example.ui.theme.BoardWellBg
 import com.example.ui.theme.GlassBorder
@@ -59,12 +64,18 @@ import com.example.ui.theme.TextSecondary
 fun GameOverScreen(
     state: GameUiState,
     onRetry: () -> Unit,
-    onHome: () -> Unit
+    onHome: () -> Unit,
+    onWatchAd: (() -> Unit)? = null
 ) {
     val subtitle = when (state.mode) {
         GameMode.CLASSIC -> "No valid moves remaining"
         GameMode.CHALLENGE -> "Level ${state.currentChallengeLevel.levelNumber} · Target ${state.currentChallengeLevel.targetScore} not reached"
     }
+    val goalScore = when (state.mode) {
+        GameMode.CLASSIC -> state.classicBestScore.coerceAtLeast(1)
+        GameMode.CHALLENGE -> state.currentChallengeLevel.targetScore.coerceAtLeast(1)
+    }
+    val progressRatio = (state.score.toFloat() / goalScore.toFloat()).coerceIn(0f, 1f)
 
     BackHandler(onBack = onHome)
 
@@ -83,7 +94,7 @@ fun GameOverScreen(
                 contentAlignment = Alignment.TopCenter,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                FrostedGlassCard(
+                PremiumCard(
                     cornerRadius = 26.dp,
                     borderColor = AccentCoral.copy(alpha = 0.45f),
                     modifier = Modifier
@@ -131,6 +142,7 @@ fun GameOverScreen(
 
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(6.dp),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(16.dp))
@@ -152,6 +164,23 @@ fun GameOverScreen(
                                 ),
                                 color = AccentCyan
                             )
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(7.dp)
+                                    .clip(CircleShape)
+                                    .background(TextSecondary.copy(alpha = 0.16f))
+                            ) {
+                                if (progressRatio > 0f) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxHeight()
+                                            .fillMaxWidth(progressRatio.coerceAtLeast(0.05f))
+                                            .clip(CircleShape)
+                                            .background(Brush.horizontalGradient(listOf(AccentCyan, AccentGold)))
+                                    )
+                                }
+                            }
                             Text(
                                 text = when (state.mode) {
                                     GameMode.CLASSIC -> "Best Score: ${state.classicBestScore}"
@@ -177,7 +206,7 @@ fun GameOverScreen(
 
                         Spacer(Modifier.height(2.dp))
 
-                        GlossyArcadeButton(
+                        PremiumPrimaryButton(
                             text = "Retry",
                             icon = Icons.Filled.Refresh,
                             style = ArcadeButtonStyle.GOLD,
@@ -189,7 +218,7 @@ fun GameOverScreen(
                             modifier = Modifier.fillMaxWidth()
                         )
 
-                        GlossyArcadeButton(
+                        PremiumPrimaryButton(
                             text = stringResource(R.string.nav_home),
                             icon = Icons.Filled.Home,
                             style = ArcadeButtonStyle.BLUE,
@@ -200,6 +229,16 @@ fun GameOverScreen(
                             testTag = "game_over_home_button",
                             modifier = Modifier.fillMaxWidth()
                         )
+
+                        if (onWatchAd != null) {
+                            SecondaryButton(
+                                text = "Watch Ad · +50 Gold",
+                                icon = Icons.Filled.PlayCircle,
+                                accent = AccentEmerald,
+                                onClick = onWatchAd,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
                     }
                 }
 

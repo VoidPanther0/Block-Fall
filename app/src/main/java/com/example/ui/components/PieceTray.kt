@@ -1,6 +1,8 @@
 package com.example.ui.components
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -26,6 +28,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
@@ -38,6 +41,7 @@ import com.example.game.BoardColorPalette
 import com.example.game.GamePiece
 import com.example.game.GameStatus
 import com.example.game.TraySlot
+import com.example.ui.theme.AccentCyan
 import com.example.ui.theme.AccentGold
 import com.example.ui.theme.LocalBlockStyle
 import com.example.ui.theme.LocalBoardPalette
@@ -58,7 +62,7 @@ fun PieceTray(
 ) {
     val blockStyle = LocalBlockStyle.current
     val boardPalette = LocalBoardPalette.current
-    val boardTheme = boardPalette.toBoardColors()
+    val boardTheme = remember(boardPalette) { boardPalette.toBoardColors() }
     val trayCorner = if (blockStyle == BlockStyle.RETRO) 10.dp else 22.dp
     val trayShape = RoundedCornerShape(trayCorner)
 
@@ -113,14 +117,19 @@ private fun TraySlotCard(
     modifier: Modifier = Modifier
 ) {
     var slotRootPos by remember { mutableStateOf(Offset.Zero) }
-    val boardTheme = boardPalette.toBoardColors()
+    val boardTheme = remember(boardPalette) { boardPalette.toBoardColors() }
     val borderColor by animateColorAsState(
         targetValue = when {
             isSelected -> AccentGold
-            slot.piece != null -> boardTheme.rim.copy(alpha = 0.65f)
-            else -> boardTheme.rim.copy(alpha = 0.22f)
+            slot.piece != null -> AccentCyan.copy(alpha = 0.42f)
+            else -> boardTheme.rim.copy(alpha = 0.2f)
         },
         label = "slot_border"
+    )
+    val selectionScale by animateFloatAsState(
+        targetValue = if (isSelected) 1.04f else 1f,
+        animationSpec = spring(dampingRatio = 0.72f, stiffness = 460f),
+        label = "slot_scale"
     )
 
     val bgColor = if (isSelected) boardTheme.selectedSlotBg else boardTheme.slotBg
@@ -133,6 +142,10 @@ private fun TraySlotCard(
         modifier = modifier
             .defaultMinSize(minHeight = 64.dp)
             .aspectRatio(1f)
+            .graphicsLayer {
+                scaleX = selectionScale
+                scaleY = selectionScale
+            }
             .clip(RoundedCornerShape(slotCorner))
             .background(bgColor)
             .border(if (isSelected) 2.dp else 1.dp, borderColor, RoundedCornerShape(slotCorner))

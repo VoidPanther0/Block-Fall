@@ -17,9 +17,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.PlayArrow
@@ -50,13 +52,19 @@ import com.example.ui.GameUiState
 import com.example.ui.components.ArcadeButtonStyle
 import com.example.ui.components.BoardPreview
 import com.example.ui.components.CascadeScreenContainer
-import com.example.ui.components.FrostedGlassCard
-import com.example.ui.components.GlossyArcadeButton
+import com.example.ui.components.PremiumBottomNavigation
+import com.example.ui.components.PremiumCard
+import com.example.ui.components.PremiumPrimaryButton
+import com.example.ui.components.PrimaryNavTab
 import com.example.ui.components.ScreenTopBar
+import com.example.ui.theme.AccentCyan
+import com.example.ui.theme.AccentEmerald
 import com.example.ui.theme.AccentGold
+import com.example.ui.theme.AccentPurple
 import com.example.ui.theme.BlueBtnBottom
 import com.example.ui.theme.BlueBtnTop
 import com.example.ui.theme.BoardWellBg
+import com.example.ui.theme.CascadeTextStyles
 import com.example.ui.theme.GlassBorder
 import com.example.ui.theme.GoldBtnBottom
 import com.example.ui.theme.GoldBtnText
@@ -67,12 +75,14 @@ import com.example.ui.theme.SurfaceCard
 import com.example.ui.theme.SurfaceCardElevated
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
+import kotlin.math.ceil
 
 @Composable
 fun ChallengeSelectionScreen(
     state: GameUiState,
     onBack: () -> Unit,
-    onPlayLevel: (Int) -> Unit
+    onPlayLevel: (Int) -> Unit,
+    onNavigateTab: ((PrimaryNavTab) -> Unit)? = null
 ) {
     var selectedLevelNumber by remember(state.unlockedChallengeLevel) {
         mutableIntStateOf(state.unlockedChallengeLevel.coerceIn(1, ChallengeLevels.levels.size))
@@ -85,6 +95,14 @@ fun ChallengeSelectionScreen(
 
     CascadeScreenContainer(
         maxContentWidth = 940.dp,
+        bottomBar = if (onNavigateTab != null) {
+            {
+                PremiumBottomNavigation(
+                    selectedTab = PrimaryNavTab.CHALLENGES,
+                    onSelectTab = onNavigateTab
+                )
+            }
+        } else null,
         modifier = Modifier.testTag("challenge_selection_screen")
     ) {
         ScreenTopBar(
@@ -117,12 +135,12 @@ fun ChallengeSelectionScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 if (isWide) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(20.dp),
+                        horizontalArrangement = Arrangement.spacedBy(18.dp),
                         verticalAlignment = Alignment.Top
                     ) {
                         ChallengeLevelGrid(
@@ -141,6 +159,12 @@ fun ChallengeSelectionScreen(
                         )
                     }
                 } else {
+                    ChallengeProgressBanner(
+                        completedCount = completedCount,
+                        totalLevels = ChallengeLevels.levels.size,
+                        totalStars = totalStars,
+                        maxStars = maxStars
+                    )
                     ChallengeLevelGrid(
                         unlockedChallengeLevel = state.unlockedChallengeLevel,
                         selectedLevelNumber = selectedLevelNumber,
@@ -157,6 +181,46 @@ fun ChallengeSelectionScreen(
 
                 Spacer(Modifier.height(6.dp))
             }
+        }
+    }
+}
+
+@Composable
+private fun ChallengeProgressBanner(
+    completedCount: Int,
+    totalLevels: Int,
+    totalStars: Int,
+    maxStars: Int
+) {
+    PremiumCard(
+        cornerRadius = 16.dp,
+        borderColor = AccentGold.copy(alpha = 0.34f),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Text(
+                    text = "CAMPAIGN PROGRESS",
+                    style = CascadeTextStyles.SectionKicker,
+                    color = AccentGold
+                )
+                Text(
+                    text = "$completedCount of $totalLevels Levels Cleared",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = TextPrimary
+                )
+            }
+            Text(
+                text = "★ $totalStars/$maxStars",
+                style = CascadeTextStyles.NumericBalance.copy(fontSize = 15.sp),
+                color = AccentGold
+            )
         }
     }
 }
@@ -240,19 +304,27 @@ private fun ChallengeInspectorCard(
     modifier: Modifier = Modifier
 ) {
     val previewBoard = remember(level.levelNumber) { level.buildBoard() }
+    val (tierLabel, tierColor) = when (level.levelNumber) {
+        in 1..2 -> "Intro" to AccentEmerald
+        in 3..4 -> "Tactical" to AccentCyan
+        in 5..6 -> "Advanced" to AccentGold
+        else -> "Master" to AccentPurple
+    }
+    val twoStarTarget = ceil(level.targetScore * 1.25).toInt()
+    val threeStarTarget = ceil(level.targetScore * 1.50).toInt()
 
-    FrostedGlassCard(
+    PremiumCard(
         cornerRadius = 22.dp,
-        borderColor = AccentGold.copy(alpha = 0.42f),
+        borderColor = AccentGold.copy(alpha = 0.45f),
         modifier = modifier
             .fillMaxWidth()
             .testTag("challenge_target_summary_card")
     ) {
         Column(
-            verticalArrangement = Arrangement.spacedBy(14.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(18.dp)
+                .padding(16.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -261,22 +333,38 @@ private fun ChallengeInspectorCard(
             ) {
                 BoardPreview(
                     board = previewBoard,
-                    modifier = Modifier.widthIn(max = 104.dp).fillMaxWidth(0.32f)
+                    modifier = Modifier
+                        .widthIn(max = 96.dp)
+                        .fillMaxWidth(0.30f)
                 )
 
                 Column(
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text(
-                        text = "LEVEL ${level.levelNumber}",
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            fontFamily = OutfitFontFamily,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 1.sp
-                        ),
-                        color = AccentGold
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            text = "LEVEL ${level.levelNumber}",
+                            style = CascadeTextStyles.SectionKicker,
+                            color = AccentGold
+                        )
+                        Box(
+                            modifier = Modifier
+                                .clip(CircleShape)
+                                .background(tierColor.copy(alpha = 0.16f))
+                                .border(1.dp, tierColor.copy(alpha = 0.45f), CircleShape)
+                                .padding(horizontal = 8.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = tierLabel.uppercase(),
+                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                                color = tierColor
+                            )
+                        }
+                    }
                     Text(
                         text = level.title,
                         style = MaterialTheme.typography.titleLarge.copy(
@@ -289,8 +377,10 @@ private fun ChallengeInspectorCard(
                     )
                     Text(
                         text = level.subtitle,
-                        style = MaterialTheme.typography.bodyMedium.copy(fontSize = 12.sp),
-                        color = TextSecondary
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextSecondary,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }
@@ -304,14 +394,41 @@ private fun ChallengeInspectorCard(
                 InspectorStatChip("Best", "${progress?.bestScore ?: 0}", Modifier.weight(1f))
             }
 
-            GlossyArcadeButton(
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(BoardWellBg)
+                    .border(1.dp, GlassBorder.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
+                    .padding(horizontal = 10.dp, vertical = 7.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "1★ ${level.targetScore}",
+                    style = CascadeTextStyles.NumericBalance.copy(fontSize = 11.sp),
+                    color = TextSecondary
+                )
+                Text(
+                    text = "2★ $twoStarTarget+",
+                    style = CascadeTextStyles.NumericBalance.copy(fontSize = 11.sp),
+                    color = AccentCyan
+                )
+                Text(
+                    text = "3★ $threeStarTarget+",
+                    style = CascadeTextStyles.NumericBalance.copy(fontSize = 11.sp),
+                    color = AccentGold
+                )
+            }
+
+            PremiumPrimaryButton(
                 text = "Play Level ${level.levelNumber}",
                 icon = Icons.Filled.PlayArrow,
                 style = ArcadeButtonStyle.GOLD,
                 onClick = onPlay,
-                height = 52.dp,
-                cornerRadius = 16.dp,
-                fontSize = 17.sp,
+                height = 50.dp,
+                cornerRadius = 15.dp,
+                fontSize = 16.sp,
                 testTag = "challenge_play_button",
                 modifier = Modifier.fillMaxWidth()
             )
@@ -331,7 +448,7 @@ private fun InspectorStatChip(
             .clip(RoundedCornerShape(12.dp))
             .background(BoardWellBg)
             .border(1.dp, GlassBorder.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
-            .padding(vertical = 8.dp, horizontal = 6.dp)
+            .padding(vertical = 7.dp, horizontal = 6.dp)
     ) {
         Text(
             text = label.uppercase(),
@@ -343,7 +460,7 @@ private fun InspectorStatChip(
             style = MaterialTheme.typography.titleMedium.copy(
                 fontFamily = JetBrainsMonoFontFamily,
                 fontWeight = FontWeight.Bold,
-                fontSize = 17.sp
+                fontSize = 16.sp
             ),
             color = TextPrimary
         )
@@ -360,6 +477,7 @@ private fun ChallengeGridTile(
     modifier: Modifier = Modifier
 ) {
     val stars = progress?.stars ?: 0
+    val completed = progress?.completed == true
     val shape = RoundedCornerShape(18.dp)
     val bgBrush = when {
         isSelected -> Brush.verticalGradient(listOf(GoldBtnTop, GoldBtnBottom))
@@ -368,13 +486,13 @@ private fun ChallengeGridTile(
     }
     val borderColor = when {
         isSelected -> TextPrimary
+        completed -> AccentEmerald.copy(alpha = 0.68f)
         isUnlocked -> AccentGold.copy(alpha = 0.4f)
         else -> GlassBorder.copy(alpha = 0.32f)
     }
 
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
+    Box(
+        contentAlignment = Alignment.Center,
         modifier = modifier
             .aspectRatio(1f)
             .shadow(if (isUnlocked) 6.dp else 1.dp, shape, clip = false)
@@ -385,38 +503,54 @@ private fun ChallengeGridTile(
             .padding(6.dp)
             .testTag("challenge_level_card_${level.levelNumber}")
     ) {
-        if (!isUnlocked) {
+        if (completed) {
             Icon(
-                imageVector = Icons.Filled.Lock,
-                contentDescription = "Locked level ${level.levelNumber}",
-                tint = TextSecondary.copy(alpha = 0.7f),
-                modifier = Modifier.size(26.dp)
+                imageVector = Icons.Filled.CheckCircle,
+                contentDescription = "Completed",
+                tint = if (isSelected) GoldBtnText else AccentEmerald,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .size(16.dp)
             )
-        } else {
-            Text(
-                text = "${level.levelNumber}",
-                style = MaterialTheme.typography.headlineMedium.copy(
-                    fontFamily = OutfitFontFamily,
-                    fontWeight = FontWeight.ExtraBold,
-                    fontSize = 28.sp
-                ),
-                color = if (isSelected) GoldBtnText else TextPrimary
-            )
-            Spacer(Modifier.height(4.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                for (starIdx in 1..3) {
-                    val filled = starIdx <= stars
-                    Icon(
-                        imageVector = if (filled) Icons.Filled.Star else Icons.Outlined.StarBorder,
-                        contentDescription = null,
-                        tint = when {
-                            filled && isSelected -> GoldBtnText
-                            filled -> AccentGold
-                            isSelected -> GoldBtnText.copy(alpha = 0.4f)
-                            else -> TextPrimary.copy(alpha = 0.4f)
-                        },
-                        modifier = Modifier.size(15.dp)
-                    )
+        }
+
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            if (!isUnlocked) {
+                Icon(
+                    imageVector = Icons.Filled.Lock,
+                    contentDescription = "Locked level ${level.levelNumber}",
+                    tint = TextSecondary.copy(alpha = 0.7f),
+                    modifier = Modifier.size(26.dp)
+                )
+            } else {
+                Text(
+                    text = "${level.levelNumber}",
+                    style = MaterialTheme.typography.headlineMedium.copy(
+                        fontFamily = OutfitFontFamily,
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 27.sp
+                    ),
+                    color = if (isSelected) GoldBtnText else TextPrimary
+                )
+                Spacer(Modifier.height(3.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                    for (starIdx in 1..3) {
+                        val filled = starIdx <= stars
+                        Icon(
+                            imageVector = if (filled) Icons.Filled.Star else Icons.Outlined.StarBorder,
+                            contentDescription = null,
+                            tint = when {
+                                filled && isSelected -> GoldBtnText
+                                filled -> AccentGold
+                                isSelected -> GoldBtnText.copy(alpha = 0.4f)
+                                else -> TextPrimary.copy(alpha = 0.4f)
+                            },
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
                 }
             }
         }

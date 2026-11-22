@@ -38,6 +38,7 @@ import com.example.data.cloud.authStateFlow
 import com.example.security.PlayIntegrityManager
 import com.example.ui.components.AuthenticatedCloudAccountCard
 import com.example.ui.components.GoogleSignInCard
+import com.example.ui.components.PrimaryNavTab
 import com.example.ui.navigation.ChallengeSelectionRoute
 import com.example.ui.navigation.GameOverRoute
 import com.example.ui.navigation.GameplayRoute
@@ -187,6 +188,41 @@ private fun CascadeNavHost(
     val activity = LocalContext.current as? Activity
     val lifecycleOwner = LocalLifecycleOwner.current
 
+    val navigatePrimaryTab: (PrimaryNavTab) -> Unit = remember(navController, viewModel) {
+        { tab ->
+            viewModel.playUiClick()
+            when (tab) {
+                PrimaryNavTab.HOME -> {
+                    navController.popBackStack<HomeRoute>(inclusive = false)
+                }
+                PrimaryNavTab.PLAY -> {
+                    navController.navigate(ModeSelectionRoute) {
+                        popUpTo<HomeRoute> { inclusive = false }
+                        launchSingleTop = true
+                    }
+                }
+                PrimaryNavTab.CHALLENGES -> {
+                    navController.navigate(ChallengeSelectionRoute) {
+                        popUpTo<HomeRoute> { inclusive = false }
+                        launchSingleTop = true
+                    }
+                }
+                PrimaryNavTab.SHOP -> {
+                    navController.navigate(ShopRoute) {
+                        popUpTo<HomeRoute> { inclusive = false }
+                        launchSingleTop = true
+                    }
+                }
+                PrimaryNavTab.PROFILE -> {
+                    navController.navigate(StatisticsRoute) {
+                        popUpTo<HomeRoute> { inclusive = false }
+                        launchSingleTop = true
+                    }
+                }
+            }
+        }
+    }
+
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
@@ -229,6 +265,7 @@ private fun CascadeNavHost(
                 HomeScreen(
                     state = state,
                     isCloudSignedIn = currentUser != null,
+                    playerName = currentUser?.displayName,
                     onPlayNewClassic = {
                         viewModel.playUiClick()
                         viewModel.startNewClassicGame()
@@ -263,7 +300,8 @@ private fun CascadeNavHost(
                     onOpenStatistics = {
                         viewModel.playUiClick()
                         navController.navigate(StatisticsRoute)
-                    }
+                    },
+                    onNavigateTab = navigatePrimaryTab
                 )
             }
 
@@ -280,7 +318,9 @@ private fun CascadeNavHost(
                     onSelectChallengeLevels = {
                         viewModel.playUiClick()
                         navController.navigate(ChallengeSelectionRoute)
-                    }
+                    },
+                    state = state,
+                    onNavigateTab = navigatePrimaryTab
                 )
             }
 
@@ -332,6 +372,10 @@ private fun CascadeNavHost(
                         viewModel.playUiClick()
                         viewModel.exitToHome()
                         navController.popBackStack<HomeRoute>(inclusive = false)
+                    },
+                    onOpenSettings = {
+                        viewModel.playUiClick()
+                        navController.navigate(SettingsRoute)
                     }
                 )
             }
@@ -352,7 +396,8 @@ private fun CascadeNavHost(
                         navController.navigate(GameplayRoute) {
                             popUpTo<HomeRoute>()
                         }
-                    }
+                    },
+                    onNavigateTab = navigatePrimaryTab
                 )
             }
 
@@ -393,6 +438,11 @@ private fun CascadeNavHost(
                     onHome = {
                         viewModel.playUiClick()
                         navController.popBackStack<HomeRoute>(inclusive = false)
+                    },
+                    onWatchAd = if (adState is AdState.Ready && activity != null) {
+                        { viewModel.watchRewardedAd(activity) }
+                    } else {
+                        null
                     }
                 )
             }
@@ -404,7 +454,9 @@ private fun CascadeNavHost(
                     onResetProgressConfirmed = {
                         viewModel.playUiClick()
                         viewModel.resetAllProgress()
-                    }
+                    },
+                    playerName = currentUser?.displayName,
+                    onNavigateTab = navigatePrimaryTab
                 )
             }
 
@@ -449,7 +501,10 @@ private fun CascadeNavHost(
                         { viewModel.watchRewardedAd(activity) }
                     } else {
                         null
-                    }
+                    },
+                    onSelectBlockStyle = viewModel::setBlockStyle,
+                    onSelectBoardPalette = viewModel::setBoardPalette,
+                    onNavigateTab = navigatePrimaryTab
                 )
             }
 

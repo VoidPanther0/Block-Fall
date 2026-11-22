@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -43,8 +42,8 @@ import com.example.game.GridCoord
 import com.example.ui.components.ArcadeButtonStyle
 import com.example.ui.components.BoardPreview
 import com.example.ui.components.CascadeScreenContainer
-import com.example.ui.components.FrostedGlassCard
-import com.example.ui.components.GlossyArcadeButton
+import com.example.ui.components.PremiumCard
+import com.example.ui.components.PremiumPrimaryButton
 import com.example.ui.components.ScreenTopBar
 import com.example.ui.theme.AccentCyan
 import com.example.ui.theme.AccentGold
@@ -224,7 +223,7 @@ fun HowToPlayScreen(
                                 onPrev = { demoStep = (demoStep - 1 + steps.size) % steps.size },
                                 onNext = { demoStep = (demoStep + 1) % steps.size }
                             )
-                            GlossyArcadeButton(
+                            PremiumPrimaryButton(
                                 text = "Got it!",
                                 style = ArcadeButtonStyle.GOLD,
                                 onClick = onBack,
@@ -249,7 +248,7 @@ fun HowToPlayScreen(
                         onPrev = { demoStep = (demoStep - 1 + steps.size) % steps.size },
                         onNext = { demoStep = (demoStep + 1) % steps.size }
                     )
-                    GlossyArcadeButton(
+                    PremiumPrimaryButton(
                         text = "Got it!",
                         style = ArcadeButtonStyle.GOLD,
                         onClick = onBack,
@@ -271,7 +270,7 @@ private fun TutorialBoardCard(
     onAdvance: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    FrostedGlassCard(
+    PremiumCard(
         cornerRadius = 22.dp,
         modifier = modifier.fillMaxWidth()
     ) {
@@ -329,7 +328,7 @@ private fun TutorialExplanationCard(
     onPrev: () -> Unit,
     onNext: () -> Unit
 ) {
-    FrostedGlassCard(
+    PremiumCard(
         cornerRadius = 20.dp,
         borderColor = AccentCyan.copy(alpha = 0.4f),
         modifier = Modifier.fillMaxWidth()

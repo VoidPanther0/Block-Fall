@@ -47,22 +47,30 @@ import com.example.game.AchievementId
 import com.example.game.ChallengeLevels
 import com.example.game.GameStatistics
 import com.example.ui.GameUiState
+import com.example.ui.components.AchievementCard
+import com.example.ui.components.ArcadeBlockEmblem
 import com.example.ui.components.ArcadeButtonStyle
 import com.example.ui.components.CascadeScreenContainer
-import com.example.ui.components.FrostedGlassCard
-import com.example.ui.components.GlossyArcadeButton
+import com.example.ui.components.PremiumBottomNavigation
+import com.example.ui.components.PremiumCard
+import com.example.ui.components.PremiumPrimaryButton
+import com.example.ui.components.PrimaryNavTab
 import com.example.ui.components.ResetProgressConfirmationDialog
 import com.example.ui.components.ScreenTopBar
+import com.example.ui.components.SectionHeader
 import com.example.ui.theme.AccentCoral
 import com.example.ui.theme.AccentCyan
 import com.example.ui.theme.AccentEmerald
 import com.example.ui.theme.AccentGold
 import com.example.ui.theme.BoardWellBg
+import com.example.ui.theme.CascadeTextStyles
 import com.example.ui.theme.GlassBorder
 import com.example.ui.theme.GoldBtnBottom
 import com.example.ui.theme.GoldBtnTop
 import com.example.ui.theme.JetBrainsMonoFontFamily
 import com.example.ui.theme.OutfitFontFamily
+import com.example.ui.theme.SurfaceCard
+import com.example.ui.theme.SurfaceCardElevated
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
 
@@ -70,7 +78,9 @@ import com.example.ui.theme.TextSecondary
 fun StatisticsScreen(
     state: GameUiState,
     onBack: () -> Unit,
-    onResetProgressConfirmed: () -> Unit
+    onResetProgressConfirmed: () -> Unit,
+    playerName: String? = null,
+    onNavigateTab: ((PrimaryNavTab) -> Unit)? = null
 ) {
     var showResetConfirm by remember { mutableStateOf(false) }
     val stats = state.statistics
@@ -81,10 +91,18 @@ fun StatisticsScreen(
 
     CascadeScreenContainer(
         maxContentWidth = 940.dp,
+        bottomBar = if (onNavigateTab != null) {
+            {
+                PremiumBottomNavigation(
+                    selectedTab = PrimaryNavTab.PROFILE,
+                    onSelectTab = onNavigateTab
+                )
+            }
+        } else null,
         modifier = Modifier.testTag("statistics_screen")
     ) {
         ScreenTopBar(
-            title = "Statistics",
+            title = "Profile & Stats",
             onBack = onBack,
             backTestTag = "statistics_back_button"
         )
@@ -108,25 +126,27 @@ fun StatisticsScreen(
                             verticalArrangement = Arrangement.spacedBy(14.dp),
                             modifier = Modifier.weight(1f)
                         ) {
+                            PlayerRankAndMilestonesCard(state = state, playerName = playerName)
                             ClassicBestSummaryCard(state)
-                            PlayerRankAndMilestonesCard(state)
                             LifetimeMetricsCard(state, stats)
                         }
                         Column(
                             verticalArrangement = Arrangement.spacedBy(14.dp),
                             modifier = Modifier.weight(1f)
                         ) {
+                            AchievementsListCard(state)
                             ChallengeMasteryCard(state, completedLevels, totalStars, maxStars, progressRatio)
                         }
                     }
                 } else {
+                    PlayerRankAndMilestonesCard(state = state, playerName = playerName)
                     ClassicBestSummaryCard(state)
-                    PlayerRankAndMilestonesCard(state)
                     LifetimeMetricsCard(state, stats)
+                    AchievementsListCard(state)
                     ChallengeMasteryCard(state, completedLevels, totalStars, maxStars, progressRatio)
                 }
 
-                GlossyArcadeButton(
+                PremiumPrimaryButton(
                     text = "Reset All Progress",
                     icon = Icons.Filled.DeleteForever,
                     style = ArcadeButtonStyle.RED,
@@ -155,7 +175,7 @@ fun StatisticsScreen(
 
 @Composable
 private fun ClassicBestSummaryCard(state: GameUiState) {
-    FrostedGlassCard(
+    PremiumCard(
         cornerRadius = 20.dp,
         borderColor = AccentGold.copy(alpha = 0.42f),
         modifier = Modifier.fillMaxWidth()
@@ -223,42 +243,55 @@ private fun ClassicBestSummaryCard(state: GameUiState) {
 }
 
 @Composable
-private fun PlayerRankAndMilestonesCard(state: GameUiState) {
+private fun PlayerRankAndMilestonesCard(
+    state: GameUiState,
+    playerName: String?
+) {
     val rank = state.playerRank
-    val unlockedSet = state.unlockedAchievements
-    FrostedGlassCard(
+    val hasCrown = "cosmetic_prism_crown" in state.wallet.unlockedEntitlements
+    PremiumCard(
         cornerRadius = 20.dp,
-        borderColor = AccentCyan.copy(alpha = 0.36f),
+        borderColor = (if (hasCrown) AccentGold else AccentCyan).copy(alpha = 0.42f),
         modifier = Modifier
             .fillMaxWidth()
             .testTag("player_rank_card")
     ) {
         Column(
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.padding(18.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .size(52.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Brush.verticalGradient(listOf(SurfaceCardElevated, SurfaceCard)))
+                        .border(
+                            width = 1.5.dp,
+                            color = if (hasCrown) AccentGold else AccentCyan.copy(alpha = 0.5f),
+                            shape = RoundedCornerShape(16.dp)
+                        )
+                ) {
+                    ArcadeBlockEmblem(size = 30.dp)
+                }
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "PLAYER RANK · TIER ${rank.tierNumber}",
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            fontFamily = OutfitFontFamily,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 0.8.sp
-                        ),
-                        color = AccentCyan
-                    )
-                    Text(
-                        text = rank.title,
+                        text = playerName?.takeIf { it.isNotBlank() } ?: "Block Tactician",
                         style = MaterialTheme.typography.titleLarge.copy(
                             fontFamily = OutfitFontFamily,
                             fontWeight = FontWeight.ExtraBold
                         ),
                         color = TextPrimary
+                    )
+                    Text(
+                        text = "TIER ${rank.tierNumber} · ${rank.title}",
+                        style = CascadeTextStyles.SectionKicker,
+                        color = if (hasCrown) AccentGold else AccentCyan
                     )
                 }
                 Text(
@@ -290,42 +323,32 @@ private fun PlayerRankAndMilestonesCard(state: GameUiState) {
                     )
                 }
             }
+        }
+    }
+}
 
-            Text(
-                text = "Milestones (${unlockedSet.size}/${AchievementId.entries.size})",
-                style = MaterialTheme.typography.labelLarge,
-                color = TextSecondary
+@Composable
+private fun AchievementsListCard(state: GameUiState) {
+    val unlockedSet = state.unlockedAchievements
+    PremiumCard(
+        cornerRadius = 20.dp,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+            modifier = Modifier.padding(18.dp)
+        ) {
+            SectionHeader(
+                kicker = "Career Milestones",
+                title = "Achievements (${unlockedSet.size}/${AchievementId.entries.size})",
+                accent = AccentGold
             )
-
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                AchievementId.entries.take(5).forEach { ach ->
-                    val unlocked = ach.id in unlockedSet
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(BoardWellBg)
-                            .padding(horizontal = 12.dp, vertical = 7.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = ach.title,
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                fontSize = 13.sp,
-                                fontWeight = if (unlocked) FontWeight.Bold else FontWeight.Normal
-                            ),
-                            color = if (unlocked) TextPrimary else TextSecondary
-                        )
-                        Text(
-                            text = if (unlocked) "UNLOCKED" else "LOCKED",
-                            style = MaterialTheme.typography.labelMedium.copy(
-                                fontFamily = JetBrainsMonoFontFamily,
-                                fontSize = 11.sp
-                            ),
-                            color = if (unlocked) AccentEmerald else TextSecondary.copy(alpha = 0.7f)
-                        )
-                    }
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                AchievementId.entries.forEach { achievement ->
+                    AchievementCard(
+                        achievement = achievement,
+                        unlocked = achievement.id in unlockedSet
+                    )
                 }
             }
         }
@@ -334,7 +357,7 @@ private fun PlayerRankAndMilestonesCard(state: GameUiState) {
 
 @Composable
 private fun LifetimeMetricsCard(state: GameUiState, stats: GameStatistics) {
-    FrostedGlassCard(
+    PremiumCard(
         cornerRadius = 20.dp,
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -342,14 +365,10 @@ private fun LifetimeMetricsCard(state: GameUiState, stats: GameStatistics) {
             verticalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.padding(18.dp)
         ) {
-            Text(
-                text = "LIFETIME PERFORMANCE",
-                style = MaterialTheme.typography.labelMedium.copy(
-                    fontFamily = OutfitFontFamily,
-                    fontWeight = FontWeight.ExtraBold,
-                    letterSpacing = 1.sp
-                ),
-                color = AccentCyan
+            SectionHeader(
+                kicker = "Career Telemetry",
+                title = "Lifetime Performance",
+                accent = AccentCyan
             )
 
             StatMetricRow("Total Games", stats.totalGamesPlayed.toString())
@@ -444,7 +463,7 @@ private fun ChallengeMasteryCard(
     maxStars: Int,
     progressRatio: Float
 ) {
-    FrostedGlassCard(
+    PremiumCard(
         cornerRadius = 20.dp,
         modifier = Modifier.fillMaxWidth()
     ) {

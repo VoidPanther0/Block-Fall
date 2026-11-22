@@ -1,32 +1,20 @@
 package com.example.ui.components
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -44,7 +32,7 @@ fun RestartConfirmationDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    ConfirmationDialogShell(
+    ConfirmationDialog(
         icon = Icons.Filled.Refresh,
         accent = AccentGold,
         title = stringResource(R.string.confirm_restart_title),
@@ -69,7 +57,7 @@ fun ExitConfirmationDialog(
         GameMode.CLASSIC -> "Your current Classic board is saved automatically so you can continue anytime."
         GameMode.CHALLENGE -> "Leaving now will discard your current Challenge attempt."
     }
-    ConfirmationDialogShell(
+    ConfirmationDialog(
         icon = Icons.Filled.Home,
         accent = AccentCyan,
         title = stringResource(R.string.confirm_exit_title),
@@ -89,7 +77,7 @@ fun ResetProgressConfirmationDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    ConfirmationDialogShell(
+    ConfirmationDialog(
         icon = Icons.Filled.DeleteForever,
         accent = AccentCoral,
         title = stringResource(R.string.confirm_reset_title),
@@ -105,103 +93,11 @@ fun ResetProgressConfirmationDialog(
 }
 
 @Composable
-private fun ConfirmationDialogShell(
-    icon: ImageVector,
-    accent: Color,
-    title: String,
-    message: String,
-    confirmLabel: String,
-    confirmStyle: ArcadeButtonStyle,
-    dialogTag: String,
-    confirmTag: String,
-    cancelTag: String,
-    onConfirm: () -> Unit,
-    onDismiss: () -> Unit
-) {
-    Dialog(onDismissRequest = onDismiss) {
-        FrostedGlassCard(
-            cornerRadius = 24.dp,
-            borderColor = accent.copy(alpha = 0.45f),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(4.dp)
-                .testTag(dialogTag)
-        ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.padding(22.dp)
-            ) {
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier
-                        .size(54.dp)
-                        .clip(CircleShape)
-                        .background(accent.copy(alpha = 0.16f))
-                        .border(1.dp, accent.copy(alpha = 0.45f), CircleShape)
-                ) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        tint = accent,
-                        modifier = Modifier.size(28.dp)
-                    )
-                }
-
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.headlineMedium.copy(
-                        fontFamily = OutfitFontFamily,
-                        fontWeight = FontWeight.ExtraBold,
-                        fontSize = 21.sp
-                    ),
-                    color = TextPrimary,
-                    textAlign = TextAlign.Center
-                )
-                Text(
-                    text = message,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = TextSecondary,
-                    textAlign = TextAlign.Center
-                )
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    GlossyArcadeButton(
-                        text = "Cancel",
-                        onClick = onDismiss,
-                        style = ArcadeButtonStyle.SLATE,
-                        height = 48.dp,
-                        cornerRadius = 14.dp,
-                        fontSize = 15.sp,
-                        testTag = cancelTag,
-                        modifier = Modifier.weight(1f)
-                    )
-                    GlossyArcadeButton(
-                        text = confirmLabel,
-                        onClick = onConfirm,
-                        style = confirmStyle,
-                        height = 48.dp,
-                        cornerRadius = 14.dp,
-                        fontSize = 15.sp,
-                        testTag = confirmTag,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
 fun GravityRulesDialog(
     onDismiss: () -> Unit
 ) {
     Dialog(onDismissRequest = onDismiss) {
-        FrostedGlassCard(
+        PremiumCard(
             cornerRadius = 24.dp,
             borderColor = AccentCyan.copy(alpha = 0.45f),
             modifier = Modifier
@@ -227,7 +123,7 @@ fun GravityRulesDialog(
                     style = MaterialTheme.typography.bodyMedium,
                     color = TextSecondary
                 )
-                GlossyArcadeButton(
+                PremiumPrimaryButton(
                     text = "Got it",
                     onClick = onDismiss,
                     style = ArcadeButtonStyle.GOLD,

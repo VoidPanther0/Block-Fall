@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -46,9 +47,11 @@ import com.example.ui.components.ArcadeButtonStyle
 import com.example.ui.components.CascadeScreenContainer
 import com.example.ui.components.ExitConfirmationDialog
 import com.example.ui.components.FloatingModalBadge
-import com.example.ui.components.FrostedGlassCard
-import com.example.ui.components.GlossyArcadeButton
+import com.example.ui.components.PremiumCard
+import com.example.ui.components.PremiumPrimaryButton
 import com.example.ui.components.RestartConfirmationDialog
+import com.example.ui.components.SecondaryButton
+import com.example.ui.theme.AccentCyan
 import com.example.ui.theme.AccentGold
 import com.example.ui.theme.BlueBtnBottom
 import com.example.ui.theme.BlueBtnTop
@@ -64,7 +67,8 @@ fun PauseScreen(
     state: GameUiState,
     onResume: () -> Unit,
     onRestartConfirmed: () -> Unit,
-    onExitToHomeConfirmed: () -> Unit
+    onExitToHomeConfirmed: () -> Unit,
+    onOpenSettings: (() -> Unit)? = null
 ) {
     var showRestartConfirm by remember { mutableStateOf(false) }
     var showExitConfirm by remember { mutableStateOf(false) }
@@ -86,7 +90,7 @@ fun PauseScreen(
                 contentAlignment = Alignment.TopCenter,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                FrostedGlassCard(
+                PremiumCard(
                     cornerRadius = 26.dp,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -134,7 +138,7 @@ fun PauseScreen(
 
                         Spacer(Modifier.height(2.dp))
 
-                        GlossyArcadeButton(
+                        PremiumPrimaryButton(
                             text = stringResource(R.string.resume),
                             icon = Icons.Filled.PlayArrow,
                             style = ArcadeButtonStyle.GREEN,
@@ -146,7 +150,7 @@ fun PauseScreen(
                             modifier = Modifier.fillMaxWidth()
                         )
 
-                        GlossyArcadeButton(
+                        PremiumPrimaryButton(
                             text = stringResource(R.string.restart),
                             icon = Icons.Filled.Refresh,
                             style = ArcadeButtonStyle.GOLD,
@@ -158,7 +162,7 @@ fun PauseScreen(
                             modifier = Modifier.fillMaxWidth()
                         )
 
-                        GlossyArcadeButton(
+                        PremiumPrimaryButton(
                             text = stringResource(R.string.nav_home),
                             icon = Icons.Filled.Home,
                             style = ArcadeButtonStyle.BLUE,
@@ -169,6 +173,17 @@ fun PauseScreen(
                             testTag = "pause_home_button",
                             modifier = Modifier.fillMaxWidth()
                         )
+
+                        if (onOpenSettings != null) {
+                            SecondaryButton(
+                                text = "Audio & Theme Settings",
+                                icon = Icons.Filled.Settings,
+                                accent = AccentCyan,
+                                onClick = onOpenSettings,
+                                testTag = "pause_settings_button",
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
                     }
                 }
 

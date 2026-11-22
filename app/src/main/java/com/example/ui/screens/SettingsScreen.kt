@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.GridOn
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Vibration
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
@@ -60,14 +61,18 @@ import com.example.game.BoardColorPalette
 import com.example.ui.GameUiState
 import com.example.ui.components.ArcadeButtonStyle
 import com.example.ui.components.CascadeScreenContainer
-import com.example.ui.components.FrostedGlassCard
-import com.example.ui.components.GlossyArcadeButton
+import com.example.ui.components.PremiumCard
+import com.example.ui.components.PremiumPrimaryButton
 import com.example.ui.components.ResetProgressConfirmationDialog
 import com.example.ui.components.ScreenTopBar
+import com.example.ui.components.SectionHeader
 import com.example.ui.components.drawBevelBlock
+import com.example.ui.theme.AccentCyan
+import com.example.ui.theme.AccentEmerald
 import com.example.ui.theme.AccentGold
 import com.example.ui.theme.BlueBtnBottom
 import com.example.ui.theme.BlueBtnTop
+import com.example.ui.theme.DividerSubtle
 import com.example.ui.theme.GlassBorder
 import com.example.ui.theme.OutfitFontFamily
 import com.example.ui.theme.SurfaceCard
@@ -96,7 +101,7 @@ fun SettingsScreen(
     val settings = state.settings
 
     CascadeScreenContainer(
-        maxContentWidth = 580.dp,
+        maxContentWidth = 600.dp,
         modifier = Modifier.testTag("settings_screen")
     ) {
         ScreenTopBar(
@@ -109,46 +114,77 @@ fun SettingsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            SettingToggleRow(
-                title = "Music",
-                icon = Icons.Filled.MusicNote,
-                checked = settings.musicEnabled,
-                onCheckedChange = onToggleMusic,
-                switchTag = "setting_music_switch"
+            SectionHeader(
+                kicker = "Preferences",
+                title = "Audio & Tactile",
+                accent = AccentCyan
             )
 
-            SettingToggleRow(
-                title = "Sound Effects",
-                icon = Icons.AutoMirrored.Outlined.VolumeUp,
-                checked = settings.soundEnabled,
-                onCheckedChange = onToggleSound,
-                switchTag = "setting_sound_switch"
+            PremiumCard(cornerRadius = 20.dp, modifier = Modifier.fillMaxWidth()) {
+                Column {
+                    SettingToggleRow(
+                        title = "Music",
+                        subtitle = "Ambient soundtrack during sessions",
+                        icon = Icons.Filled.MusicNote,
+                        checked = settings.musicEnabled,
+                        onCheckedChange = onToggleMusic,
+                        switchTag = "setting_music_switch"
+                    )
+                    HorizontalDivider(color = DividerSubtle.copy(alpha = 0.6f))
+                    SettingToggleRow(
+                        title = "Sound Effects",
+                        subtitle = "Drops, line clears & cascade chimes",
+                        icon = Icons.AutoMirrored.Outlined.VolumeUp,
+                        checked = settings.soundEnabled,
+                        onCheckedChange = onToggleSound,
+                        switchTag = "setting_sound_switch"
+                    )
+                    HorizontalDivider(color = DividerSubtle.copy(alpha = 0.6f))
+                    SettingToggleRow(
+                        title = "Vibration",
+                        subtitle = "Tactile haptic feedback on placement",
+                        icon = Icons.Filled.Vibration,
+                        checked = settings.hapticsEnabled,
+                        onCheckedChange = onToggleHaptics,
+                        switchTag = "setting_haptics_switch"
+                    )
+                }
+            }
+
+            SectionHeader(
+                kicker = "Assists & FX",
+                title = "Gameplay & Visuals",
+                accent = AccentEmerald
             )
 
-            SettingToggleRow(
-                title = "Vibration",
-                icon = Icons.Filled.Vibration,
-                checked = settings.hapticsEnabled,
-                onCheckedChange = onToggleHaptics,
-                switchTag = "setting_haptics_switch"
-            )
+            PremiumCard(cornerRadius = 20.dp, modifier = Modifier.fillMaxWidth()) {
+                Column {
+                    SettingToggleRow(
+                        title = "Visual Effects",
+                        subtitle = "Line sweep flashes & particle bursts",
+                        icon = Icons.Filled.AutoAwesome,
+                        checked = settings.visualEffectsEnabled,
+                        onCheckedChange = onToggleVisualEffects,
+                        switchTag = "setting_vfx_switch"
+                    )
+                    HorizontalDivider(color = DividerSubtle.copy(alpha = 0.6f))
+                    SettingToggleRow(
+                        title = "Placement Preview",
+                        subtitle = "Highlight predicted row & column clears",
+                        icon = Icons.Filled.GridOn,
+                        checked = settings.placementPreviewEnabled,
+                        onCheckedChange = onTogglePlacementPreview,
+                        switchTag = "setting_preview_switch"
+                    )
+                }
+            }
 
-            SettingToggleRow(
-                title = "Visual Effects",
-                icon = Icons.Filled.AutoAwesome,
-                checked = settings.visualEffectsEnabled,
-                onCheckedChange = onToggleVisualEffects,
-                switchTag = "setting_vfx_switch"
-            )
-
-            SettingToggleRow(
-                title = "Placement Preview",
-                icon = Icons.Filled.GridOn,
-                checked = settings.placementPreviewEnabled,
-                onCheckedChange = onTogglePlacementPreview,
-                switchTag = "setting_preview_switch"
+            SectionHeader(
+                kicker = "Appearance",
+                title = "Board & Block Theme",
+                accent = AccentGold
             )
 
             ThemeSwitcherCard(
@@ -158,11 +194,17 @@ fun SettingsScreen(
                 onSelectBoardPalette = onSelectBoardPalette
             )
 
+            SectionHeader(
+                kicker = "Account",
+                title = "Cloud Sync & Integrity",
+                accent = AccentCyan
+            )
+
             cloudAccountContent()
 
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(2.dp))
 
-            GlossyArcadeButton(
+            PremiumPrimaryButton(
                 text = "Reset Progress",
                 icon = Icons.Filled.DeleteForever,
                 style = ArcadeButtonStyle.RED,
@@ -195,7 +237,7 @@ private fun ThemeSwitcherCard(
     onSelectBlockStyle: (BlockStyle) -> Unit,
     onSelectBoardPalette: (BoardColorPalette) -> Unit
 ) {
-    FrostedGlassCard(
+    PremiumCard(
         cornerRadius = 20.dp,
         modifier = Modifier
             .fillMaxWidth()
@@ -448,28 +490,26 @@ private fun ThemeLivePreviewStrip(
 @Composable
 private fun SettingToggleRow(
     title: String,
+    subtitle: String,
     icon: ImageVector,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
     switchTag: String
 ) {
-    FrostedGlassCard(
-        cornerRadius = 18.dp,
-        modifier = Modifier.fillMaxWidth()
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(14.dp),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 10.dp)
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = TextPrimary,
-                modifier = Modifier.size(22.dp)
-            )
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = TextPrimary,
+            modifier = Modifier.size(22.dp)
+        )
+        Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleMedium.copy(
@@ -477,21 +517,27 @@ private fun SettingToggleRow(
                     fontWeight = FontWeight.Bold,
                     fontSize = 15.sp
                 ),
-                color = TextPrimary,
-                modifier = Modifier.weight(1f)
+                color = TextPrimary
             )
-            Switch(
-                checked = checked,
-                onCheckedChange = onCheckedChange,
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = Color.White,
-                    checkedTrackColor = SwitchTrackOn,
-                    uncheckedThumbColor = Color.White.copy(alpha = 0.85f),
-                    uncheckedTrackColor = SwitchTrackOff,
-                    uncheckedBorderColor = Color.Transparent
-                ),
-                modifier = Modifier.testTag(switchTag)
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = TextSecondary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = Color.White,
+                checkedTrackColor = SwitchTrackOn,
+                uncheckedThumbColor = Color.White.copy(alpha = 0.85f),
+                uncheckedTrackColor = SwitchTrackOff,
+                uncheckedBorderColor = Color.Transparent
+            ),
+            modifier = Modifier.testTag(switchTag)
+        )
     }
 }

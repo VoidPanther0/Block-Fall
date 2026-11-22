@@ -10,8 +10,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
@@ -49,6 +51,7 @@ fun CascadeScreenContainer(
     modifier: Modifier = Modifier,
     maxContentWidth: Dp = 760.dp,
     backdrop: @Composable () -> Unit = { RoyalSkyBackdrop() },
+    bottomBar: (@Composable () -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
     Box(
@@ -58,13 +61,29 @@ fun CascadeScreenContainer(
         backdrop()
 
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .windowInsetsPadding(WindowInsets.safeDrawing)
-                .padding(horizontal = 16.dp, vertical = 12.dp)
-                .widthIn(max = maxContentWidth),
-            content = content
-        )
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.fillMaxSize()
+        ) {
+            val contentInsets = if (bottomBar != null) {
+                WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)
+            } else {
+                WindowInsets.safeDrawing
+            }
+
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .windowInsetsPadding(contentInsets)
+                    .padding(horizontal = 16.dp, vertical = 10.dp)
+                    .widthIn(max = maxContentWidth),
+                content = content
+            )
+
+            if (bottomBar != null) {
+                bottomBar()
+            }
+        }
     }
 }
 
@@ -78,7 +97,7 @@ fun ScreenTopBar(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(bottom = 14.dp)
+            .padding(bottom = 12.dp)
     ) {
         if (onBack != null) {
             Box(

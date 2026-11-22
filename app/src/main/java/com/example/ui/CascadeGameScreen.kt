@@ -202,7 +202,7 @@ fun CascadeGameScreen(
                     }
                 }
             } else {
-                val boardMaxWidth = (maxHeight * 0.44f).coerceIn(170.dp, 500.dp)
+                val boardMaxWidth = (maxHeight * 0.48f).coerceIn(170.dp, 520.dp)
 
                 Column(
                     modifier = Modifier
@@ -316,7 +316,7 @@ fun CascadeGameScreen(
         if (activeDrag != null && boardBoundsInRoot.width > 1f) {
             Canvas(modifier = Modifier.fillMaxSize()) {
                 val cellSize = boardBoundsInRoot.width / Board.SIZE.toFloat()
-                val gap = (cellSize * 0.09f).coerceAtLeast(2.5f)
+                val gap = (cellSize * 0.085f).coerceAtLeast(2.5f)
                 val tileSize = cellSize - gap
 
                 val pieceW = activeDrag.piece.shape.widthCells * cellSize
@@ -331,8 +331,8 @@ fun CascadeGameScreen(
                         top = startY + cell.row * cellSize + gap / 2f,
                         cellSize = tileSize,
                         color = activeDrag.piece.color,
-                        alpha = 0.94f,
-                        glowBoost = if (state.settings.visualEffectsEnabled) 0.65f else 0.1f,
+                        alpha = 0.96f,
+                        glowBoost = if (state.settings.visualEffectsEnabled) 0.72f else 0.12f,
                         blockStyle = state.settings.blockStyle,
                         boardPalette = state.settings.boardPalette
                     )

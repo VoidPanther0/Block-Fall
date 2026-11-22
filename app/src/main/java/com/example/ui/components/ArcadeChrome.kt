@@ -1,9 +1,13 @@
 package com.example.ui.components
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -23,6 +27,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -35,6 +41,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -241,15 +248,32 @@ fun GlossyArcadeButton(
         ArcadeButtonStyle.SLATE -> Quad(SlateBtnTop, SlateBtnBottom, SlateBtnLip, TextPrimary)
     }
 
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val pressScale by animateFloatAsState(
+        targetValue = if (isPressed && enabled) 0.968f else 1f,
+        animationSpec = spring(dampingRatio = 0.72f, stiffness = 550f),
+        label = "arcade_btn_press"
+    )
+
     val shape = RoundedCornerShape(cornerRadius)
     val outerModifier = modifier
         .height(height)
+        .graphicsLayer {
+            scaleX = pressScale
+            scaleY = pressScale
+        }
         .then(if (testTag != null) Modifier.testTag(testTag) else Modifier)
         .alpha(if (enabled) 1f else 0.44f)
         .shadow(elevation = 6.dp, shape = shape, clip = false)
         .clip(shape)
         .background(lipColor)
-        .clickable(enabled = enabled, onClick = onClick)
+        .clickable(
+            interactionSource = interactionSource,
+            indication = androidx.compose.material3.ripple(color = Color.White),
+            enabled = enabled,
+            onClick = onClick
+        )
 
     Box(modifier = outerModifier) {
         Box(

@@ -122,7 +122,7 @@ fun TopGameBar(
                     .clip(RoundedCornerShape(14.dp))
                     .background(SurfaceCardElevated.copy(alpha = 0.9f))
                     .border(1.dp, modeAccent.copy(alpha = 0.48f), RoundedCornerShape(14.dp))
-                    .padding(horizontal = 12.dp, vertical = 8.dp)
+                    .padding(horizontal = 11.dp, vertical = 8.dp)
             ) {
                 Box(
                     modifier = Modifier
@@ -136,7 +136,7 @@ fun TopGameBar(
                         fontFamily = OutfitFontFamily,
                         fontWeight = FontWeight.ExtraBold,
                         fontSize = 12.sp,
-                        letterSpacing = 0.8.sp
+                        letterSpacing = 0.7.sp
                     ),
                     color = TextPrimary,
                     maxLines = 1,
@@ -147,11 +147,11 @@ fun TopGameBar(
 
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(2.dp),
             modifier = Modifier
                 .clip(RoundedCornerShape(16.dp))
-                .background(SurfaceCard.copy(alpha = 0.86f))
-                .border(1.dp, GlassBorder.copy(alpha = 0.42f), RoundedCornerShape(16.dp))
+                .background(SurfaceCard.copy(alpha = 0.88f))
+                .border(1.dp, GlassBorder.copy(alpha = 0.44f), RoundedCornerShape(16.dp))
                 .padding(horizontal = 4.dp)
         ) {
             IconButton(
@@ -212,7 +212,7 @@ fun ScorePanel(
 ) {
     val animatedScore by animateIntAsState(
         targetValue = state.score,
-        animationSpec = tween(durationMillis = 220),
+        animationSpec = tween(durationMillis = 200),
         label = "score_tick"
     )
 
@@ -232,6 +232,7 @@ fun ScorePanel(
                 label = if (state.isNewBest && state.mode == GameMode.CLASSIC) "NEW BEST!" else stringResource(R.string.score_label),
                 value = animatedScore.toString(),
                 highlight = state.isNewBest && state.mode == GameMode.CLASSIC,
+                badgeText = if (state.currentCascadeWave >= 2) "×${state.currentCascadeWave}" else null,
                 modifier = Modifier
                     .weight(1f)
                     .testTag("score_card")
@@ -243,6 +244,7 @@ fun ScorePanel(
                     accent = AccentCyan,
                     label = stringResource(R.string.best_label),
                     value = state.classicBestScore.toString(),
+                    badgeText = if (state.bestCascadeDepth >= 2) "MAX ×${state.bestCascadeDepth}" else null,
                     modifier = Modifier
                         .weight(1f)
                         .testTag("best_score_card")
@@ -395,12 +397,13 @@ private fun StudioHudCard(
     value: String,
     modifier: Modifier = Modifier,
     highlight: Boolean = false,
+    badgeText: String? = null,
     valueColor: Color = TextPrimary
 ) {
     val shape = RoundedCornerShape(18.dp)
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        horizontalArrangement = Arrangement.spacedBy(9.dp),
         modifier = modifier
             .shadow(6.dp, shape, clip = false)
             .clip(shape)
@@ -417,12 +420,12 @@ private fun StudioHudCard(
                 color = if (highlight) AccentGold.copy(alpha = 0.85f) else GlassBorder.copy(alpha = 0.45f),
                 shape = shape
             )
-            .padding(horizontal = 12.dp, vertical = 9.dp)
+            .padding(horizontal = 11.dp, vertical = 8.dp)
     ) {
         Box(
             contentAlignment = Alignment.Center,
             modifier = Modifier
-                .size(34.dp)
+                .size(32.dp)
                 .clip(RoundedCornerShape(10.dp))
                 .background(accent.copy(alpha = 0.16f))
                 .border(1.dp, accent.copy(alpha = 0.36f), RoundedCornerShape(10.dp))
@@ -431,27 +434,45 @@ private fun StudioHudCard(
                 imageVector = icon,
                 contentDescription = null,
                 tint = accent,
-                modifier = Modifier.size(18.dp)
+                modifier = Modifier.size(17.dp)
             )
         }
         Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelMedium.copy(
-                    fontSize = 10.sp,
-                    letterSpacing = 0.9.sp,
-                    fontWeight = FontWeight.Bold
-                ),
-                color = if (highlight) AccentGold else TextSecondary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.labelMedium.copy(
+                        fontSize = 9.5.sp,
+                        letterSpacing = 0.8.sp,
+                        fontWeight = FontWeight.Bold
+                    ),
+                    color = if (highlight) AccentGold else TextSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false)
+                )
+                if (badgeText != null) {
+                    Text(
+                        text = badgeText,
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontFamily = JetBrainsMonoFontFamily,
+                            fontSize = 9.sp
+                        ),
+                        color = AccentGold,
+                        maxLines = 1
+                    )
+                }
+            }
             Text(
                 text = value,
                 style = MaterialTheme.typography.titleLarge.copy(
                     fontFamily = JetBrainsMonoFontFamily,
                     fontWeight = FontWeight.ExtraBold,
-                    fontSize = 20.sp
+                    fontSize = 19.sp
                 ),
                 color = valueColor,
                 maxLines = 1,
