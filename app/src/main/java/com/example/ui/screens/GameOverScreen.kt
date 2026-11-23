@@ -6,22 +6,18 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.GridOff
+import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -30,8 +26,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -40,23 +34,18 @@ import androidx.compose.ui.unit.sp
 import com.example.R
 import com.example.game.GameMode
 import com.example.ui.GameUiState
+import com.example.ui.components.ArcadeBlockEmblem
 import com.example.ui.components.ArcadeButtonStyle
 import com.example.ui.components.CascadeScreenContainer
-import com.example.ui.components.FloatingModalBadge
 import com.example.ui.components.PremiumCard
 import com.example.ui.components.PremiumPrimaryButton
-import com.example.ui.components.SecondaryButton
-import com.example.ui.theme.AccentCoral
 import com.example.ui.theme.AccentCyan
-import com.example.ui.theme.AccentEmerald
 import com.example.ui.theme.AccentGold
 import com.example.ui.theme.BoardWellBg
 import com.example.ui.theme.GlassBorder
 import com.example.ui.theme.GoldBtnText
 import com.example.ui.theme.JetBrainsMonoFontFamily
 import com.example.ui.theme.OutfitFontFamily
-import com.example.ui.theme.RedBtnBottom
-import com.example.ui.theme.RedBtnTop
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
 
@@ -66,21 +55,10 @@ fun GameOverScreen(
     onRetry: () -> Unit,
     onHome: () -> Unit
 ) {
-    val subtitle = when {
-        state.isDailyChallenge -> "Today's puzzle · Target ${state.currentChallengeLevel.targetScore} not reached"
-        state.mode == GameMode.CLASSIC -> "No valid moves remaining"
-        else -> "Level ${state.currentChallengeLevel.levelNumber} · Target ${state.currentChallengeLevel.targetScore} not reached"
-    }
-    val goalScore = when (state.mode) {
-        GameMode.CLASSIC -> state.classicBestScore.coerceAtLeast(1)
-        GameMode.CHALLENGE -> state.currentChallengeLevel.targetScore.coerceAtLeast(1)
-    }
-    val progressRatio = (state.score.toFloat() / goalScore.toFloat()).coerceIn(0f, 1f)
-
     BackHandler(onBack = onHome)
 
     CascadeScreenContainer(
-        maxContentWidth = 440.dp,
+        maxContentWidth = 420.dp,
         modifier = Modifier.testTag("game_over_screen")
     ) {
         Column(
@@ -90,24 +68,33 @@ fun GameOverScreen(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Box(
-                contentAlignment = Alignment.TopCenter,
+            PremiumCard(
+                cornerRadius = 20.dp,
+                borderColor = GlassBorder,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                PremiumCard(
-                    cornerRadius = 18.dp,
-                    borderColor = GlassBorder,
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 36.dp)
+                        .padding(horizontal = 22.dp, vertical = 20.dp)
                 ) {
+                    // 1. Logo + Game Over title
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(start = 22.dp, end = 22.dp, top = 46.dp, bottom = 22.dp)
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier
+                                .size(56.dp)
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(com.example.ui.theme.ObsidianBg)
+                                .border(1.5.dp, GlassBorder, RoundedCornerShape(14.dp))
+                        ) {
+                            ArcadeBlockEmblem(size = 34.dp)
+                        }
                         Text(
                             text = stringResource(R.string.game_over_title),
                             style = MaterialTheme.typography.headlineMedium.copy(
@@ -115,166 +102,125 @@ fun GameOverScreen(
                                 fontWeight = FontWeight.ExtraBold,
                                 fontSize = 26.sp
                             ),
-                            color = TextPrimary
+                            color = TextPrimary,
+                            modifier = Modifier.testTag("game_over_title_text")
                         )
+                    }
 
+                    if (state.isNewBest && state.mode == GameMode.CLASSIC) {
                         Text(
-                            text = subtitle,
-                            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
-                            color = TextSecondary
-                        )
-
-                        if (state.isNewBest && state.mode == GameMode.CLASSIC) {
-                            Text(
-                                text = "NEW HIGH SCORE!",
-                                style = MaterialTheme.typography.labelLarge.copy(
-                                    fontFamily = OutfitFontFamily,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    fontSize = 12.sp
-                                ),
-                                color = GoldBtnText,
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(AccentGold)
-                                    .padding(horizontal = 12.dp, vertical = 4.dp)
-                            )
-                        }
-
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(6.dp),
+                            text = "NEW HIGH SCORE!",
+                            style = MaterialTheme.typography.labelLarge.copy(
+                                fontFamily = OutfitFontFamily,
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 12.sp
+                            ),
+                            color = GoldBtnText,
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(14.dp))
-                                .background(BoardWellBg)
-                                .border(1.dp, GlassBorder, RoundedCornerShape(14.dp))
-                                .padding(16.dp)
-                        ) {
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(AccentGold)
+                                .padding(horizontal = 12.dp, vertical = 4.dp)
+                        )
+                    }
+
+                    // 2. Score on top, Best Score directly underneath
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(BoardWellBg)
+                            .border(1.dp, GlassBorder, RoundedCornerShape(16.dp))
+                            .padding(horizontal = 16.dp, vertical = 14.dp)
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
-                                text = "FINAL SCORE",
-                                style = MaterialTheme.typography.labelMedium,
+                                text = "SCORE",
+                                style = MaterialTheme.typography.labelMedium.copy(
+                                    letterSpacing = 1.sp,
+                                    fontSize = 11.sp
+                                ),
                                 color = TextSecondary
                             )
                             Text(
                                 text = "${state.score}",
                                 style = MaterialTheme.typography.displaySmall.copy(
                                     fontFamily = JetBrainsMonoFontFamily,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 40.sp
+                                    fontWeight = FontWeight.ExtraBold,
+                                    fontSize = 36.sp
                                 ),
-                                color = AccentCyan
+                                color = AccentCyan,
+                                modifier = Modifier.testTag("game_over_score_value")
                             )
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(7.dp)
-                                    .clip(CircleShape)
-                                    .background(TextSecondary.copy(alpha = 0.16f))
-                            ) {
-                                if (progressRatio > 0f) {
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxHeight()
-                                            .fillMaxWidth(progressRatio.coerceAtLeast(0.05f))
-                                            .clip(CircleShape)
-                                            .background(Brush.horizontalGradient(listOf(AccentCyan, AccentGold)))
+                        }
+
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = if (state.mode == GameMode.CLASSIC) "BEST SCORE" else "TARGET SCORE",
+                                style = MaterialTheme.typography.labelMedium.copy(
+                                    letterSpacing = 0.8.sp,
+                                    fontSize = 11.sp
+                                ),
+                                color = TextSecondary
+                            )
+                            val bestOrTarget = if (state.mode == GameMode.CLASSIC) {
+                                state.classicBestScore
+                            } else {
+                                state.currentChallengeLevel.targetScore
+                            }
+                            Box(contentAlignment = Alignment.Center) {
+                                androidx.compose.foundation.layout.Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.EmojiEvents,
+                                        contentDescription = null,
+                                        tint = AccentGold,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Text(
+                                        text = "$bestOrTarget",
+                                        style = MaterialTheme.typography.headlineSmall.copy(
+                                            fontFamily = JetBrainsMonoFontFamily,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 20.sp
+                                        ),
+                                        color = AccentGold,
+                                        modifier = Modifier.testTag("game_over_best_score_value")
                                     )
                                 }
                             }
-                            Text(
-                                text = when (state.mode) {
-                                    GameMode.CLASSIC -> "Best Score: ${state.classicBestScore}"
-                                    GameMode.CHALLENGE -> "Target Score: ${state.currentChallengeLevel.targetScore}"
-                                },
-                                style = MaterialTheme.typography.titleMedium.copy(fontSize = 13.sp),
-                                color = TextSecondary
-                            )
                         }
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            GameOverMiniStat("Moves", "${state.movesPlayed}", Modifier.weight(1f))
-                            GameOverMiniStat("Lines", "${state.totalLinesCleared}", Modifier.weight(1f))
-                            GameOverMiniStat(
-                                "Max Chain",
-                                if (state.bestCascadeDepth > 0) "x${state.bestCascadeDepth}" else "—",
-                                Modifier.weight(1f)
-                            )
-                        }
-
-                        Spacer(Modifier.height(2.dp))
-
-                        PremiumPrimaryButton(
-                            text = "Play Again",
-                            icon = Icons.Filled.Refresh,
-                            style = ArcadeButtonStyle.GREEN,
-                            onClick = onRetry,
-                            height = 54.dp,
-                            cornerRadius = 12.dp,
-                            fontSize = 18.sp,
-                            testTag = "game_over_retry_button",
-                            modifier = Modifier.fillMaxWidth()
-                        )
-
-                        PremiumPrimaryButton(
-                            text = stringResource(R.string.nav_home),
-                            icon = Icons.Filled.Home,
-                            style = ArcadeButtonStyle.SLATE,
-                            onClick = onHome,
-                            height = 50.dp,
-                            cornerRadius = 12.dp,
-                            fontSize = 16.sp,
-                            testTag = "game_over_home_button",
-                            modifier = Modifier.fillMaxWidth()
-                        )
                     }
-                }
 
-                FloatingModalBadge(
-                    size = 76.dp,
-                    backgroundBrush = Brush.verticalGradient(listOf(RedBtnTop, RedBtnBottom))
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.GridOff,
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(34.dp)
+                    // 3. Play Again and Home buttons
+                    PremiumPrimaryButton(
+                        text = stringResource(R.string.play_again),
+                        icon = Icons.Filled.Refresh,
+                        style = ArcadeButtonStyle.GREEN,
+                        onClick = onRetry,
+                        height = 50.dp,
+                        cornerRadius = 14.dp,
+                        fontSize = 16.sp,
+                        testTag = "game_over_retry_button",
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    PremiumPrimaryButton(
+                        text = stringResource(R.string.nav_home),
+                        icon = Icons.Filled.Home,
+                        style = ArcadeButtonStyle.SLATE,
+                        onClick = onHome,
+                        height = 48.dp,
+                        cornerRadius = 14.dp,
+                        fontSize = 15.sp,
+                        testTag = "game_over_home_button",
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun GameOverMiniStat(
-    label: String,
-    value: String,
-    modifier: Modifier = Modifier
-) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = modifier
-            .clip(RoundedCornerShape(12.dp))
-            .background(BoardWellBg)
-            .border(1.dp, GlassBorder.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
-            .padding(vertical = 8.dp)
-    ) {
-        Text(
-            text = label.uppercase(),
-            style = MaterialTheme.typography.labelMedium.copy(fontSize = 10.sp),
-            color = TextSecondary
-        )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.titleMedium.copy(
-                fontFamily = JetBrainsMonoFontFamily,
-                fontWeight = FontWeight.Bold,
-                fontSize = 16.sp
-            ),
-            color = if (label == "Max Chain" && value != "—") AccentGold else TextPrimary
-        )
     }
 }

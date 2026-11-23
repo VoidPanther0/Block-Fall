@@ -220,16 +220,18 @@ class SecurityAndPerfTest {
             userId = "uid_test_1",
             displayName = "   Cascade Pro   ",
             classicBestScore = 2500L,
-            unlockedChallengeLevel = 4L,
             blockStyleId = "invalid_style",
-            boardPaletteId = "midnight"
+            boardPaletteId = "midnight",
+            avatarId = "amber_crown"
         )
         val createMap = profile.toCreateMap()
         assertFalse(createMap.containsKey("id"))
         assertFalse(createMap.containsKey("documentId"))
+        assertFalse(createMap.containsKey("unlockedChallengeLevel"))
         assertEquals("Cascade Pro", createMap["displayName"])
         assertEquals("modern", createMap["blockStyleId"])
         assertEquals("midnight", createMap["boardPaletteId"])
+        assertEquals("amber_crown", createMap["avatarId"])
         assertTrue(createMap["createdAt"] is com.google.firebase.firestore.FieldValue)
         assertTrue(createMap["updatedAt"] is com.google.firebase.firestore.FieldValue)
 
@@ -239,39 +241,31 @@ class SecurityAndPerfTest {
             // Lower cloud score must NOT overwrite higher local score
             val mergedLower = repo.mergeCloudProgress(
                 cloudBestScore = 1100,
-                cloudUnlockedLevel = 2,
                 cloudTotalGames = 5,
                 cloudTotalLines = 12,
                 cloudTotalCascades = 2,
                 cloudMaxDepth = 2,
                 cloudTotalBlocks = 40,
-                cloudFullClears = 0,
-                cloudChallenges = mapOf(
-                    1 to com.example.game.ChallengeLevelProgress(1, 140, 2, true)
-                )
+                cloudFullClears = 0
             )
             assertEquals(2500, mergedLower.classicBestScore)
-            assertEquals(2, mergedLower.unlockedChallengeLevel)
-            assertEquals(2, mergedLower.challengeProgress[1]?.stars)
 
             // Higher cloud score upgrades local score
             val mergedHigher = repo.mergeCloudProgress(
                 cloudBestScore = 4100,
-                cloudUnlockedLevel = 5,
                 cloudTotalGames = 15,
                 cloudTotalLines = 80,
                 cloudTotalCascades = 14,
                 cloudMaxDepth = 5,
                 cloudTotalBlocks = 300,
                 cloudFullClears = 2,
-                cloudChallenges = mapOf(
-                    1 to com.example.game.ChallengeLevelProgress(1, 210, 3, true)
-                )
+                cloudDisplayName = "CloudChampion",
+                cloudAvatarId = "cobalt_shield"
             )
             assertEquals(4100, mergedHigher.classicBestScore)
-            assertEquals(5, mergedHigher.unlockedChallengeLevel)
-            assertEquals(3, mergedHigher.challengeProgress[1]?.stars)
             assertEquals(2, mergedHigher.statistics.fullBoardClears)
+            assertEquals("CloudChampion", mergedHigher.playerDisplayName)
+            assertEquals("cobalt_shield", mergedHigher.profileAvatarId)
         }
     }
 }

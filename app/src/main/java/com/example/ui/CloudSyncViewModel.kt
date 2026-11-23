@@ -3,11 +3,9 @@ package com.example.ui
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.data.cloud.ChallengeProgressDoc
 import com.example.data.cloud.CloudSyncRepository
 import com.example.data.cloud.LeaderboardEntry
 import com.example.data.cloud.UserCloudProfile
-import com.example.game.ChallengeLevelProgress
 import com.example.security.IntegrityCheckResult
 import com.example.security.IntegrityStatusCode
 import com.example.security.PlayIntegrityManager
@@ -65,26 +63,6 @@ class CloudSyncViewModel(
                 initialValue = CloudStreamState.Loading
             )
 
-    val challengeDocsState: StateFlow<CloudStreamState<List<ChallengeProgressDoc>>> =
-        repository.observeChallengeProgress(currentUserId)
-            .map<List<ChallengeProgressDoc>, CloudStreamState<List<ChallengeProgressDoc>>> {
-                CloudStreamState.Success(it)
-            }
-            .catch { error ->
-                val firestoreError = generateSequence(error) { it.cause }
-                    .filterIsInstance<FirebaseFirestoreException>()
-                    .firstOrNull()
-                if (firestoreError == null && error is CancellationException) throw error
-                val rootError = firestoreError ?: error
-                Log.w(TAG, "Error observing challenge docs", rootError)
-                emit(CloudStreamState.Error(rootError.message ?: "Failed to load cloud challenges"))
-            }
-            .stateIn(
-                scope = viewModelScope,
-                started = SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS),
-                initialValue = CloudStreamState.Loading
-            )
-
     val leaderboardState: StateFlow<CloudStreamState<List<LeaderboardEntry>>> =
         repository.observeLeaderboard(limit = 25L)
             .map<List<LeaderboardEntry>, CloudStreamState<List<LeaderboardEntry>>> {
@@ -110,26 +88,20 @@ class CloudSyncViewModel(
             _sessionStatus.update { it.copy(isSyncing = true, lastErrorMessage = null) }
 
             val effectiveBest = maxOf(uiState.classicBestScore, uiState.statistics.classicBestScore)
+            val effectiveName = uiState.playerDisplayName?.takeIf { it.isNotBlank() } ?: defaultDisplayName
             val profileResult = repository.upsertUserProfile(
-                displayName = defaultDisplayName,
+                displayName = effectiveName,
+                avatarId = uiState.profileAvatarId,
                 classicBestScore = effectiveBest,
-                unlockedChallengeLevel = uiState.unlockedChallengeLevel,
                 statistics = uiState.statistics,
                 settings = uiState.settings
             )
 
             var firstError: Throwable? = profileResult.exceptionOrNull()
 
-            uiState.challengeProgress.values.forEach { levelProgress ->
-                val res = repository.syncChallengeLevel(levelProgress)
-                if (firstError == null && res.isFailure) {
-                    firstError = res.exceptionOrNull()
-                }
-            }
-
             if (effectiveBest > 0) {
                 val lbRes = repository.publishLeaderboardEntry(
-                    displayName = defaultDisplayName,
+                    displayName = effectiveName,
                     classicBestScore = effectiveBest,
                     maxCascadeDepth = uiState.statistics.maxCascadeDepth,
                     rankTitle = uiState.playerRank.title
@@ -153,12 +125,6 @@ class CloudSyncViewModel(
                     )
                 }
             }
-        }
-    }
-
-    fun syncChallengeLevel(progress: ChallengeLevelProgress) {
-        viewModelScope.launch {
-            repository.syncChallengeLevel(progress)
         }
     }
 

@@ -20,6 +20,7 @@ import com.example.game.GameSettings
 import com.example.game.GameStatistics
 import com.example.game.PieceShape
 import com.example.game.PlayerWallet
+import com.example.game.ProfileAvatar
 import com.example.game.SavedClassicGame
 import com.example.security.DecryptionResult
 import com.example.security.EncryptedEntitlementCache
@@ -41,6 +42,8 @@ data class PersistedProgress(
     val statistics: GameStatistics = GameStatistics(classicBestScore = classicBestScore),
     val challengeProgress: Map<Int, ChallengeLevelProgress> = emptyMap(),
     val wallet: PlayerWallet = PlayerWallet(),
+    val playerDisplayName: String? = null,
+    val profileAvatarId: String = ProfileAvatar.CLASSIC_BLOCK.id,
     val localIntegrityTampered: Boolean = false
 )
 
@@ -89,6 +92,8 @@ class GameRepository(
         val SAVED_CLASSIC_ENVELOPE = stringPreferencesKey("saved_classic_envelope_v1")
         val WALLET_ENVELOPE = stringPreferencesKey("wallet_envelope_v1")
         val DAILY_PROGRESS = stringPreferencesKey("daily_gravity_progress_v1")
+        val PLAYER_DISPLAY_NAME = stringPreferencesKey("player_display_name_v1")
+        val PROFILE_AVATAR_ID = stringPreferencesKey("profile_avatar_id_v1")
     }
 
     val progressFlow: Flow<PersistedProgress> = context.cascadeDataStore.data.map { prefs ->
@@ -116,6 +121,8 @@ class GameRepository(
             statistics = protectedState.statistics,
             challengeProgress = protectedState.challengeProgress,
             wallet = walletState.wallet,
+            playerDisplayName = prefs[Keys.PLAYER_DISPLAY_NAME]?.trim()?.takeIf { it.isNotEmpty() },
+            profileAvatarId = ProfileAvatar.fromId(prefs[Keys.PROFILE_AVATAR_ID]).id,
             localIntegrityTampered = protectedState.tampered || walletState.tampered
         )
     }
@@ -247,21 +254,38 @@ class GameRepository(
         }
     }
 
+    suspend fun updatePlayerDisplayName(name: String) {
+        val sanitized = name.trim().take(24)
+        context.cascadeDataStore.edit { prefs ->
+            if (sanitized.isEmpty()) {
+                prefs.remove(Keys.PLAYER_DISPLAY_NAME)
+            } else {
+                prefs[Keys.PLAYER_DISPLAY_NAME] = sanitized
+            }
+        }
+    }
+
+    suspend fun updateProfileAvatar(avatarId: String) {
+        val normalized = ProfileAvatar.fromId(avatarId).id
+        context.cascadeDataStore.edit { prefs ->
+            prefs[Keys.PROFILE_AVATAR_ID] = normalized
+        }
+    }
+
     suspend fun mergeCloudProgress(
         cloudBestScore: Int,
-        cloudUnlockedLevel: Int,
         cloudTotalGames: Int,
         cloudTotalLines: Int,
         cloudTotalCascades: Int,
         cloudMaxDepth: Int,
         cloudTotalBlocks: Int,
         cloudFullClears: Int,
-        cloudChallenges: Map<Int, ChallengeLevelProgress>
+        cloudDisplayName: String? = null,
+        cloudAvatarId: String? = null
     ): PersistedProgress {
         context.cascadeDataStore.edit { prefs ->
             val current = readProtectedProgressState(prefs)
             val mergedBest = maxOf(current.classicBestScore, cloudBestScore.coerceAtLeast(0))
-            val mergedUnlocked = maxOf(current.unlockedChallengeLevel, cloudUnlockedLevel.coerceIn(1, 50))
             val s = current.statistics
             val mergedStats = s.copy(
                 totalGamesPlayed = maxOf(s.totalGamesPlayed, cloudTotalGames.coerceAtLeast(0)),
@@ -272,26 +296,26 @@ class GameRepository(
                 fullBoardClears = maxOf(s.fullBoardClears, cloudFullClears.coerceAtLeast(0)),
                 classicBestScore = mergedBest
             )
-            val mergedMap = current.challengeProgress.toMutableMap()
-            cloudChallenges.forEach { (lvl, cloudItem) ->
-                val localItem = mergedMap[lvl]
-                mergedMap[lvl] = ChallengeLevelProgress(
-                    levelNumber = lvl,
-                    bestScore = maxOf(localItem?.bestScore ?: 0, cloudItem.bestScore),
-                    stars = maxOf(localItem?.stars ?: 0, cloudItem.stars),
-                    completed = (localItem?.completed == true) || cloudItem.completed
-                )
-            }
             writeProtectedProgressState(
                 prefs,
                 current.copy(
                     classicBestScore = mergedBest,
-                    unlockedChallengeLevel = mergedUnlocked,
                     statistics = mergedStats,
-                    challengeProgress = mergedMap,
                     tampered = false
                 )
             )
+            if (prefs[Keys.PLAYER_DISPLAY_NAME].isNullOrBlank() &&
+                !cloudDisplayName.isNullOrBlank() &&
+                cloudDisplayName != "Player"
+            ) {
+                prefs[Keys.PLAYER_DISPLAY_NAME] = cloudDisplayName.trim().take(24)
+            }
+            if (prefs[Keys.PROFILE_AVATAR_ID].isNullOrBlank() &&
+                !cloudAvatarId.isNullOrBlank() &&
+                cloudAvatarId in ProfileAvatar.VALID_IDS
+            ) {
+                prefs[Keys.PROFILE_AVATAR_ID] = cloudAvatarId
+            }
         }
         return loadInitialProgress()
     }
@@ -338,6 +362,8 @@ class GameRepository(
             prefs.remove(Keys.CHALLENGE_PROGRESS_JSON)
             prefs.remove(Keys.PROTECTED_PROGRESS_ENVELOPE)
             prefs.remove(Keys.WALLET_ENVELOPE)
+            prefs.remove(Keys.PLAYER_DISPLAY_NAME)
+            prefs.remove(Keys.PROFILE_AVATAR_ID)
         }
     }
 

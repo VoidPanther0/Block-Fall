@@ -15,7 +15,27 @@ class PieceGenerator(
         random = if (seed == null) Random.Default else Random(seed)
     }
 
-    private val allShapes = PieceShape.entries
+    companion object {
+        /**
+         * Shapes excluded from newly dealt trays per gameplay tuning:
+         * - 3-cube straight bars (LINE_3_H, LINE_3_V)
+         * - Oversized 5-cell / bulky rectangles & pentominoes (LINE_5_H, LINE_5_V, BIG_CORNER_BR, BIG_CORNER_BL, PLUS_5, U_5)
+         */
+        val EXCLUDED_SHAPES: Set<PieceShape> = setOf(
+            PieceShape.LINE_3_H,
+            PieceShape.LINE_3_V,
+            PieceShape.LINE_5_H,
+            PieceShape.LINE_5_V,
+            PieceShape.BIG_CORNER_BR,
+            PieceShape.BIG_CORNER_BL,
+            PieceShape.PLUS_5,
+            PieceShape.U_5
+        )
+
+        val ACTIVE_SHAPES: List<PieceShape> = PieceShape.entries.filterNot { it in EXCLUDED_SHAPES }
+    }
+
+    private val allShapes = ACTIVE_SHAPES
     private val totalWeight = allShapes.sumOf { it.weight }
     private val colors = BlockColor.entries
 
@@ -24,19 +44,27 @@ class PieceGenerator(
         startingPieceId: Long
     ): Pair<List<GamePiece>, Long> {
         var nextId = startingPieceId
+        val occupied = board.occupiedCount()
+        val playablePool = if (occupied >= 28) {
+            allShapes.filter { shape ->
+                val probe = GamePiece(0L, shape, colors.first())
+                PlacementValidator.findAllValidAnchors(board, probe).isNotEmpty()
+            }
+        } else {
+            allShapes
+        }
+        val selectionPool = if (playablePool.isNotEmpty() && occupied >= 34) playablePool else allShapes
         val selectedShapes = mutableListOf<PieceShape>()
 
-        repeat(3) { slotIdx ->
-            var candidate = pickWeightedShape()
+        repeat(3) {
+            var candidate = pickWeightedShape(selectionPool)
             var attempts = 0
-            while (attempts < 8) {
-                val tooManyPentominoes =
-                    candidate.cellCount >= 5 && selectedShapes.count { it.cellCount >= 5 } >= 1
+            while (attempts < 10) {
                 val duplicateShape = selectedShapes.contains(candidate)
                 val tooManyLarge =
-                    candidate.cellCount >= 4 && selectedShapes.count { it.cellCount >= 4 } >= 2
-                if (!tooManyPentominoes && !duplicateShape && !tooManyLarge) break
-                candidate = pickWeightedShape()
+                    candidate.cellCount >= 4 && selectedShapes.count { it.cellCount >= 4 } >= if (occupied >= 32) 1 else 2
+                if (!duplicateShape && !tooManyLarge) break
+                candidate = pickWeightedShape(selectionPool)
                 attempts++
             }
             selectedShapes.add(candidate)
@@ -51,15 +79,20 @@ class PieceGenerator(
             )
         }.toMutableList()
 
-        // Fairness safeguard: when the board is reasonably open (<= 75% occupied),
-        // guarantee at least one generated piece can fit if any catalog shape fits.
-        if (board.occupiedCount() <= 48 && !PlacementValidator.hasAnyValidMove(board, pieces)) {
-            val playableShapes = allShapes.filter { shape ->
+        // Fairness safeguard: whenever the board has room (<= 56 occupied cells) and at least one
+        // active shape can fit on the board, guarantee slot 0 is immediately playable.
+        if (occupied <= 56 && !PlacementValidator.hasAnyValidMove(board, pieces)) {
+            val rescueShapes = allShapes.filter { shape ->
                 val probe = GamePiece(0L, shape, pieces[0].color)
                 PlacementValidator.findAllValidAnchors(board, probe).isNotEmpty()
             }
-            if (playableShapes.isNotEmpty()) {
-                val rescueShape = playableShapes[random.nextInt(playableShapes.size)]
+            if (rescueShapes.isNotEmpty()) {
+                val preferredRescue = if (occupied >= 44) {
+                    rescueShapes.sortedBy { it.cellCount }.take(3)
+                } else {
+                    rescueShapes
+                }
+                val rescueShape = preferredRescue[random.nextInt(preferredRescue.size)]
                 pieces[0] = pieces[0].copy(shape = rescueShape)
             }
         }
@@ -67,12 +100,13 @@ class PieceGenerator(
         return pieces to nextId
     }
 
-    private fun pickWeightedShape(): PieceShape {
-        var roll = random.nextInt(totalWeight)
-        for (shape in allShapes) {
+    private fun pickWeightedShape(pool: List<PieceShape> = allShapes): PieceShape {
+        val poolWeight = if (pool === allShapes) totalWeight else pool.sumOf { it.weight }.coerceAtLeast(1)
+        var roll = random.nextInt(poolWeight)
+        for (shape in pool) {
             roll -= shape.weight
             if (roll < 0) return shape
         }
-        return allShapes.first()
+        return pool.first()
     }
 }

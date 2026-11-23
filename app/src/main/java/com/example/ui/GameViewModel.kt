@@ -6,11 +6,11 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.ads.AdConfig
 import com.example.ads.AdState
 import com.example.ads.RewardedAdManager
 import com.example.audio.SoundManager
 import com.example.data.GameRepository
-import com.example.game.AchievementEvaluator
 import com.example.game.BlockColor
 import com.example.game.BlockStyle
 import com.example.game.Board
@@ -34,9 +34,12 @@ import com.example.game.PieceGenerator
 import com.example.game.PlayerRankCalculator
 import com.example.game.PlayerRankInfo
 import com.example.game.PlayerWallet
+import com.example.game.ProfileAvatar
 import com.example.game.SavedClassicGame
 import com.example.game.TraySlot
 import com.example.game.TurnExecutionResult
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -117,12 +120,7 @@ data class GameUiState(
     val settings: GameSettings = GameSettings(),
     val statistics: GameStatistics = GameStatistics(),
     val challengeProgress: Map<Int, ChallengeLevelProgress> = emptyMap(),
-    val unlockedAchievements: Set<String> = emptySet(),
-    val playerRank: PlayerRankInfo = PlayerRankCalculator.compute(
-        GameStatistics(),
-        emptyMap(),
-        emptySet()
-    ),
+    val playerRank: PlayerRankInfo = PlayerRankCalculator.compute(GameStatistics()),
     val lastChallengeStarsEarned: Int = 0,
     val savedClassicSummary: SavedClassicGame? = null,
     val visualPhase: BoardVisualPhase = BoardVisualPhase.Idle,
@@ -131,6 +129,11 @@ data class GameUiState(
     val particleTriggerId: Long = 0L,
     val latestParticles: List<ParticleBurst> = emptyList(),
     val wallet: PlayerWallet = PlayerWallet(),
+    val playerDisplayName: String? = null,
+    val profileAvatarId: String = ProfileAvatar.CLASSIC_BLOCK.id,
+    val showContinueOffer: Boolean = false,
+    val continueCountdownSeconds: Int = GameViewModel.CONTINUE_COUNTDOWN_SECONDS,
+    val continueOfferUsedThisRun: Boolean = false,
     val showRulesDialog: Boolean = false,
     /** True while the seeded Daily Gravity puzzle is being played. UI-only routing flag. */
     val isDailyChallenge: Boolean = false
@@ -154,13 +157,21 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     val soundManager = SoundManager(application.applicationContext)
     val haptics = com.example.audio.HapticsManager(application.applicationContext)
     private val animationRunner = CascadeAnimationRunner(soundManager)
-    private val adManager by lazy { RewardedAdManager(getApplication<Application>()) }
+    private val adManager by lazy {
+        RewardedAdManager(getApplication<Application>(), AdConfig.rewardedGoldUnitId)
+    }
+    private val continueAdManager by lazy {
+        RewardedAdManager(getApplication<Application>(), AdConfig.rewardedContinueUnitId)
+    }
 
     val adState: StateFlow<AdState> = adManager.adState
+    val continueAdState: StateFlow<AdState> = continueAdManager.adState
 
     private var nextIdCounter: Long = 100L
     private var activeDailyKey: String? = null
     private var comboStreak: Int = 0
+    private var continueCountdownJob: Job? = null
+    private var isContinueAdShowing: Boolean = false
 
     private val _uiState = MutableStateFlow(GameUiState())
     val uiState: StateFlow<GameUiState> = _uiState.asStateFlow()
@@ -170,6 +181,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     init {
         adManager.loadAd()
+        continueAdManager.loadAd()
         viewModelScope.launch {
             val saved = repository.loadInitialProgress()
             soundManager.soundEnabled = saved.settings.soundEnabled
@@ -188,7 +200,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 val mergedStats = saved.statistics.copy(
                     classicBestScore = maxOf(saved.classicBestScore, validSaved.score)
                 )
-                val (achievements, rank) = computeProgression(mergedStats, saved.challengeProgress)
+                val rank = computeProgression(mergedStats)
                 _uiState.update {
                     it.copy(
                         mode = GameMode.CLASSIC,
@@ -205,9 +217,10 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                         settings = saved.settings,
                         statistics = mergedStats,
                         challengeProgress = saved.challengeProgress,
-                        unlockedAchievements = achievements,
                         playerRank = rank,
                         wallet = saved.wallet,
+                        playerDisplayName = saved.playerDisplayName,
+                        profileAvatarId = saved.profileAvatarId,
                         savedClassicSummary = validSaved
                     )
                 }
@@ -215,7 +228,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 val emptyBoard = Board.empty()
                 val (trayPieces, updatedId) = pieceGenerator.generateTray(emptyBoard, nextIdCounter)
                 nextIdCounter = updatedId
-                val (achievements, rank) = computeProgression(saved.statistics, saved.challengeProgress)
+                val rank = computeProgression(saved.statistics)
                 _uiState.update {
                     it.copy(
                         mode = GameMode.CLASSIC,
@@ -228,9 +241,10 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                         settings = saved.settings,
                         statistics = saved.statistics,
                         challengeProgress = saved.challengeProgress,
-                        unlockedAchievements = achievements,
                         playerRank = rank,
                         wallet = saved.wallet,
+                        playerDisplayName = saved.playerDisplayName,
+                        profileAvatarId = saved.profileAvatarId,
                         savedClassicSummary = null
                     )
                 }
@@ -252,6 +266,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun startNewClassicGame(countAsNewGame: Boolean = true) {
+        cancelContinueCountdown()
         pieceGenerator.reseed(null)
         activeDailyKey = null
         comboStreak = 0
@@ -280,6 +295,9 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 dragState = null,
                 floatingBanner = null,
                 latestParticles = emptyList(),
+                showContinueOffer = false,
+                continueCountdownSeconds = CONTINUE_COUNTDOWN_SECONDS,
+                continueOfferUsedThisRun = false,
                 statistics = if (countAsNewGame) {
                     it.statistics.copy(totalGamesPlayed = it.statistics.totalGamesPlayed + 1)
                 } else {
@@ -294,6 +312,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun continueSavedClassicGame(): Boolean {
+        cancelContinueCountdown()
         val snapshot = _uiState.value.savedClassicSummary
         if (snapshot != null && !GameSessionEngine.isClassicGameOver(snapshot.board, snapshot.trayPieces)) {
             nextIdCounter = snapshot.nextIdCounter.coerceAtLeast(nextIdCounter)
@@ -315,7 +334,10 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                     visualPhase = BoardVisualPhase.Idle,
                     dragState = null,
                     floatingBanner = null,
-                    latestParticles = emptyList()
+                    latestParticles = emptyList(),
+                    showContinueOffer = false,
+                    continueCountdownSeconds = CONTINUE_COUNTDOWN_SECONDS,
+                    continueOfferUsedThisRun = false
                 )
             }
             return true
@@ -345,6 +367,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         levelOverride: ChallengeLevel? = null,
         keepSeed: Boolean = false
     ) {
+        cancelContinueCountdown()
         if (!keepSeed) {
             pieceGenerator.reseed(null)
             activeDailyKey = null
@@ -379,6 +402,9 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 dragState = null,
                 floatingBanner = null,
                 latestParticles = emptyList(),
+                showContinueOffer = false,
+                continueCountdownSeconds = CONTINUE_COUNTDOWN_SECONDS,
+                continueOfferUsedThisRun = false,
                 statistics = if (countAsNewGame) {
                     it.statistics.copy(totalGamesPlayed = it.statistics.totalGamesPlayed + 1)
                 } else {
@@ -393,6 +419,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     fun switchMode(mode: GameMode) {
         if (_uiState.value.status == GameStatus.RESOLVING_CASCADE) return
+        cancelContinueCountdown()
         when (mode) {
             GameMode.CLASSIC -> {
                 viewModelScope.launch {
@@ -414,7 +441,10 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                                 savedClassicSummary = saved,
                                 visualPhase = BoardVisualPhase.Idle,
                                 dragState = null,
-                                floatingBanner = null
+                                floatingBanner = null,
+                                showContinueOffer = false,
+                                continueCountdownSeconds = CONTINUE_COUNTDOWN_SECONDS,
+                                continueOfferUsedThisRun = false
                             )
                         }
                     } else {
@@ -438,8 +468,9 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     fun pauseGame() {
         _uiState.update {
-            if (it.status == GameStatus.PLAYING) it.copy(status = GameStatus.PAUSED, dragState = null)
-            else it
+            if (it.status == GameStatus.PLAYING && !it.showContinueOffer) {
+                it.copy(status = GameStatus.PAUSED, dragState = null)
+            } else it
         }
     }
 
@@ -451,14 +482,16 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun exitToHome() {
+        cancelContinueCountdown()
         val state = _uiState.value
-        if (state.mode == GameMode.CLASSIC && state.status != GameStatus.GAME_OVER) {
+        if (state.mode == GameMode.CLASSIC && state.status != GameStatus.GAME_OVER && !state.showContinueOffer) {
             persistClassicSnapshot()
         }
         _uiState.update {
             it.copy(
                 dragState = null,
                 selectedSlotIndex = null,
+                showContinueOffer = false,
                 status = if (it.status == GameStatus.PAUSED) GameStatus.PLAYING else it.status
             )
         }
@@ -507,6 +540,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun resetAllProgress() {
+        cancelContinueCountdown()
         viewModelScope.launch {
             repository.resetAllProgress()
             val emptyBoard = Board.empty()
@@ -514,7 +548,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             nextIdCounter = updatedId
             _visualPhase.value = BoardVisualPhase.Idle
             val emptyStats = GameStatistics()
-            val (achievements, rank) = computeProgression(emptyStats, emptyMap())
+            val rank = computeProgression(emptyStats)
             _uiState.update {
                 it.copy(
                     mode = GameMode.CLASSIC,
@@ -534,11 +568,15 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                     unlockedChallengeLevel = 1,
                     statistics = emptyStats,
                     challengeProgress = emptyMap(),
-                    unlockedAchievements = achievements,
                     playerRank = rank,
                     lastChallengeStarsEarned = 0,
                     savedClassicSummary = null,
                     wallet = PlayerWallet(),
+                    playerDisplayName = null,
+                    profileAvatarId = ProfileAvatar.CLASSIC_BLOCK.id,
+                    showContinueOffer = false,
+                    continueCountdownSeconds = CONTINUE_COUNTDOWN_SECONDS,
+                    continueOfferUsedThisRun = false,
                     visualPhase = BoardVisualPhase.Idle,
                     dragState = null,
                     floatingBanner = null,
@@ -629,9 +667,142 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         )
     }
 
+    fun watchContinueRewardedAd(activity: Activity) {
+        val state = _uiState.value
+        if (!state.showContinueOffer) return
+        isContinueAdShowing = true
+        continueAdManager.showAd(
+            activity = activity,
+            onRewarded = {
+                isContinueAdShowing = false
+                grantContinueRescue()
+            },
+            onDismissed = {
+                isContinueAdShowing = false
+                if (_uiState.value.showContinueOffer) {
+                    declineContinueOffer()
+                }
+            },
+            onFailed = {
+                isContinueAdShowing = false
+                declineContinueOffer()
+            }
+        )
+    }
+
+    fun grantContinueRescue() {
+        cancelContinueCountdown()
+        val state = _uiState.value
+        val rescuedBoard = applyContinueBoardRescue(state.board)
+        val (freshPieces, updatedId) = pieceGenerator.generateTray(rescuedBoard, nextIdCounter)
+        nextIdCounter = updatedId
+        soundManager.playGreat()
+        haptics.perform(com.example.audio.HapticEvent.CLEAR)
+        _visualPhase.value = BoardVisualPhase.Idle
+        _uiState.update {
+            it.copy(
+                board = rescuedBoard,
+                traySlots = freshPieces.mapIndexed { idx, piece -> TraySlot(idx, piece) },
+                selectedSlotIndex = null,
+                dragState = null,
+                status = GameStatus.PLAYING,
+                showContinueOffer = false,
+                continueCountdownSeconds = CONTINUE_COUNTDOWN_SECONDS,
+                continueOfferUsedThisRun = true
+            )
+        }
+        persistClassicSnapshot()
+    }
+
+    fun declineContinueOffer() {
+        cancelContinueCountdown()
+        isContinueAdShowing = false
+        val current = _uiState.value
+        if (current.status == GameStatus.GAME_OVER && !current.showContinueOffer) return
+        soundManager.playGameOver()
+        haptics.perform(com.example.audio.HapticEvent.GAME_OVER)
+        _uiState.update {
+            it.copy(
+                status = GameStatus.GAME_OVER,
+                showContinueOffer = false,
+                savedClassicSummary = null,
+                dragState = null,
+                selectedSlotIndex = null
+            )
+        }
+        viewModelScope.launch {
+            repository.saveClassicGame(null)
+        }
+    }
+
+    fun selectProfileAvatar(avatarId: String) {
+        val normalized = ProfileAvatar.fromId(avatarId).id
+        _uiState.update { it.copy(profileAvatarId = normalized) }
+        viewModelScope.launch {
+            repository.updateProfileAvatar(normalized)
+        }
+    }
+
+    fun renamePlayerWithDiamonds(
+        newName: String,
+        onResult: (Boolean, String) -> Unit = { _, _ -> }
+    ) {
+        viewModelScope.launch {
+            val result = EconomyEngine.renameProfileWithDiamonds(
+                wallet = _uiState.value.wallet,
+                newName = newName,
+                transactionId = UUID.randomUUID().toString()
+            )
+            when (result) {
+                is EconomyMutationResult.Success -> {
+                    val sanitizedName = newName.trim().take(EconomyEngine.MAX_PLAYER_NAME_LENGTH)
+                    _uiState.update {
+                        it.copy(
+                            wallet = result.updatedWallet,
+                            playerDisplayName = sanitizedName
+                        )
+                    }
+                    repository.updateWallet(result.updatedWallet)
+                    repository.updatePlayerDisplayName(sanitizedName)
+                    onResult(true, "Name changed to $sanitizedName")
+                }
+                is EconomyMutationResult.Rejected -> {
+                    onResult(false, result.reason)
+                }
+            }
+        }
+    }
+
     private suspend fun applyWalletMutation(wallet: PlayerWallet) {
         _uiState.update { it.copy(wallet = wallet) }
         repository.updateWallet(wallet)
+    }
+
+    private fun startContinueCountdown() {
+        continueCountdownJob?.cancel()
+        continueCountdownJob = viewModelScope.launch {
+            var remaining = CONTINUE_COUNTDOWN_SECONDS
+            while (remaining > 0) {
+                _uiState.update {
+                    if (!it.showContinueOffer) return@launch
+                    it.copy(continueCountdownSeconds = remaining)
+                }
+                delay(1000L)
+                while (isContinueAdShowing) {
+                    delay(200L)
+                }
+                if (!_uiState.value.showContinueOffer) return@launch
+                remaining--
+            }
+            if (_uiState.value.showContinueOffer && !isContinueAdShowing) {
+                declineContinueOffer()
+            }
+        }
+    }
+
+    private fun cancelContinueCountdown() {
+        continueCountdownJob?.cancel()
+        continueCountdownJob = null
     }
 
     fun selectTraySlot(slotIndex: Int) {
@@ -843,12 +1014,19 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     private fun applyTurnFinalization(turn: TurnExecutionResult, blocksPlaced: Int) {
         val state = _uiState.value
         val nextStatus = turn.nextStatus
+        val triggerContinueOffer = nextStatus == GameStatus.GAME_OVER &&
+            state.mode == GameMode.CLASSIC &&
+            shouldOfferContinue(turn.finalScore, state.continueOfferUsedThisRun)
 
-        if (nextStatus == GameStatus.CHALLENGE_WON) {
-            soundManager.playLevelComplete()
-        } else if (nextStatus == GameStatus.GAME_OVER || nextStatus == GameStatus.CHALLENGE_LOST) {
-            soundManager.playGameOver()
-            haptics.perform(com.example.audio.HapticEvent.GAME_OVER)
+        val resolvedStatus = if (triggerContinueOffer) GameStatus.PLAYING else nextStatus
+
+        if (!triggerContinueOffer) {
+            if (nextStatus == GameStatus.CHALLENGE_WON) {
+                soundManager.playLevelComplete()
+            } else if (nextStatus == GameStatus.GAME_OVER || nextStatus == GameStatus.CHALLENGE_LOST) {
+                soundManager.playGameOver()
+                haptics.perform(com.example.audio.HapticEvent.GAME_OVER)
+            }
         }
 
         val isDaily = state.isDailyChallenge && activeDailyKey != null
@@ -912,14 +1090,14 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 if (state.mode == GameMode.CLASSIC) turn.finalScore else 0
             )
         )
-        val (achievements, rank) = computeProgression(updatedStats, updatedChallengeMap, state.unlockedAchievements)
+        val rank = computeProgression(updatedStats)
 
         _visualPhase.value = BoardVisualPhase.Idle
         _uiState.update {
             it.copy(
                 board = turn.resolution.finalBoard,
                 traySlots = turn.nextTraySlots,
-                status = nextStatus,
+                status = resolvedStatus,
                 visualPhase = BoardVisualPhase.Idle,
                 currentCascadeWave = 0,
                 unlockedChallengeLevel = nextUnlockedLevel,
@@ -927,9 +1105,16 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 lastChallengeStarsEarned = turn.earnedChallengeStars,
                 challengeProgress = updatedChallengeMap,
                 statistics = updatedStats,
-                unlockedAchievements = achievements,
-                playerRank = rank
+                playerRank = rank,
+                showContinueOffer = triggerContinueOffer,
+                continueCountdownSeconds = if (triggerContinueOffer) CONTINUE_COUNTDOWN_SECONDS else it.continueCountdownSeconds,
+                continueOfferUsedThisRun = it.continueOfferUsedThisRun || triggerContinueOffer
             )
+        }
+
+        if (triggerContinueOffer) {
+            continueAdManager.loadAd()
+            startContinueCountdown()
         }
 
         if (isDaily && (nextStatus == GameStatus.CHALLENGE_WON || nextStatus == GameStatus.CHALLENGE_LOST)) {
@@ -951,7 +1136,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             )
             if (state.mode == GameMode.CLASSIC) {
                 repository.updateClassicBestScore(turn.finalScore)
-                if (nextStatus == GameStatus.GAME_OVER) {
+                if (resolvedStatus == GameStatus.GAME_OVER) {
                     _uiState.update { it.copy(savedClassicSummary = null) }
                     repository.saveClassicGame(null)
                 } else {
@@ -969,55 +1154,38 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    private fun computeProgression(
-        stats: GameStatistics,
-        challengeProgress: Map<Int, ChallengeLevelProgress>,
-        existing: Set<String> = emptySet()
-    ): Pair<Set<String>, PlayerRankInfo> {
-        val unlocked = AchievementEvaluator.evaluateUnlocked(existing, stats, challengeProgress)
-        val rank = PlayerRankCalculator.compute(stats, challengeProgress, unlocked)
-        return unlocked to rank
+    private fun computeProgression(stats: GameStatistics): PlayerRankInfo {
+        return PlayerRankCalculator.compute(stats)
     }
 
     fun applyCloudMerge(
-        cloudProfile: com.example.data.cloud.UserCloudProfile?,
-        cloudChallenges: List<com.example.data.cloud.ChallengeProgressDoc>
+        cloudProfile: com.example.data.cloud.UserCloudProfile?
     ) {
-        if (cloudProfile == null && cloudChallenges.isEmpty()) return
+        if (cloudProfile == null) return
         viewModelScope.launch {
-            val challengeMap = cloudChallenges.associate { doc ->
-                val lvl = doc.levelNumber.toInt().coerceIn(1, 50)
-                lvl to ChallengeLevelProgress(
-                    levelNumber = lvl,
-                    bestScore = doc.bestScore.toInt().coerceAtLeast(0),
-                    stars = doc.stars.toInt().coerceIn(0, 3),
-                    completed = doc.completed
-                )
-            }
             val merged = repository.mergeCloudProgress(
-                cloudBestScore = cloudProfile?.classicBestScore?.toInt() ?: 0,
-                cloudUnlockedLevel = cloudProfile?.unlockedChallengeLevel?.toInt() ?: 1,
-                cloudTotalGames = cloudProfile?.totalGamesPlayed?.toInt() ?: 0,
-                cloudTotalLines = cloudProfile?.totalLinesCleared?.toInt() ?: 0,
-                cloudTotalCascades = cloudProfile?.totalCascadesTriggered?.toInt() ?: 0,
-                cloudMaxDepth = cloudProfile?.maxCascadeDepth?.toInt() ?: 0,
-                cloudTotalBlocks = cloudProfile?.totalBlocksPlaced?.toInt() ?: 0,
-                cloudFullClears = cloudProfile?.fullBoardClears?.toInt() ?: 0,
-                cloudChallenges = challengeMap
+                cloudBestScore = cloudProfile.classicBestScore.toInt(),
+                cloudTotalGames = cloudProfile.totalGamesPlayed.toInt(),
+                cloudTotalLines = cloudProfile.totalLinesCleared.toInt(),
+                cloudTotalCascades = cloudProfile.totalCascadesTriggered.toInt(),
+                cloudMaxDepth = cloudProfile.maxCascadeDepth.toInt(),
+                cloudTotalBlocks = cloudProfile.totalBlocksPlaced.toInt(),
+                cloudFullClears = cloudProfile.fullBoardClears.toInt(),
+                cloudDisplayName = cloudProfile.displayName,
+                cloudAvatarId = cloudProfile.avatarId
             )
-            val (achievements, rank) = computeProgression(
-                merged.statistics,
-                merged.challengeProgress,
-                _uiState.value.unlockedAchievements
-            )
+            val rank = computeProgression(merged.statistics)
             _uiState.update { cur ->
                 cur.copy(
                     classicBestScore = maxOf(cur.classicBestScore, merged.classicBestScore),
-                    unlockedChallengeLevel = maxOf(cur.unlockedChallengeLevel, merged.unlockedChallengeLevel),
                     statistics = merged.statistics,
-                    challengeProgress = merged.challengeProgress,
-                    unlockedAchievements = achievements,
-                    playerRank = rank
+                    playerRank = rank,
+                    playerDisplayName = cur.playerDisplayName ?: merged.playerDisplayName,
+                    profileAvatarId = if (cur.profileAvatarId == ProfileAvatar.CLASSIC_BLOCK.id && merged.profileAvatarId != ProfileAvatar.CLASSIC_BLOCK.id) {
+                        merged.profileAvatarId
+                    } else {
+                        cur.profileAvatarId
+                    }
                 )
             }
         }
@@ -1044,12 +1212,39 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     override fun onCleared() {
         super.onCleared()
+        cancelContinueCountdown()
         soundManager.release()
         haptics.cancel()
     }
 
     companion object {
         const val AD_REWARD_GOLD = 50
+        const val CONTINUE_MAX_SCORE = 10_000
+        const val CONTINUE_COUNTDOWN_SECONDS = 5
+
+        fun shouldOfferContinue(score: Int, alreadyUsedThisRun: Boolean): Boolean =
+            !alreadyUsedThisRun && score <= CONTINUE_MAX_SCORE
+
+        fun applyContinueBoardRescue(board: Board): Board {
+            val rowUpdates = buildMap<GridCoord, com.example.game.BlockCell?> {
+                for (r in setOf(2, 3, 4, 5)) {
+                    for (c in 0 until Board.SIZE) {
+                        put(GridCoord(r, c), null)
+                    }
+                }
+            }
+            val rowsCleared = board.withCells(rowUpdates)
+            if (rowsCleared.occupiedCount() <= 40) return rowsCleared
+
+            val colUpdates = buildMap<GridCoord, com.example.game.BlockCell?> {
+                for (r in 0 until Board.SIZE) {
+                    for (c in setOf(3, 4)) {
+                        put(GridCoord(r, c), null)
+                    }
+                }
+            }
+            return rowsCleared.withCells(colUpdates)
+        }
 
         fun calculateChallengeStars(score: Int, targetScore: Int, movesRemaining: Int): Int =
             GameSessionEngine.calculateChallengeStars(score, targetScore, movesRemaining)

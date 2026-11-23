@@ -171,39 +171,63 @@ fun GameBoard(
                 }
         ) {
             val cellSize = size.width / Board.SIZE.toFloat()
-            val gap = (cellSize * 0.085f).coerceAtLeast(2.5f)
+            val gap = (cellSize * 0.075f).coerceAtLeast(2.2f)
             val tileSize = cellSize - gap
             val slotRadius = if (blockStyle == BlockStyle.RETRO) {
-                CornerRadius(2f, 2f)
+                CornerRadius(2.5f, 2.5f)
             } else {
-                CornerRadius(tileSize * 0.2f, tileSize * 0.2f)
+                CornerRadius(tileSize * 0.22f, tileSize * 0.22f)
             }
 
-            // 1. Sculpted 8x8 recessed cell wells with subtle checkerboard contrast
+            // 1. Sculpted 8x8 recessed cell wells with crisp inner bevel and subtle 4x4 quadrant tint
             for (r in 0 until Board.SIZE) {
                 for (c in 0 until Board.SIZE) {
                     val left = c * cellSize + gap / 2f
                     val top = r * cellSize + gap / 2f
-                    val subtleChecker = if ((r + c) % 2 == 0) {
-                        boardTheme.slotFill
-                    } else {
-                        boardTheme.slotFill.copy(alpha = 0.82f)
+                    val inAltQuadrant = ((r / 4) + (c / 4)) % 2 == 1
+                    val cellTint = when {
+                        (r + c) % 2 == 0 && !inAltQuadrant -> boardTheme.slotFill
+                        (r + c) % 2 == 0 && inAltQuadrant -> boardTheme.slotFill.copy(alpha = 0.90f)
+                        !inAltQuadrant -> boardTheme.slotFill.copy(alpha = 0.84f)
+                        else -> boardTheme.slotFill.copy(alpha = 0.76f)
                     }
+                    // Soft dark recessed top shadow lip inside each cell well
                     drawRoundRect(
-                        color = subtleChecker,
+                        color = boardTheme.wellBottom.copy(alpha = 0.72f),
                         topLeft = Offset(left, top),
                         size = Size(tileSize, tileSize),
                         cornerRadius = slotRadius
                     )
                     drawRoundRect(
-                        color = boardTheme.slotBorder.copy(alpha = 0.68f),
+                        color = cellTint,
+                        topLeft = Offset(left + 0.8f, top + 1.4f),
+                        size = Size((tileSize - 1.6f).coerceAtLeast(1f), (tileSize - 2.2f).coerceAtLeast(1f)),
+                        cornerRadius = slotRadius
+                    )
+                    drawRoundRect(
+                        color = boardTheme.slotBorder.copy(alpha = 0.72f),
                         topLeft = Offset(left, top),
                         size = Size(tileSize, tileSize),
                         cornerRadius = slotRadius,
-                        style = Stroke(width = 1f)
+                        style = Stroke(width = 1.1f)
                     )
                 }
             }
+
+            // Subtle crisp crosshair dividing the 8x8 board into 4x4 zones for effortless spatial scanning
+            val midPos = cellSize * 4f
+            drawLine(
+                color = boardTheme.slotBorder.copy(alpha = 0.42f),
+                start = Offset(midPos, 2f),
+                end = Offset(midPos, size.height - 2f),
+                strokeWidth = 1.4f
+            )
+            drawLine(
+                color = boardTheme.slotBorder.copy(alpha = 0.42f),
+                start = Offset(2f, midPos),
+                end = Offset(size.width - 2f, midPos),
+                strokeWidth = 1.4f
+            )
 
             // 2. Predictive line-clear highlight while hovering a valid placement
             if (placementPreviewEnabled && dragState != null && dragState.isHoverValid) {

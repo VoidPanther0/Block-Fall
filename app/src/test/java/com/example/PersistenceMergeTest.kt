@@ -27,10 +27,14 @@ class PersistenceMergeTest {
     private fun repo(ctx: Context) =
         GameRepository(ctx, EncryptedEntitlementCache("com.example.test", keyProvider))
 
-    private fun merge(r: GameRepository, best: Int, unlocked: Int, ch: Map<Int, ChallengeLevelProgress> = emptyMap()) =
-        runBlocking {
-            r.mergeCloudProgress(best, unlocked, 0, 0, 0, 0, 0, 0, ch)
-        }
+    private fun merge(
+        r: GameRepository,
+        best: Int,
+        displayName: String? = null,
+        avatarId: String? = null
+    ) = runBlocking {
+        r.mergeCloudProgress(best, 0, 0, 0, 0, 0, 0, displayName, avatarId)
+    }
 
     @Test fun guestProgressSurvivesRestartAndCloudMergeNeverLowersIt() = runBlocking {
         val ctx = ApplicationProvider.getApplicationContext<Context>()
@@ -38,7 +42,8 @@ class PersistenceMergeTest {
         r1.resetAllProgress()
         // guest plays offline
         r1.updateClassicBestScore(900)
-        r1.saveChallengeLevelResult(3, 400, 2, true, 4)
+        r1.updatePlayerDisplayName("CascadeHero")
+        r1.updateProfileAvatar(ProfileAvatar.EMERALD_GEM.id)
         r1.updateWallet(PlayerWallet(goldCoins = 777, diamonds = 9, hammerCount = 1, refreshCount = 2, shuffleCount = 5))
         val saved = SavedClassicGame(
             Board.fromPattern(listOf("#.......") + List(7) { "........" }),
@@ -50,29 +55,24 @@ class PersistenceMergeTest {
         val r2 = repo(ctx)
         val p = r2.loadInitialProgress()
         assertEquals(900, p.classicBestScore)
-        assertEquals(4, p.unlockedChallengeLevel)
-        assertEquals(2, p.challengeProgress[3]!!.stars)
+        assertEquals("CascadeHero", p.playerDisplayName)
+        assertEquals(ProfileAvatar.EMERALD_GEM.id, p.profileAvatarId)
         assertEquals(777, p.wallet.goldCoins); assertEquals(9, p.wallet.diamonds)
         assertEquals(5, p.wallet.shuffleCount)
         assertEquals(55, p.savedClassicGame!!.score)
         assertEquals(321L, p.savedClassicGame!!.nextIdCounter)
         assertFalse(p.localIntegrityTampered)
 
-        // login: older cloud data must not overwrite newer local progress
-        val older = merge(r2, 100, 2, mapOf(3 to ChallengeLevelProgress(3, 50, 1, false)))
+        // login: older cloud data must not overwrite newer local progress or custom name/avatar
+        val older = merge(r2, 100, displayName = "OldCloudName", avatarId = ProfileAvatar.CORAL_SPARK.id)
         assertEquals(900, older.classicBestScore)
-        assertEquals(4, older.unlockedChallengeLevel)
-        assertEquals(400, older.challengeProgress[3]!!.bestScore)
-        assertEquals(2, older.challengeProgress[3]!!.stars)
-        assertTrue(older.challengeProgress[3]!!.completed)
+        assertEquals("CascadeHero", older.playerDisplayName)
+        assertEquals(ProfileAvatar.EMERALD_GEM.id, older.profileAvatarId)
         assertEquals(777, older.wallet.goldCoins) // wallet is local-only, untouched by merge
 
-        // newer cloud data is adopted, local-only levels are kept
-        val newer = merge(r2, 5000, 9, mapOf(8 to ChallengeLevelProgress(8, 1000, 3, true)))
+        // newer cloud data is adopted
+        val newer = merge(r2, 5000)
         assertEquals(5000, newer.classicBestScore)
-        assertEquals(9, newer.unlockedChallengeLevel)
-        assertEquals(3, newer.challengeProgress[3]!!.levelNumber)
-        assertEquals(3, newer.challengeProgress[8]!!.stars)
 
         // best score never decreases through the repository API either
         r2.updateClassicBestScore(10)

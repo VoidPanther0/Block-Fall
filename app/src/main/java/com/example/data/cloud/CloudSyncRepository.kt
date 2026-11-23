@@ -2,7 +2,6 @@ package com.example.data.cloud
 
 import android.content.Context
 import com.example.R
-import com.example.game.ChallengeLevelProgress
 import com.example.game.GameSettings
 import com.example.game.GameStatistics
 import com.example.security.IntegrityCheckResult
@@ -58,26 +57,6 @@ class CloudSyncRepository(
         )
     }
 
-    fun observeChallengeProgress(userId: String): Flow<List<ChallengeProgressDoc>> = flow {
-        val uid = requireUserId()
-        check(uid == userId) { "Signed-in user mismatch for challenge stream." }
-        val path = "users/$uid/challengeProgress"
-        emitAll(
-            db.collection("users").document(uid).collection("challengeProgress")
-                .snapshots()
-                .map { snapshot ->
-                    snapshot.toObjects(
-                        ChallengeProgressDoc::class.java,
-                        DocumentSnapshot.ServerTimestampBehavior.ESTIMATE
-                    )
-                }
-                .catch { error ->
-                    logStreamFailure(error, OperationType.LIST, path, uid)
-                    throw error
-                }
-        )
-    }
-
     fun observeLeaderboard(limit: Long = 25L): Flow<List<LeaderboardEntry>> = flow {
         val uid = requireUserId()
         val path = "leaderboard"
@@ -101,8 +80,8 @@ class CloudSyncRepository(
 
     suspend fun upsertUserProfile(
         displayName: String,
+        avatarId: String,
         classicBestScore: Int,
-        unlockedChallengeLevel: Int,
         statistics: GameStatistics,
         settings: GameSettings
     ): Result<Unit> {
@@ -113,7 +92,6 @@ class CloudSyncRepository(
             val docRef = db.collection("users").document(uid)
             val existing = docRef.get().await()
             val prevBest = existing.getLong("classicBestScore") ?: 0L
-            val prevUnlocked = existing.getLong("unlockedChallengeLevel") ?: 1L
             val prevGames = existing.getLong("totalGamesPlayed") ?: 0L
             val prevLines = existing.getLong("totalLinesCleared") ?: 0L
             val prevCascades = existing.getLong("totalCascadesTriggered") ?: 0L
@@ -124,8 +102,8 @@ class CloudSyncRepository(
             val merged = UserCloudProfile(
                 userId = uid,
                 displayName = UserCloudProfile.sanitizeDisplayName(displayName),
+                avatarId = UserCloudProfile.sanitizeAvatarId(avatarId),
                 classicBestScore = maxOf(prevBest, classicBestScore.toLong()),
-                unlockedChallengeLevel = maxOf(prevUnlocked, unlockedChallengeLevel.toLong()),
                 totalGamesPlayed = maxOf(prevGames, statistics.totalGamesPlayed.toLong()),
                 totalLinesCleared = maxOf(prevLines, statistics.totalLinesCleared.toLong()),
                 totalCascadesTriggered = maxOf(prevCascades, statistics.totalCascadesTriggered.toLong()),
@@ -145,39 +123,6 @@ class CloudSyncRepository(
                 docRef.set(merged.toCreateMap()).await()
             } else {
                 docRef.update(merged.toUpdateMap()).await()
-            }
-            Result.success(Unit)
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            handleFirestoreError(e, OperationType.WRITE, docPath)
-            Result.failure(e)
-        }
-    }
-
-    suspend fun syncChallengeLevel(progress: ChallengeLevelProgress): Result<Unit> {
-        val levelId = "level_${progress.levelNumber}"
-        val uidPreview = auth.currentUser?.uid ?: "unauthenticated"
-        val docPath = "users/$uidPreview/challengeProgress/$levelId"
-        return try {
-            val uid = requireUserId()
-            val docRef = db.collection("users").document(uid)
-                .collection("challengeProgress").document(levelId)
-            val existing = docRef.get().await()
-            val prevBest = existing.getLong("bestScore") ?: 0L
-            val prevStars = existing.getLong("stars") ?: 0L
-            val prevCompleted = existing.getBoolean("completed") == true
-
-            val model = ChallengeProgressDoc(
-                levelNumber = progress.levelNumber.toLong().coerceIn(1L, 50L),
-                bestScore = maxOf(prevBest, progress.bestScore.toLong()),
-                stars = maxOf(prevStars, progress.stars.toLong()),
-                completed = prevCompleted || progress.completed
-            )
-            if (!existing.exists()) {
-                docRef.set(model.toCreateMap()).await()
-            } else {
-                docRef.update(model.toUpdateMap()).await()
             }
             Result.success(Unit)
         } catch (e: CancellationException) {

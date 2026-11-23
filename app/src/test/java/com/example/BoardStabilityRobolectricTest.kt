@@ -118,4 +118,29 @@ class BoardStabilityRobolectricTest {
             .top
         assertEquals(boardTopBefore, boardTopDuringClear, 0.5f)
     }
+
+    @Test
+    fun `18_game_over_screen_renders_logo_title_score_above_best_and_two_buttons`() {
+        composeRule.setContent {
+            CascadeTheme {
+                com.example.ui.screens.GameOverScreen(
+                    state = GameUiState(score = 4250, classicBestScore = 9800),
+                    onRetry = {},
+                    onHome = {}
+                )
+            }
+        }
+        composeRule.waitForIdle()
+
+        val titleBounds = composeRule.onNodeWithTag("game_over_title_text").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+        val scoreBounds = composeRule.onNodeWithTag("game_over_score_value").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+        val bestBounds = composeRule.onNodeWithTag("game_over_best_score_value").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+        val retryBounds = composeRule.onNodeWithTag("game_over_retry_button").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+        val homeBounds = composeRule.onNodeWithTag("game_over_home_button").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+
+        org.junit.Assert.assertTrue("Title must appear above score", titleBounds.bottom <= scoreBounds.top + 1f)
+        org.junit.Assert.assertTrue("Score must appear above best score", scoreBounds.bottom <= bestBounds.top + 1f)
+        org.junit.Assert.assertTrue("Best score must appear above Play Again button", bestBounds.bottom <= retryBounds.top + 1f)
+        org.junit.Assert.assertTrue("Play Again button must appear above Home button", retryBounds.bottom <= homeBounds.top + 1f)
+    }
 }

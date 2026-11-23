@@ -1,12 +1,13 @@
 package com.example.ui.screens
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -15,17 +16,22 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.DeleteForever
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -34,42 +40,34 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.game.AchievementId
-import com.example.game.ChallengeLevels
-import com.example.game.GameStatistics
+import com.example.game.EconomyEngine
+import com.example.game.ProfileAvatar
 import com.example.ui.GameUiState
-import com.example.ui.components.AchievementCard
-import com.example.ui.components.ArcadeBlockEmblem
 import com.example.ui.components.ArcadeButtonStyle
 import com.example.ui.components.CascadeScreenContainer
 import com.example.ui.components.CurrencyWallet
+import com.example.ui.components.PlayerAvatarBadge
 import com.example.ui.components.PremiumCard
 import com.example.ui.components.PremiumPrimaryButton
-import com.example.ui.components.ResetProgressConfirmationDialog
 import com.example.ui.components.ScreenTopBar
 import com.example.ui.components.SectionHeader
 import com.example.ui.theme.AccentCoral
 import com.example.ui.theme.AccentCyan
+import com.example.ui.theme.AccentDiamond
 import com.example.ui.theme.AccentEmerald
 import com.example.ui.theme.AccentGold
 import com.example.ui.theme.BoardWellBg
 import com.example.ui.theme.CascadeTextStyles
 import com.example.ui.theme.GlassBorder
-import com.example.ui.theme.GoldBtnBottom
-import com.example.ui.theme.GoldBtnTop
 import com.example.ui.theme.JetBrainsMonoFontFamily
 import com.example.ui.theme.OutfitFontFamily
 import com.example.ui.theme.SurfaceCard
-import com.example.ui.theme.SurfaceCardElevated
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
 
@@ -77,150 +75,84 @@ import com.example.ui.theme.TextSecondary
 fun StatisticsScreen(
     state: GameUiState,
     onBack: () -> Unit,
-    onResetProgressConfirmed: () -> Unit,
-    playerName: String? = null
+    @Suppress("UNUSED_PARAMETER") onResetProgressConfirmed: () -> Unit = {},
+    playerName: String? = null,
+    googlePhotoUrl: String? = null,
+    onSelectAvatar: (String) -> Unit = {},
+    onRenameWithDiamonds: (String, (Boolean, String) -> Unit) -> Unit = { _, _ -> }
 ) {
-    val stats = state.statistics
-    val completedLevels = state.challengeProgress.values.count { it.completed }
-    val totalStars = state.challengeProgress.values.sumOf { it.stars }
-    val maxStars = ChallengeLevels.levels.size * 3
-    val progressRatio = (completedLevels.toFloat() / ChallengeLevels.levels.size.toFloat()).coerceIn(0f, 1f)
+    val effectiveName = state.playerDisplayName?.takeIf { it.isNotBlank() }
+        ?: playerName?.takeIf { it.isNotBlank() }
+        ?: "Player"
+    var showRenameDialog by remember { mutableStateOf(false) }
 
     CascadeScreenContainer(
-        maxContentWidth = 940.dp,
+        maxContentWidth = 760.dp,
         modifier = Modifier.testTag("statistics_screen")
     ) {
         ScreenTopBar(
-            title = "Profile & Stats",
+            title = "Profile",
             onBack = onBack,
             backTestTag = "statistics_back_button"
         )
 
-        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-            val isWide = maxWidth >= 660.dp
-
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
-            ) {
-                if (isWide) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
-                        verticalAlignment = Alignment.Top
-                    ) {
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(14.dp),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            PlayerRankAndMilestonesCard(state = state, playerName = playerName)
-                            ClassicBestSummaryCard(state)
-                            LifetimeMetricsCard(state, stats)
-                        }
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(14.dp),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            AchievementsListCard(state)
-                            ChallengeMasteryCard(state, completedLevels, totalStars, maxStars, progressRatio)
-                        }
-                    }
-                } else {
-                    PlayerRankAndMilestonesCard(state = state, playerName = playerName)
-                    ClassicBestSummaryCard(state)
-                    LifetimeMetricsCard(state, stats)
-                    AchievementsListCard(state)
-                    ChallengeMasteryCard(state, completedLevels, totalStars, maxStars, progressRatio)
-                }
-
-                Spacer(Modifier.height(6.dp))
-            }
-        }
-    }
-
-}
-
-@Composable
-private fun ClassicBestSummaryCard(state: GameUiState) {
-    PremiumCard(
-        cornerRadius = 20.dp,
-        borderColor = AccentGold.copy(alpha = 0.42f),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Row(
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(18.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier
-                        .size(46.dp)
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(AccentGold.copy(alpha = 0.16f))
-                        .border(1.dp, AccentGold.copy(alpha = 0.42f), RoundedCornerShape(14.dp))
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.EmojiEvents,
-                        contentDescription = null,
-                        tint = AccentGold,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-                Column {
-                    Text(
-                        text = "CLASSIC HIGH SCORE",
-                        style = MaterialTheme.typography.labelMedium.copy(letterSpacing = 0.8.sp),
-                        color = AccentGold
-                    )
-                    Text(
-                        text = "${state.classicBestScore}",
-                        style = MaterialTheme.typography.headlineMedium.copy(
-                            fontFamily = JetBrainsMonoFontFamily,
-                            fontWeight = FontWeight.ExtraBold,
-                            fontSize = 28.sp
-                        ),
-                        color = TextPrimary
-                    )
-                }
-            }
-            Column(horizontalAlignment = Alignment.End) {
-                Text(
-                    text = "MAX CHAIN",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = TextSecondary
-                )
-                Text(
-                    text = if (state.statistics.maxCascadeDepth > 0) "x${state.statistics.maxCascadeDepth}" else "—",
-                    style = MaterialTheme.typography.titleLarge.copy(
-                        fontFamily = JetBrainsMonoFontFamily,
-                        fontWeight = FontWeight.Bold
-                    ),
-                    color = AccentCyan
-                )
-            }
+            ProfileIdentityCard(
+                state = state,
+                displayName = effectiveName,
+                googlePhotoUrl = googlePhotoUrl,
+                onOpenRename = { showRenameDialog = true }
+            )
+
+            AvatarPickerCard(
+                selectedAvatarId = state.profileAvatarId,
+                googlePhotoUrl = googlePhotoUrl,
+                hasCrown = "cosmetic_prism_crown" in state.wallet.unlockedEntitlements,
+                onSelectAvatar = onSelectAvatar
+            )
+
+            BestScoreCard(classicBestScore = state.classicBestScore)
+
+            Spacer(Modifier.height(6.dp))
         }
+    }
+
+    if (showRenameDialog) {
+        RenameWithDiamondsDialog(
+            currentName = effectiveName,
+            availableDiamonds = state.wallet.diamonds,
+            onConfirm = { newName, onFeedback ->
+                onRenameWithDiamonds(newName) { success, msg ->
+                    if (success) {
+                        showRenameDialog = false
+                    } else {
+                        onFeedback(msg)
+                    }
+                }
+            },
+            onDismiss = { showRenameDialog = false }
+        )
     }
 }
 
 @Composable
-private fun PlayerRankAndMilestonesCard(
+private fun ProfileIdentityCard(
     state: GameUiState,
-    playerName: String?
+    displayName: String,
+    googlePhotoUrl: String?,
+    onOpenRename: () -> Unit
 ) {
     val rank = state.playerRank
     val hasCrown = "cosmetic_prism_crown" in state.wallet.unlockedEntitlements
+
     PremiumCard(
         cornerRadius = 20.dp,
-        borderColor = (if (hasCrown) AccentGold else AccentCyan).copy(alpha = 0.42f),
+        borderColor = (if (hasCrown) AccentGold else AccentCyan).copy(alpha = 0.45f),
         modifier = Modifier
             .fillMaxWidth()
             .testTag("player_rank_card")
@@ -231,46 +163,45 @@ private fun PlayerRankAndMilestonesCard(
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(14.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier
-                        .size(52.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(com.example.ui.theme.ObsidianBg)
-                        .border(
-                            width = 1.5.dp,
-                            color = if (hasCrown) AccentGold else GlassBorder,
-                            shape = RoundedCornerShape(12.dp)
-                        )
+                PlayerAvatarBadge(
+                    avatarId = state.profileAvatarId,
+                    googlePhotoUrl = googlePhotoUrl,
+                    size = 64.dp,
+                    hasCrownCosmetic = hasCrown
+                )
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(3.dp),
+                    modifier = Modifier.weight(1f)
                 ) {
-                    ArcadeBlockEmblem(size = 30.dp)
-                }
-                Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = playerName?.takeIf { it.isNotBlank() } ?: "Block Tactician",
+                        text = displayName,
                         style = MaterialTheme.typography.titleLarge.copy(
                             fontFamily = OutfitFontFamily,
-                            fontWeight = FontWeight.ExtraBold
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 20.sp
                         ),
-                        color = TextPrimary
+                        color = TextPrimary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.testTag("profile_display_name_text")
                     )
                     Text(
                         text = "TIER ${rank.tierNumber} · ${rank.title}",
                         style = CascadeTextStyles.SectionKicker,
                         color = if (hasCrown) AccentGold else AccentCyan
                     )
+                    Text(
+                        text = "${rank.xp} XP",
+                        style = MaterialTheme.typography.labelLarge.copy(
+                            fontFamily = JetBrainsMonoFontFamily,
+                            fontWeight = FontWeight.Bold
+                        ),
+                        color = AccentGold
+                    )
                 }
-                Text(
-                    text = "${rank.xp} XP",
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontFamily = JetBrainsMonoFontFamily,
-                        fontWeight = FontWeight.Bold
-                    ),
-                    color = AccentGold
-                )
             }
 
             Box(
@@ -293,7 +224,19 @@ private fun PlayerRankAndMilestonesCard(
                 }
             }
 
-            HorizontalDivider(color = GlassBorder.copy(alpha = 0.3f))
+            PremiumPrimaryButton(
+                text = "Change Name · ${EconomyEngine.RENAME_DIAMOND_COST} Diamonds",
+                icon = Icons.Filled.Edit,
+                style = ArcadeButtonStyle.BLUE,
+                onClick = onOpenRename,
+                height = 48.dp,
+                cornerRadius = 12.dp,
+                fontSize = 14.sp,
+                testTag = "profile_rename_button",
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            HorizontalDivider(color = GlassBorder.copy(alpha = 0.35f))
             CurrencyWallet(
                 goldCoins = state.wallet.goldCoins,
                 diamonds = state.wallet.diamonds,
@@ -303,224 +246,83 @@ private fun PlayerRankAndMilestonesCard(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun AchievementsListCard(state: GameUiState) {
-    val unlockedSet = state.unlockedAchievements
-    PremiumCard(
-        cornerRadius = 20.dp,
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-            modifier = Modifier.padding(18.dp)
-        ) {
-            SectionHeader(
-                kicker = "Career Milestones",
-                title = "Achievements (${unlockedSet.size}/${AchievementId.entries.size})",
-                accent = AccentGold
-            )
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                AchievementId.entries.forEach { achievement ->
-                    AchievementCard(
-                        achievement = achievement,
-                        unlocked = achievement.id in unlockedSet
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun LifetimeMetricsCard(state: GameUiState, stats: GameStatistics) {
-    PremiumCard(
-        cornerRadius = 20.dp,
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.padding(18.dp)
-        ) {
-            SectionHeader(
-                kicker = "Career Telemetry",
-                title = "Lifetime Performance",
-                accent = AccentCyan
-            )
-
-            StatMetricRow("Total Games", stats.totalGamesPlayed.toString())
-            StatDivider()
-            StatMetricRow("Classic Best Score", state.classicBestScore.toString(), AccentGold)
-            StatDivider()
-            StatMetricRow("Lines Cleared", stats.totalLinesCleared.toString())
-            StatDivider()
-            StatMetricRow("Cascades Triggered", stats.totalCascadesTriggered.toString())
-            StatDivider()
-            StatMetricRow("Blocks Placed", stats.totalBlocksPlaced.toString())
-
-            Spacer(Modifier.height(4.dp))
-            StatisticsBreakdownChart(stats = stats)
-        }
-    }
-}
-
-@Composable
-private fun StatisticsBreakdownChart(stats: GameStatistics) {
-    val metrics = listOf(
-        Triple("Games", stats.totalGamesPlayed.toFloat(), AccentCyan),
-        Triple("Lines", stats.totalLinesCleared.toFloat(), AccentEmerald),
-        Triple("Cascades", stats.totalCascadesTriggered.toFloat(), AccentGold),
-        Triple("Depth", stats.maxCascadeDepth.toFloat(), AccentCoral)
-    )
-    val maxVal = metrics.maxOf { it.second }.coerceAtLeast(1f)
-
-    Column(
-        verticalArrangement = Arrangement.spacedBy(6.dp),
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .background(BoardWellBg)
-            .border(1.dp, GlassBorder.copy(alpha = 0.35f), RoundedCornerShape(14.dp))
-            .padding(12.dp)
-    ) {
-        Text(
-            text = "Activity Breakdown",
-            style = MaterialTheme.typography.labelMedium,
-            color = TextSecondary
-        )
-        Canvas(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(64.dp)
-        ) {
-            val barWidth = size.width / (metrics.size * 2f)
-            val step = size.width / metrics.size
-            metrics.forEachIndexed { idx, (_, value, color) ->
-                val ratio = (value / maxVal).coerceIn(0.06f, 1f)
-                val barHeight = size.height * ratio
-                val x = idx * step + (step - barWidth) / 2f
-                drawRoundRect(
-                    color = color,
-                    topLeft = Offset(x, size.height - barHeight),
-                    size = Size(barWidth, barHeight),
-                    cornerRadius = CornerRadius(6f, 6f)
-                )
-            }
-        }
-        Row(modifier = Modifier.fillMaxWidth()) {
-            metrics.forEach { (label, value, color) ->
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(
-                        text = "${value.toInt()}",
-                        style = MaterialTheme.typography.labelLarge.copy(
-                            fontFamily = JetBrainsMonoFontFamily,
-                            fontSize = 12.sp
-                        ),
-                        color = color
-                    )
-                    Text(
-                        text = label,
-                        style = MaterialTheme.typography.bodyMedium.copy(fontSize = 10.sp),
-                        color = TextSecondary
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ChallengeMasteryCard(
-    state: GameUiState,
-    completedLevels: Int,
-    totalStars: Int,
-    maxStars: Int,
-    progressRatio: Float
+private fun AvatarPickerCard(
+    selectedAvatarId: String,
+    googlePhotoUrl: String?,
+    hasCrown: Boolean,
+    onSelectAvatar: (String) -> Unit
 ) {
     PremiumCard(
         cornerRadius = 20.dp,
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag("profile_avatar_picker_card")
     ) {
         Column(
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.padding(18.dp)
         ) {
-            Row(
+            SectionHeader(
+                kicker = "Identity",
+                title = "Choose Avatar",
+                accent = AccentCyan
+            )
+
+            FlowRow(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Text(
-                    text = "Challenge Mastery",
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontFamily = OutfitFontFamily,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp
-                    ),
-                    color = TextPrimary
-                )
-                Text(
-                    text = "$completedLevels/${ChallengeLevels.levels.size} · ★ $totalStars/$maxStars",
-                    style = MaterialTheme.typography.labelLarge.copy(
-                        fontFamily = JetBrainsMonoFontFamily,
-                        fontSize = 13.sp
-                    ),
-                    color = AccentGold
-                )
-            }
-
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(12.dp)
-                    .clip(CircleShape)
-                    .background(BoardWellBg)
-                    .border(1.dp, GlassBorder.copy(alpha = 0.45f), CircleShape)
-                    .padding(2.dp)
-            ) {
-                if (progressRatio > 0f) {
-                    Box(
+                ProfileAvatar.entries.forEach { avatar ->
+                    val isSelected = selectedAvatarId == avatar.id
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
                         modifier = Modifier
-                            .fillMaxHeight()
-                            .fillMaxWidth(progressRatio.coerceAtLeast(0.06f))
-                            .clip(CircleShape)
-                            .background(Brush.horizontalGradient(listOf(GoldBtnTop, GoldBtnBottom)))
-                    )
-                }
-            }
-
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                ChallengeLevels.levels.forEach { level ->
-                    val progress = state.challengeProgress[level.levelNumber]
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(BoardWellBg)
-                            .padding(horizontal = 12.dp, vertical = 7.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(if (isSelected) AccentCyan.copy(alpha = 0.12f) else BoardWellBg)
+                            .border(
+                                width = if (isSelected) 2.dp else 1.dp,
+                                color = if (isSelected) AccentCyan else GlassBorder,
+                                shape = RoundedCornerShape(14.dp)
+                            )
+                            .clickable { onSelectAvatar(avatar.id) }
+                            .padding(horizontal = 10.dp, vertical = 10.dp)
+                            .testTag("avatar_option_${avatar.id}")
                     ) {
+                        Box(contentAlignment = Alignment.BottomEnd) {
+                            PlayerAvatarBadge(
+                                avatarId = avatar.id,
+                                googlePhotoUrl = googlePhotoUrl,
+                                size = 50.dp,
+                                hasCrownCosmetic = isSelected && hasCrown
+                            )
+                            if (isSelected) {
+                                Icon(
+                                    imageVector = Icons.Filled.CheckCircle,
+                                    contentDescription = "Selected",
+                                    tint = AccentEmerald,
+                                    modifier = Modifier
+                                        .size(18.dp)
+                                        .clip(CircleShape)
+                                        .background(SurfaceCard)
+                                )
+                            }
+                        }
                         Text(
-                            text = "L${level.levelNumber} · ${level.title}",
-                            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
-                            color = TextPrimary
-                        )
-                        Text(
-                            text = if (progress?.completed == true) {
-                                "${"★".repeat(progress.stars)}  ${progress.bestScore}"
-                            } else if (level.levelNumber <= state.unlockedChallengeLevel) {
-                                if ((progress?.bestScore ?: 0) > 0) "Best ${progress?.bestScore}" else "Unlocked"
+                            text = if (avatar == ProfileAvatar.GOOGLE_PHOTO && googlePhotoUrl.isNullOrBlank()) {
+                                "Google"
                             } else {
-                                "Locked"
+                                avatar.label
                             },
-                            style = MaterialTheme.typography.labelMedium.copy(
-                                fontFamily = JetBrainsMonoFontFamily,
-                                letterSpacing = 0.sp
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                fontSize = 11.sp
                             ),
-                            color = if (progress?.completed == true) AccentGold else TextSecondary
+                            color = if (isSelected) AccentCyan else TextSecondary,
+                            maxLines = 1
                         )
                     }
                 }
@@ -530,39 +332,130 @@ private fun ChallengeMasteryCard(
 }
 
 @Composable
-private fun StatMetricRow(
-    label: String,
-    value: String,
-    valueColor: Color = TextPrimary
-) {
-    Row(
+private fun BestScoreCard(classicBestScore: Int) {
+    PremiumCard(
+        cornerRadius = 20.dp,
+        borderColor = AccentGold.copy(alpha = 0.42f),
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+            .testTag("profile_best_score_card")
     ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp),
-            color = TextSecondary
-        )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.titleMedium.copy(
-                fontFamily = JetBrainsMonoFontFamily,
-                fontWeight = FontWeight.Bold,
-                fontSize = 15.sp
-            ),
-            color = valueColor
-        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(18.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(AccentGold.copy(alpha = 0.16f))
+                    .border(1.dp, AccentGold.copy(alpha = 0.42f), RoundedCornerShape(14.dp))
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.EmojiEvents,
+                    contentDescription = null,
+                    tint = AccentGold,
+                    modifier = Modifier.size(26.dp)
+                )
+            }
+            Column {
+                Text(
+                    text = "BEST SCORE",
+                    style = MaterialTheme.typography.labelMedium.copy(letterSpacing = 0.8.sp),
+                    color = AccentGold
+                )
+                Text(
+                    text = "$classicBestScore",
+                    style = MaterialTheme.typography.headlineMedium.copy(
+                        fontFamily = JetBrainsMonoFontFamily,
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 30.sp
+                    ),
+                    color = TextPrimary
+                )
+            }
+        }
     }
 }
 
 @Composable
-private fun StatDivider() {
-    HorizontalDivider(
-        color = GlassBorder.copy(alpha = 0.3f),
-        thickness = 1.dp
+private fun RenameWithDiamondsDialog(
+    currentName: String,
+    availableDiamonds: Int,
+    onConfirm: (String, (String) -> Unit) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var draftName by remember { mutableStateOf(currentName) }
+    var feedbackError by remember { mutableStateOf<String?>(null) }
+    val hasEnoughDiamonds = availableDiamonds >= EconomyEngine.RENAME_DIAMOND_COST
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        modifier = Modifier.testTag("profile_rename_dialog"),
+        title = {
+            Text(
+                text = "Change Player Name",
+                style = MaterialTheme.typography.titleLarge.copy(
+                    fontFamily = OutfitFontFamily,
+                    fontWeight = FontWeight.Bold
+                )
+            )
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(
+                    text = "Cost: ${EconomyEngine.RENAME_DIAMOND_COST} Diamonds (Available: $availableDiamonds)",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (hasEnoughDiamonds) AccentDiamond else AccentCoral
+                )
+                OutlinedTextField(
+                    value = draftName,
+                    onValueChange = { input ->
+                        draftName = input.take(EconomyEngine.MAX_PLAYER_NAME_LENGTH)
+                        feedbackError = null
+                    },
+                    label = { Text("New display name") },
+                    singleLine = true,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("profile_rename_input")
+                )
+                if (feedbackError != null) {
+                    Text(
+                        text = feedbackError.orEmpty(),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = AccentCoral,
+                        modifier = Modifier.testTag("profile_rename_feedback")
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    val trimmed = draftName.trim()
+                    when {
+                        trimmed.isEmpty() -> feedbackError = "Enter a name (1–24 characters)"
+                        !hasEnoughDiamonds -> feedbackError = "Need ${EconomyEngine.RENAME_DIAMOND_COST} Diamonds to change name"
+                        else -> onConfirm(trimmed) { err -> feedbackError = err }
+                    }
+                },
+                modifier = Modifier.testTag("profile_rename_confirm_button")
+            ) {
+                Text("Pay ${EconomyEngine.RENAME_DIAMOND_COST} Diamonds")
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onDismiss,
+                modifier = Modifier.testTag("profile_rename_cancel_button")
+            ) {
+                Text("Cancel")
+            }
+        }
     )
 }

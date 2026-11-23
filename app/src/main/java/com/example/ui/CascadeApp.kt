@@ -158,21 +158,20 @@ private fun AuthenticatedCloudSession(
 
     val gameState by gameViewModel.uiState.collectAsStateWithLifecycle()
     val cloudProfile by cloudViewModel.profileState.collectAsStateWithLifecycle()
-    val cloudChallenges by cloudViewModel.challengeDocsState.collectAsStateWithLifecycle()
 
-    LaunchedEffect(cloudProfile, cloudChallenges) {
+    LaunchedEffect(cloudProfile) {
         val profileData = (cloudProfile as? CloudStreamState.Success)?.data
-        val challengesData = (cloudChallenges as? CloudStreamState.Success)?.data.orEmpty()
-        if (profileData != null || challengesData.isNotEmpty()) {
-            gameViewModel.applyCloudMerge(profileData, challengesData)
+        if (profileData != null) {
+            gameViewModel.applyCloudMerge(profileData)
         }
     }
 
     LaunchedEffect(
         uid,
         gameState.classicBestScore,
-        gameState.unlockedChallengeLevel,
-        gameState.statistics.totalGamesPlayed
+        gameState.statistics.totalGamesPlayed,
+        gameState.playerDisplayName,
+        gameState.profileAvatarId
     ) {
         cloudViewModel.syncLocalStateToCloud(gameState)
     }
@@ -255,10 +254,13 @@ private fun CascadeNavHost(
             }
 
             composable<HomeRoute> {
+                val effectiveName = state.playerDisplayName?.takeIf { it.isNotBlank() }
+                    ?: currentUser?.displayName?.takeIf { it.isNotBlank() }
                 HomeScreen(
                     state = state,
                     isCloudSignedIn = currentUser != null,
-                    playerName = currentUser?.displayName,
+                    playerName = effectiveName,
+                    googlePhotoUrl = currentUser?.photoUrl?.toString(),
                     onPlayNewClassic = {
                         viewModel.playUiClick()
                         viewModel.startNewClassicGame()
@@ -447,6 +449,8 @@ private fun CascadeNavHost(
             }
 
             composable<StatisticsRoute> {
+                val effectiveName = state.playerDisplayName?.takeIf { it.isNotBlank() }
+                    ?: currentUser?.displayName?.takeIf { it.isNotBlank() }
                 StatisticsScreen(
                     state = state,
                     onBack = { navController.popBackStack() },
@@ -454,7 +458,10 @@ private fun CascadeNavHost(
                         viewModel.playUiClick()
                         viewModel.resetAllProgress()
                     },
-                    playerName = currentUser?.displayName
+                    playerName = effectiveName,
+                    googlePhotoUrl = currentUser?.photoUrl?.toString(),
+                    onSelectAvatar = viewModel::selectProfileAvatar,
+                    onRenameWithDiamonds = viewModel::renamePlayerWithDiamonds
                 )
             }
 

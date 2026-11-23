@@ -21,8 +21,8 @@ function validProfilePayload(uid, overrides = {}) {
   return {
     userId: uid,
     displayName: "BlockMaster",
+    avatarId: "classic_block",
     classicBestScore: 1200,
-    unlockedChallengeLevel: 3,
     totalGamesPlayed: 12,
     totalLinesCleared: 48,
     totalCascadesTriggered: 9,
@@ -30,25 +30,12 @@ function validProfilePayload(uid, overrides = {}) {
     totalBlocksPlaced: 180,
     fullBoardClears: 1,
     blockStyleId: "modern",
-    boardPaletteId: "deep_ocean",
+    boardPaletteId: "royal",
     soundEnabled: true,
     musicEnabled: true,
     hapticsEnabled: true,
     visualEffectsEnabled: true,
     placementPreviewEnabled: true,
-    createdAt: past,
-    updatedAt: past,
-    ...overrides,
-  };
-}
-
-function validChallengePayload(levelNumber = 1, overrides = {}) {
-  const past = new Date(Date.now() - 5000);
-  return {
-    levelNumber,
-    bestScore: 220,
-    stars: 3,
-    completed: true,
     createdAt: past,
     updatedAt: past,
     ...overrides,
@@ -134,14 +121,22 @@ test("Owner can create and monotonically update their UserCloudProfile; cross-us
   await assertSucceeds(aliceRef.set(validProfilePayload(ALICE_UID)));
   await assertSucceeds(aliceRef.get());
 
-  // Valid partial update with higher score
+  // Valid partial update with higher score and new avatarId
   await assertSucceeds(
     aliceRef.update({
       classicBestScore: 1850,
-      unlockedChallengeLevel: 4,
+      avatarId: "amber_crown",
       blockStyleId: "retro",
       boardPaletteId: "sunset",
       updatedAt: new Date(Date.now() - 1000),
+    })
+  );
+
+  // Reject invalid avatarId
+  await assertFails(
+    aliceRef.update({
+      avatarId: "unknown_avatar",
+      updatedAt: new Date(Date.now() - 800),
     })
   );
 
@@ -188,56 +183,24 @@ test("Owner can create and monotonically update their UserCloudProfile; cross-us
   );
 });
 
-test("Owner challengeProgress subcollection CRUD obeys monotonic score/stars and rejects @DocumentId injection", async () => {
+test("Removed challengeProgress subcollection is denied under default-deny rules", async () => {
   const alice = testEnv.authenticatedContext(ALICE_UID).firestore();
-  const bob = testEnv.authenticatedContext(BOB_UID).firestore();
   const levelRef = alice
     .collection("users")
     .doc(ALICE_UID)
     .collection("challengeProgress")
     .doc("level_1");
 
-  // Empty subcollection list works without undefined-property errors
-  await assertSucceeds(
-    alice.collection("users").doc(ALICE_UID).collection("challengeProgress").get()
-  );
-
-  await assertSucceeds(levelRef.set(validChallengePayload(1)));
-
-  // Reject extra `id` field (@DocumentId parity guard)
+  await assertFails(levelRef.get());
   await assertFails(
-    alice
-      .collection("users")
-      .doc(ALICE_UID)
-      .collection("challengeProgress")
-      .doc("level_2")
-      .set(validChallengePayload(2, { id: "level_2" }))
-  );
-
-  // Monotonic star/score upgrade succeeds
-  await assertSucceeds(
-    levelRef.update({
-      bestScore: 310,
+    levelRef.set({
+      levelNumber: 1,
+      bestScore: 220,
       stars: 3,
-      updatedAt: new Date(Date.now() - 1000),
+      completed: true,
+      createdAt: new Date(Date.now() - 5000),
+      updatedAt: new Date(Date.now() - 5000),
     })
-  );
-
-  // Reject star downgrade
-  await assertFails(
-    levelRef.update({
-      stars: 1,
-      updatedAt: new Date(Date.now() - 500),
-    })
-  );
-
-  // Cross-user denied
-  await assertFails(
-    bob
-      .collection("users")
-      .doc(ALICE_UID)
-      .collection("challengeProgress")
-      .get()
   );
 });
 

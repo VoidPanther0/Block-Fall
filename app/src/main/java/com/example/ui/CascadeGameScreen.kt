@@ -1,7 +1,10 @@
 package com.example.ui
 
+import android.app.Activity
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -15,10 +18,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -32,36 +39,51 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.ads.AdState
 import com.example.game.Board
 import com.example.game.GameStatus
+import com.example.ui.components.ArcadeButtonStyle
+import com.example.ui.components.BannerAdBar
 import com.example.ui.components.CascadeCalloutBar
 import com.example.ui.components.ExitConfirmationDialog
 import com.example.ui.components.GameBoard
 import com.example.ui.components.GravityRulesDialog
 import com.example.ui.components.PieceTray
+import com.example.ui.components.PremiumCard
+import com.example.ui.components.PremiumPrimaryButton
 import com.example.ui.components.RestartConfirmationDialog
 import com.example.ui.components.RoyalSkyBackdrop
 import com.example.ui.components.ScorePanel
+import com.example.ui.components.SecondaryButton
 import com.example.ui.components.TopGameBar
 import com.example.ui.components.drawBevelBlock
 import com.example.ui.theme.AccentCyan
+import com.example.ui.theme.AccentGold
+import com.example.ui.theme.GlassBorder
 import com.example.ui.theme.InvalidTint
+import com.example.ui.theme.JetBrainsMonoFontFamily
+import com.example.ui.theme.OutfitFontFamily
+import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
 
 @Composable
@@ -75,6 +97,8 @@ fun CascadeGameScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val visualPhase by viewModel.visualPhase.collectAsStateWithLifecycle()
+    val continueAdState by viewModel.continueAdState.collectAsStateWithLifecycle()
+    val activity = LocalContext.current as? Activity
     val density = LocalDensity.current
     val haptics = LocalHapticFeedback.current
     // Clearance between pointer finger and bottom edge of lifted floating piece
@@ -85,7 +109,11 @@ fun CascadeGameScreen(
     var showRestartConfirm by remember { mutableStateOf(false) }
     var showExitConfirm by remember { mutableStateOf(false) }
 
-    BackHandler(enabled = state.status == GameStatus.PLAYING) {
+    BackHandler(enabled = state.showContinueOffer) {
+        viewModel.declineContinueOffer()
+    }
+
+    BackHandler(enabled = state.status == GameStatus.PLAYING && !state.showContinueOffer) {
         showExitConfirm = true
     }
 
@@ -95,7 +123,8 @@ fun CascadeGameScreen(
         }
     }
 
-    LaunchedEffect(state.status) {
+    LaunchedEffect(state.status, state.showContinueOffer) {
+        if (state.showContinueOffer) return@LaunchedEffect
         when (state.status) {
             GameStatus.CHALLENGE_WON -> onLevelComplete()
             GameStatus.GAME_OVER, GameStatus.CHALLENGE_LOST -> onGameOver()
@@ -222,7 +251,7 @@ fun CascadeGameScreen(
                                 state.traySlots.any { it.piece != null },
                             onClick = viewModel::useShuffleBooster
                         )
-                        HintFooter(hasSelectedPiece = state.selectedSlotIndex != null)
+                        BannerAdBar()
                     }
                 }
             } else {
@@ -339,7 +368,7 @@ fun CascadeGameScreen(
                                 state.traySlots.any { it.piece != null },
                             onClick = viewModel::useShuffleBooster
                         )
-                        HintFooter(hasSelectedPiece = state.selectedSlotIndex != null)
+                        BannerAdBar()
                         Spacer(Modifier.height(2.dp))
                     }
                 }
@@ -400,6 +429,109 @@ fun CascadeGameScreen(
         if (state.showRulesDialog) {
             GravityRulesDialog(onDismiss = { viewModel.toggleRulesDialog(false) })
         }
+
+        if (state.showContinueOffer) {
+            ContinueCountdownOverlay(
+                secondsRemaining = state.continueCountdownSeconds,
+                score = state.score,
+                adReady = continueAdState is AdState.Ready && activity != null,
+                onWatchAd = {
+                    activity?.let { viewModel.watchContinueRewardedAd(it) }
+                },
+                onSkip = viewModel::declineContinueOffer
+            )
+        }
+    }
+}
+
+@Composable
+private fun ContinueCountdownOverlay(
+    secondsRemaining: Int,
+    score: Int,
+    adReady: Boolean,
+    onWatchAd: () -> Unit,
+    onSkip: () -> Unit
+) {
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xB80F172A))
+            .padding(24.dp)
+            .testTag("continue_offer_overlay")
+    ) {
+        PremiumCard(
+            cornerRadius = 20.dp,
+            borderColor = AccentGold.copy(alpha = 0.65f),
+            modifier = Modifier.widthIn(max = 380.dp).fillMaxWidth()
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(22.dp)
+            ) {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .size(72.dp)
+                        .clip(CircleShape)
+                        .background(AccentGold.copy(alpha = 0.16f))
+                        .border(2.5.dp, AccentGold, CircleShape)
+                ) {
+                    Text(
+                        text = "${secondsRemaining}s",
+                        style = MaterialTheme.typography.headlineMedium.copy(
+                            fontFamily = JetBrainsMonoFontFamily,
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 26.sp
+                        ),
+                        color = AccentGold,
+                        modifier = Modifier.testTag("continue_countdown_text")
+                    )
+                }
+
+                Text(
+                    text = "Continue Playing?",
+                    style = MaterialTheme.typography.headlineSmall.copy(
+                        fontFamily = OutfitFontFamily,
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 22.sp
+                    ),
+                    color = TextPrimary,
+                    textAlign = TextAlign.Center
+                )
+
+                Text(
+                    text = "Watch a short rewarded ad to clear center blocks and rescue your $score pt run!",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TextSecondary,
+                    textAlign = TextAlign.Center
+                )
+
+                PremiumPrimaryButton(
+                    text = if (adReady) "Watch Ad to Continue" else "Loading Rewarded Ad...",
+                    icon = Icons.Filled.PlayCircle,
+                    style = ArcadeButtonStyle.GREEN,
+                    enabled = adReady,
+                    onClick = onWatchAd,
+                    height = 52.dp,
+                    cornerRadius = 14.dp,
+                    fontSize = 15.sp,
+                    testTag = "continue_watch_ad_button",
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                SecondaryButton(
+                    text = "No Thanks (${secondsRemaining}s)",
+                    accent = TextSecondary,
+                    onClick = onSkip,
+                    height = 48.dp,
+                    testTag = "continue_skip_button"
+                )
+            }
+        }
     }
 }
 
@@ -413,21 +545,5 @@ private fun ShuffleBoosterButton(count: Int, enabled: Boolean, onClick: () -> Un
         height = 48.dp,
         onClick = onClick,
         testTag = "shuffle_booster_button"
-    )
-}
-
-@Composable
-private fun HintFooter(hasSelectedPiece: Boolean) {
-    Text(
-        text = if (hasSelectedPiece) {
-            "Tap any board square to place your piece"
-        } else {
-            "Drag or tap a piece to place · Complete lines to clear"
-        },
-        style = MaterialTheme.typography.bodyMedium.copy(fontSize = 11.sp),
-        color = TextSecondary,
-        textAlign = TextAlign.Center,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis
     )
 }

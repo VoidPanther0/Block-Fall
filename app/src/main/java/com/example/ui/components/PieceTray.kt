@@ -81,16 +81,18 @@ fun PieceTray(
     val trayCorner = if (blockStyle == BlockStyle.RETRO) 10.dp else 14.dp
     val trayShape = RoundedCornerShape(trayCorner)
 
-    // Legality comes from the authoritative validator — the UI only reflects it.
-    val usableSlots = remember(board, slots) {
-        slots.map { slot ->
-            slot.piece != null && PlacementValidator.findAllValidAnchors(board, slot.piece).isNotEmpty()
+    // Legality comes from the authoritative validator — evaluate only during active PLAYING state.
+    val usableSlots = remember(board, slots, status) {
+        if (status != GameStatus.PLAYING) {
+            slots.map { it.piece != null }
+        } else {
+            slots.map { slot ->
+                slot.piece != null && PlacementValidator.findAllValidAnchors(board, slot.piece).isNotEmpty()
+            }
         }
     }
-    val anyUsable = usableSlots.any { it }
 
-    Column(
-        verticalArrangement = Arrangement.spacedBy(6.dp),
+    Box(
         modifier = modifier
             .fillMaxWidth()
             .shadow(2.dp, trayShape, clip = false)
@@ -123,22 +125,6 @@ fun PieceTray(
                     modifier = Modifier.weight(1f)
                 )
             }
-        }
-
-        if (!anyUsable && status == GameStatus.PLAYING) {
-            Text(
-                text = "No valid placement — shuffle or clear space",
-                style = MaterialTheme.typography.bodySmall.copy(
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.SemiBold
-                ),
-                color = AccentWarning,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier
-                    .align(Alignment.CenterHorizontally)
-                    .testTag("piece_tray_no_valid_hint")
-            )
         }
     }
 }
@@ -224,25 +210,8 @@ private fun TraySlotCard(
                 piece = piece,
                 blockStyle = blockStyle,
                 boardPalette = boardPalette,
+                alpha = if (isUsable || !isInteractive) 1f else 0.45f,
                 modifier = Modifier.fillMaxSize()
-            )
-        }
-        if (piece != null && !isUsable) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .clip(RoundedCornerShape(slotCorner))
-                    .background(androidx.compose.ui.graphics.Color(0xCCF8FAFC))
-            )
-            Text(
-                text = "NO FIT",
-                style = MaterialTheme.typography.labelSmall.copy(
-                    fontFamily = OutfitFontFamily,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 9.5.sp
-                ),
-                color = AccentWarning,
-                maxLines = 1
             )
         }
     }
@@ -253,7 +222,8 @@ fun MiniPieceCanvas(
     piece: GamePiece,
     modifier: Modifier = Modifier,
     blockStyle: BlockStyle = LocalBlockStyle.current,
-    boardPalette: BoardColorPalette = LocalBoardPalette.current
+    boardPalette: BoardColorPalette = LocalBoardPalette.current,
+    alpha: Float = 1f
 ) {
     Canvas(modifier = modifier) {
         val gridDim = 5f
@@ -272,6 +242,7 @@ fun MiniPieceCanvas(
                 top = offsetY + cell.row * maxCellSize + gap / 2f,
                 cellSize = tile,
                 color = piece.color,
+                alpha = alpha,
                 blockStyle = blockStyle,
                 boardPalette = boardPalette
             )

@@ -13,13 +13,22 @@
           "type": "string",
           "description": "Player public or profile display name."
         },
+        "avatarId": {
+          "type": "string",
+          "enum": [
+            "classic_block",
+            "cobalt_shield",
+            "emerald_gem",
+            "amber_crown",
+            "coral_spark",
+            "violet_orb",
+            "google_photo"
+          ],
+          "description": "Selected profile avatar identifier."
+        },
         "classicBestScore": {
           "type": "integer",
           "description": "Highest verified local/synced Classic mode score."
-        },
-        "unlockedChallengeLevel": {
-          "type": "integer",
-          "description": "Highest unlocked Challenge level number (1..50)."
         },
         "totalGamesPlayed": {
           "type": "integer",
@@ -52,7 +61,7 @@
         },
         "boardPaletteId": {
           "type": "string",
-          "enum": ["deep_ocean", "midnight", "emerald_grove", "sunset"],
+          "enum": ["royal", "midnight", "emerald", "sunset"],
           "description": "Active BoardColorPalette ID."
         },
         "soundEnabled": {
@@ -84,8 +93,8 @@
       "required": [
         "userId",
         "displayName",
+        "avatarId",
         "classicBestScore",
-        "unlockedChallengeLevel",
         "totalGamesPlayed",
         "totalLinesCleared",
         "totalCascadesTriggered",
@@ -99,43 +108,6 @@
         "hapticsEnabled",
         "visualEffectsEnabled",
         "placementPreviewEnabled",
-        "createdAt",
-        "updatedAt"
-      ]
-    },
-    "ChallengeProgressDoc": {
-      "title": "ChallengeProgressDoc",
-      "description": "Per-level Challenge mode stars and best score.",
-      "type": "object",
-      "properties": {
-        "levelNumber": {
-          "type": "integer"
-        },
-        "bestScore": {
-          "type": "integer"
-        },
-        "stars": {
-          "type": "integer"
-        },
-        "completed": {
-          "type": "boolean"
-        },
-        "createdAt": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Server timestamp written via FieldValue.serverTimestamp()."
-        },
-        "updatedAt": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Server timestamp written via FieldValue.serverTimestamp()."
-        }
-      },
-      "required": [
-        "levelNumber",
-        "bestScore",
-        "stars",
-        "completed",
         "createdAt",
         "updatedAt"
       ]
@@ -242,10 +214,6 @@
     "/users/{userId}": {
       "schema": { "$ref": "#/entities/UserCloudProfile" },
       "description": "Authenticated user progression, stats, and settings."
-    },
-    "/users/{userId}/challengeProgress/{levelId}": {
-      "schema": { "$ref": "#/entities/ChallengeProgressDoc" },
-      "description": "Authenticated user per-level Challenge completion state."
     },
     "/users/{userId}/integrityAttestations/{attestationId}": {
       "schema": { "$ref": "#/entities/IntegrityAttestationDoc" },

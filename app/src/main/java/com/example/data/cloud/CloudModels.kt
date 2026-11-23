@@ -1,6 +1,7 @@
 package com.example.data.cloud
 
 import androidx.annotation.Keep
+import com.example.game.ProfileAvatar
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.FieldValue
@@ -13,8 +14,8 @@ data class UserCloudProfile(
     @DocumentId val documentId: String = "",
     val userId: String = "",
     val displayName: String = "Player",
+    val avatarId: String = "classic_block",
     val classicBestScore: Long = 0L,
-    val unlockedChallengeLevel: Long = 1L,
     val totalGamesPlayed: Long = 0L,
     val totalLinesCleared: Long = 0L,
     val totalCascadesTriggered: Long = 0L,
@@ -22,7 +23,7 @@ data class UserCloudProfile(
     val totalBlocksPlaced: Long = 0L,
     val fullBoardClears: Long = 0L,
     val blockStyleId: String = "modern",
-    val boardPaletteId: String = "deep_ocean",
+    val boardPaletteId: String = "royal",
     val soundEnabled: Boolean = true,
     val musicEnabled: Boolean = true,
     val hapticsEnabled: Boolean = true,
@@ -34,8 +35,8 @@ data class UserCloudProfile(
     fun toCreateMap(): Map<String, Any> = mapOf(
         "userId" to userId,
         "displayName" to sanitizeDisplayName(displayName),
+        "avatarId" to sanitizeAvatarId(avatarId),
         "classicBestScore" to classicBestScore.coerceIn(0L, MAX_SCORE),
-        "unlockedChallengeLevel" to unlockedChallengeLevel.coerceIn(1L, MAX_LEVEL),
         "totalGamesPlayed" to totalGamesPlayed.coerceIn(0L, MAX_STAT),
         "totalLinesCleared" to totalLinesCleared.coerceIn(0L, MAX_STAT),
         "totalCascadesTriggered" to totalCascadesTriggered.coerceIn(0L, MAX_STAT),
@@ -55,8 +56,8 @@ data class UserCloudProfile(
 
     fun toUpdateMap(): Map<String, Any> = mapOf(
         "displayName" to sanitizeDisplayName(displayName),
+        "avatarId" to sanitizeAvatarId(avatarId),
         "classicBestScore" to classicBestScore.coerceIn(0L, MAX_SCORE),
-        "unlockedChallengeLevel" to unlockedChallengeLevel.coerceIn(1L, MAX_LEVEL),
         "totalGamesPlayed" to totalGamesPlayed.coerceIn(0L, MAX_STAT),
         "totalLinesCleared" to totalLinesCleared.coerceIn(0L, MAX_STAT),
         "totalCascadesTriggered" to totalCascadesTriggered.coerceIn(0L, MAX_STAT),
@@ -75,51 +76,25 @@ data class UserCloudProfile(
 
     companion object {
         const val MAX_SCORE = 10_000_000L
-        const val MAX_LEVEL = 50L
         const val MAX_STAT = 10_000_000L
         const val MAX_DEPTH = 100L
         const val MAX_BLOCKS = 100_000_000L
 
         private val VALID_BLOCK_STYLES = setOf("modern", "retro", "neon")
-        private val VALID_BOARD_PALETTES = setOf("deep_ocean", "midnight", "emerald_grove", "sunset")
+        private val VALID_BOARD_PALETTES = setOf("royal", "midnight", "emerald", "sunset")
 
         fun sanitizeDisplayName(raw: String?): String =
             raw?.trim()?.take(40)?.takeIf { it.isNotEmpty() } ?: "Player"
+
+        fun sanitizeAvatarId(raw: String?): String =
+            if (raw != null && raw in ProfileAvatar.VALID_IDS) raw else ProfileAvatar.CLASSIC_BLOCK.id
 
         fun sanitizeBlockStyle(raw: String): String =
             if (raw in VALID_BLOCK_STYLES) raw else "modern"
 
         fun sanitizeBoardPalette(raw: String): String =
-            if (raw in VALID_BOARD_PALETTES) raw else "deep_ocean"
+            if (raw in VALID_BOARD_PALETTES) raw else "royal"
     }
-}
-
-@Keep
-@IgnoreExtraProperties
-data class ChallengeProgressDoc(
-    @DocumentId val documentId: String = "",
-    val levelNumber: Long = 1L,
-    val bestScore: Long = 0L,
-    val stars: Long = 0L,
-    val completed: Boolean = false,
-    @ServerTimestamp val createdAt: Timestamp? = null,
-    @ServerTimestamp val updatedAt: Timestamp? = null
-) {
-    fun toCreateMap(): Map<String, Any> = mapOf(
-        "levelNumber" to levelNumber.coerceIn(1L, 50L),
-        "bestScore" to bestScore.coerceIn(0L, UserCloudProfile.MAX_SCORE),
-        "stars" to stars.coerceIn(0L, 3L),
-        "completed" to completed,
-        "createdAt" to FieldValue.serverTimestamp(),
-        "updatedAt" to FieldValue.serverTimestamp()
-    )
-
-    fun toUpdateMap(): Map<String, Any> = mapOf(
-        "bestScore" to bestScore.coerceIn(0L, UserCloudProfile.MAX_SCORE),
-        "stars" to stars.coerceIn(0L, 3L),
-        "completed" to completed,
-        "updatedAt" to FieldValue.serverTimestamp()
-    )
 }
 
 @Keep

@@ -47,7 +47,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
 import com.example.game.BlockColor
-import com.example.game.ChallengeLevels
 import com.example.game.DailyChallengeGenerator
 import com.example.ui.GameUiState
 import com.example.ui.components.ArcadeButtonStyle
@@ -77,6 +76,7 @@ fun HomeScreen(
     state: GameUiState,
     isCloudSignedIn: Boolean = false,
     playerName: String? = null,
+    googlePhotoUrl: String? = null,
     onPlayNewClassic: () -> Unit,
     onContinueClassic: () -> Unit,
     onPlayDaily: () -> Unit = {},
@@ -89,8 +89,6 @@ fun HomeScreen(
 ) {
     val savedSummary = state.savedClassicSummary
     val canContinue = savedSummary != null
-    val totalStars = state.challengeProgress.values.sumOf { it.stars }
-    val maxStars = ChallengeLevels.levels.size * 3
     val hasCrown = "cosmetic_prism_crown" in state.wallet.unlockedEntitlements
     val dailySpec = remember {
         DailyChallengeGenerator.forDateKey(DailyChallengeGenerator.todayDateKey())
@@ -109,6 +107,8 @@ fun HomeScreen(
                 rank = state.playerRank,
                 goldCoins = state.wallet.goldCoins,
                 diamonds = state.wallet.diamonds,
+                avatarId = state.profileAvatarId,
+                googlePhotoUrl = googlePhotoUrl,
                 hasCrownCosmetic = hasCrown,
                 isCloudSignedIn = isCloudSignedIn,
                 onOpenProfile = onOpenStatistics,
@@ -151,9 +151,6 @@ fun HomeScreen(
                                     onClick = onPlayDaily
                                 )
                                 HomeActionHub(
-                                    totalStars = totalStars,
-                                    maxStars = maxStars,
-                                    unlockedLevel = state.unlockedChallengeLevel,
                                     onOpenModes = onOpenModes,
                                     onOpenChallenges = onOpenChallenges,
                                     onOpenShop = onOpenShop,
@@ -177,9 +174,6 @@ fun HomeScreen(
                             onClick = onPlayDaily
                         )
                         HomeActionHub(
-                            totalStars = totalStars,
-                            maxStars = maxStars,
-                            unlockedLevel = state.unlockedChallengeLevel,
                             onOpenModes = onOpenModes,
                             onOpenChallenges = onOpenChallenges,
                             onOpenShop = onOpenShop,
@@ -395,9 +389,6 @@ private fun DailyRewardStrip(
 
 @Composable
 private fun HomeActionHub(
-    totalStars: Int,
-    maxStars: Int,
-    unlockedLevel: Int,
     onOpenModes: () -> Unit,
     onOpenChallenges: () -> Unit,
     onOpenShop: () -> Unit,
@@ -420,7 +411,7 @@ private fun HomeActionHub(
             )
             HomeHubTile(
                 title = stringResource(R.string.nav_challenges),
-                subtitle = "★ $totalStars/$maxStars · Lvl $unlockedLevel",
+                subtitle = "8 tactical puzzle boards",
                 icon = Icons.Filled.Star,
                 accent = AccentGold,
                 onClick = onOpenChallenges,
@@ -454,8 +445,8 @@ private fun HomeActionHub(
         }
 
         HomeHubTile(
-            title = "Profile & Stats",
-            subtitle = "Rank · achievements · lifetime stats",
+            title = "Profile",
+            subtitle = "Avatar · rank · best score",
             icon = Icons.Filled.Leaderboard,
             accent = AccentCyan,
             onClick = onOpenStatistics,

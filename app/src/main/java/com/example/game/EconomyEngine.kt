@@ -361,6 +361,42 @@ object EconomyEngine {
         )
     }
 
+    const val RENAME_DIAMOND_COST = 100
+    const val MAX_PLAYER_NAME_LENGTH = 24
+
+    fun renameProfileWithDiamonds(
+        wallet: PlayerWallet,
+        newName: String,
+        transactionId: String,
+        cost: Int = RENAME_DIAMOND_COST
+    ): EconomyMutationResult {
+        if (transactionId.isBlank()) {
+            return EconomyMutationResult.Rejected("Missing transaction ID")
+        }
+        if (transactionId in wallet.processedLedgerIds) {
+            return EconomyMutationResult.Rejected("Duplicate transaction ignored")
+        }
+        val cleanName = newName.trim().replace(Regex("\\s+"), " ")
+        if (cleanName.isEmpty()) {
+            return EconomyMutationResult.Rejected("Enter a valid player name")
+        }
+        if (cleanName.length > MAX_PLAYER_NAME_LENGTH) {
+            return EconomyMutationResult.Rejected("Name must be $MAX_PLAYER_NAME_LENGTH characters or fewer")
+        }
+        if (cost < 0 || wallet.diamonds < cost) {
+            return EconomyMutationResult.Rejected("Need $cost Diamonds to change name")
+        }
+        val updated = wallet.copy(
+            diamonds = (wallet.diamonds - cost).coerceAtLeast(0),
+            processedLedgerIds = (wallet.processedLedgerIds + transactionId).takeLastSet(64)
+        )
+        return EconomyMutationResult.Success(
+            updatedWallet = updated,
+            ledgerId = transactionId,
+            message = cleanName
+        )
+    }
+
     private fun Set<String>.takeLastSet(maxSize: Int): Set<String> {
         if (size <= maxSize) return this
         return toList().takeLast(maxSize).toSet()

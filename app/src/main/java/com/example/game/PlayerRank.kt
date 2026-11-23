@@ -9,7 +9,7 @@ data class PlayerRankInfo(
 )
 
 /**
- * Computes player progression rank deterministically from genuine local stats & stars.
+ * Computes player progression rank deterministically from genuine local stats.
  */
 object PlayerRankCalculator {
 
@@ -24,18 +24,11 @@ object PlayerRankCalculator {
         Tier("Grand Architect", 4500)
     )
 
-    fun compute(
-        stats: GameStatistics,
-        challengeProgress: Map<Int, ChallengeLevelProgress>,
-        unlockedAchievements: Set<String>
-    ): PlayerRankInfo {
-        val totalStars = challengeProgress.values.sumOf { it.stars }
-        val xp = (stats.totalLinesCleared * 8) +
-            (stats.totalCascadesTriggered * 25) +
-            (totalStars * 40) +
-            (stats.dailyCompletedCount * 60) +
-            (unlockedAchievements.size * 50) +
-            (stats.classicBestScore / 10)
+    fun compute(stats: GameStatistics): PlayerRankInfo {
+        val xp = (stats.totalLinesCleared * 10) +
+            (stats.totalCascadesTriggered * 35) +
+            (stats.dailyCompletedCount * 80) +
+            (stats.classicBestScore / 8)
 
         var currentIdx = 0
         for (i in tiers.indices) {

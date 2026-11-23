@@ -37,13 +37,10 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.ShoppingBag
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.outlined.EmojiEvents
-import androidx.compose.material.icons.outlined.GridView
-import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.Person
-import androidx.compose.material.icons.outlined.ShoppingBag
+import androidx.compose.material.icons.filled.WorkspacePremium
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -58,19 +55,22 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.game.AchievementId
+import coil.compose.AsyncImage
 import com.example.game.BlockColor
 import com.example.game.BlockStyle
 import com.example.game.BoardColorPalette
 import com.example.game.PlayerRankInfo
+import com.example.game.ProfileAvatar
 import com.example.ui.theme.AccentCyan
 import com.example.ui.theme.AccentEmerald
 import com.example.ui.theme.AccentGold
@@ -90,11 +90,110 @@ import com.example.ui.theme.TextSecondary
 import com.example.ui.theme.toBoardColors
 
 @Composable
+fun PlayerAvatarBadge(
+    avatarId: String,
+    googlePhotoUrl: String? = null,
+    size: Dp = 48.dp,
+    hasCrownCosmetic: Boolean = false,
+    modifier: Modifier = Modifier
+) {
+    val avatar = ProfileAvatar.fromId(avatarId)
+    val shape = RoundedCornerShape((size.value * 0.25f).dp)
+    val borderColor = if (hasCrownCosmetic) AccentGold else GlassBorder
+    val borderWidth = if (hasCrownCosmetic) 1.5.dp else 1.dp
+
+    val bgColor = when (avatar) {
+        ProfileAvatar.CLASSIC_BLOCK -> SurfaceCard
+        ProfileAvatar.COBALT_SHIELD -> Color(0xFFE0EEFF)
+        ProfileAvatar.EMERALD_GEM -> Color(0xFFE0F7EA)
+        ProfileAvatar.AMBER_CROWN -> Color(0xFFFFF4DC)
+        ProfileAvatar.CORAL_SPARK -> Color(0xFFFFE5E8)
+        ProfileAvatar.VIOLET_ORB -> Color(0xFFF0E8FF)
+        ProfileAvatar.GOOGLE_PHOTO -> Color(0xFFE8F0FE)
+    }
+
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = modifier
+            .size(size)
+            .clip(shape)
+            .background(bgColor)
+            .border(borderWidth, borderColor, shape)
+    ) {
+        when {
+            avatar == ProfileAvatar.GOOGLE_PHOTO && !googlePhotoUrl.isNullOrBlank() -> {
+                AsyncImage(
+                    model = googlePhotoUrl,
+                    contentDescription = "Google profile photo",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .size(size)
+                        .clip(shape)
+                )
+            }
+            avatar == ProfileAvatar.GOOGLE_PHOTO -> {
+                Icon(
+                    imageVector = Icons.Filled.Person,
+                    contentDescription = avatar.label,
+                    tint = AccentCyan,
+                    modifier = Modifier.size(size * 0.56f)
+                )
+            }
+            avatar == ProfileAvatar.CLASSIC_BLOCK -> {
+                ArcadeBlockEmblem(size = size * 0.6f)
+            }
+            avatar == ProfileAvatar.COBALT_SHIELD -> {
+                Icon(
+                    imageVector = Icons.Filled.Shield,
+                    contentDescription = avatar.label,
+                    tint = AccentCyan,
+                    modifier = Modifier.size(size * 0.56f)
+                )
+            }
+            avatar == ProfileAvatar.EMERALD_GEM -> {
+                Icon(
+                    imageVector = Icons.Filled.AutoAwesome,
+                    contentDescription = avatar.label,
+                    tint = AccentEmerald,
+                    modifier = Modifier.size(size * 0.56f)
+                )
+            }
+            avatar == ProfileAvatar.AMBER_CROWN -> {
+                Icon(
+                    imageVector = Icons.Filled.WorkspacePremium,
+                    contentDescription = avatar.label,
+                    tint = AccentGold,
+                    modifier = Modifier.size(size * 0.58f)
+                )
+            }
+            avatar == ProfileAvatar.CORAL_SPARK -> {
+                Icon(
+                    imageVector = Icons.Filled.Bolt,
+                    contentDescription = avatar.label,
+                    tint = Color(0xFFE11D48),
+                    modifier = Modifier.size(size * 0.58f)
+                )
+            }
+            avatar == ProfileAvatar.VIOLET_ORB -> {
+                Icon(
+                    imageVector = Icons.Filled.Star,
+                    contentDescription = avatar.label,
+                    tint = AccentPurple,
+                    modifier = Modifier.size(size * 0.56f)
+                )
+            }
+        }
+    }
+}
+
+@Composable
 fun PlayerProfileHeader(
     playerName: String?,
     rank: PlayerRankInfo,
     goldCoins: Int,
     diamonds: Int,
+    avatarId: String = ProfileAvatar.CLASSIC_BLOCK.id,
+    googlePhotoUrl: String? = null,
     hasCrownCosmetic: Boolean = false,
     isCloudSignedIn: Boolean = false,
     onOpenProfile: () -> Unit,
@@ -123,20 +222,12 @@ fun PlayerProfileHeader(
                     .clickable(onClick = onOpenProfile)
                     .padding(vertical = 2.dp)
             ) {
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(SurfaceCard)
-                        .border(
-                            width = if (hasCrownCosmetic) 1.5.dp else 1.dp,
-                            color = if (hasCrownCosmetic) AccentGold else GlassBorder,
-                            shape = RoundedCornerShape(12.dp)
-                        )
-                ) {
-                    ArcadeBlockEmblem(size = 28.dp)
-                }
+                PlayerAvatarBadge(
+                    avatarId = avatarId,
+                    googlePhotoUrl = googlePhotoUrl,
+                    size = 48.dp,
+                    hasCrownCosmetic = hasCrownCosmetic
+                )
 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
@@ -458,100 +549,6 @@ fun SkinCard(
                     )
                 }
             }
-        }
-    }
-}
-
-@Composable
-fun AchievementCard(
-    achievement: AchievementId,
-    unlocked: Boolean,
-    modifier: Modifier = Modifier
-) {
-    val icon = when (achievement.iconKey) {
-        "star" -> Icons.Filled.Star
-        "layers" -> Icons.Filled.Layers
-        "bolt" -> Icons.Filled.Bolt
-        "auto_awesome" -> Icons.Filled.AutoAwesome
-        "trending" -> Icons.AutoMirrored.Filled.TrendingUp
-        "trophy" -> Icons.Filled.EmojiEvents
-        "flag" -> Icons.Filled.Flag
-        "check" -> Icons.Filled.CheckCircle
-        "crown" -> Icons.Filled.EmojiEvents
-        "calendar" -> Icons.Filled.CalendarToday
-        else -> Icons.Filled.Star
-    }
-    val accent = if (unlocked) AccentGold else TextMuted
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(if (unlocked) SurfaceCard else BoardWellBg)
-            .border(
-                width = 1.dp,
-                color = if (unlocked) AccentGold.copy(alpha = 0.65f) else GlassBorder,
-                shape = RoundedCornerShape(12.dp)
-            )
-            .padding(horizontal = 12.dp, vertical = 10.dp)
-    ) {
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier
-                .size(38.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(accent.copy(alpha = 0.14f))
-                .border(1.dp, accent.copy(alpha = 0.36f), RoundedCornerShape(10.dp))
-        ) {
-            Icon(
-                imageVector = if (unlocked) icon else Icons.Filled.Lock,
-                contentDescription = null,
-                tint = accent,
-                modifier = Modifier.size(19.dp)
-            )
-        }
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = achievement.title,
-                style = MaterialTheme.typography.titleSmall.copy(
-                    fontSize = 14.sp,
-                    fontWeight = if (unlocked) FontWeight.Bold else FontWeight.SemiBold
-                ),
-                color = if (unlocked) TextPrimary else TextSecondary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                text = achievement.description,
-                style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.5.sp),
-                color = TextMuted,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-            modifier = Modifier
-                .clip(CircleShape)
-                .background(if (unlocked) AccentEmerald.copy(alpha = 0.16f) else SurfaceCard)
-                .padding(horizontal = 8.dp, vertical = 4.dp)
-        ) {
-            Icon(
-                imageVector = if (unlocked) Icons.Filled.CheckCircle else Icons.Filled.Lock,
-                contentDescription = null,
-                tint = if (unlocked) AccentEmerald else TextMuted,
-                modifier = Modifier.size(12.dp)
-            )
-            Text(
-                text = if (unlocked) "UNLOCKED" else "LOCKED",
-                style = MaterialTheme.typography.labelSmall.copy(
-                    fontFamily = JetBrainsMonoFontFamily,
-                    fontSize = 9.5.sp
-                ),
-                color = if (unlocked) AccentEmerald else TextMuted
-            )
         }
     }
 }

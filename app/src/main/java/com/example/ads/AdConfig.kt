@@ -24,6 +24,8 @@ object AdConfig {
 
     const val TEST_APP_ID = "ca-app-pub-3940256099942544~3347511713"
     const val TEST_REWARDED_GOLD_UNIT_ID = "ca-app-pub-3940256099942544/5224354917"
+    const val TEST_BANNER_GAMEPLAY_UNIT_ID = "ca-app-pub-3940256099942544/6300978111"
+    const val TEST_REWARDED_CONTINUE_UNIT_ID = "ca-app-pub-3940256099942544/5224354917"
 
     private val APP_ID_PATTERN = Regex("^ca-app-pub-\\d{16}~\\d{10}$")
     private val AD_UNIT_PATTERN = Regex("^ca-app-pub-\\d{16}/\\d{10}$")
@@ -36,6 +38,8 @@ object AdConfig {
     val isAppIdValid: Boolean = APP_ID_PATTERN.matches(configuredAppId)
 
     private val configuredRewardedGoldUnitId: String = BuildConfig.ADMOB_REWARDED_GOLD_UNIT_ID
+    private val configuredBannerGameplayUnitId: String = BuildConfig.ADMOB_BANNER_GAMEPLAY_UNIT_ID
+    private val configuredRewardedContinueUnitId: String = BuildConfig.ADMOB_REWARDED_CONTINUE_UNIT_ID
 
     val rewardedGoldUnitId: String = if (BuildConfig.DEBUG) {
         TEST_REWARDED_GOLD_UNIT_ID
@@ -43,5 +47,21 @@ object AdConfig {
         configuredRewardedGoldUnitId
             .takeIf { AD_UNIT_PATTERN.matches(it) }
             ?: TEST_REWARDED_GOLD_UNIT_ID
+    }
+
+    val bannerGameplayUnitId: String = if (BuildConfig.DEBUG) {
+        TEST_BANNER_GAMEPLAY_UNIT_ID
+    } else {
+        configuredBannerGameplayUnitId
+            .takeIf { AD_UNIT_PATTERN.matches(it) }
+            ?: TEST_BANNER_GAMEPLAY_UNIT_ID
+    }
+
+    val rewardedContinueUnitId: String = if (BuildConfig.DEBUG) {
+        TEST_REWARDED_CONTINUE_UNIT_ID
+    } else {
+        configuredRewardedContinueUnitId
+            .takeIf { AD_UNIT_PATTERN.matches(it) }
+            ?: TEST_REWARDED_CONTINUE_UNIT_ID
     }
 }

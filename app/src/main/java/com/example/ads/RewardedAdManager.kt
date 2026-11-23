@@ -29,7 +29,10 @@ sealed class AdState {
  * The unit ID comes from [AdConfig]: debug builds always use Google's official test unit,
  * while release builds use the production "Rewarded Gold +50" unit.
  */
-class RewardedAdManager(private val context: Context) {
+class RewardedAdManager(
+    private val context: Context,
+    private val adUnitId: String = AdConfig.rewardedGoldUnitId
+) {
 
     companion object {
         private const val TAG = "RewardedAdManager"
@@ -53,7 +56,7 @@ class RewardedAdManager(private val context: Context) {
         try {
             RewardedAd.load(
                 context,
-                AdConfig.rewardedGoldUnitId,
+                adUnitId,
                 adRequest,
                 object : RewardedAdLoadCallback() {
                     override fun onAdLoaded(ad: RewardedAd) {

@@ -23,7 +23,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.example.game.BlockColor
-import com.example.game.ChallengeLevels
 import com.example.game.DailyChallengeGenerator
 import com.example.ui.GameUiState
 import com.example.ui.components.ArcadeButtonStyle
@@ -47,10 +46,8 @@ fun ModeSelectionScreen(
     onPlayDaily: () -> Unit = {},
     state: GameUiState = GameUiState()
 ) {
-    val totalStars = state.challengeProgress.values.sumOf { it.stars }
-    val maxStars = ChallengeLevels.levels.size * 3
     val classicStat = if (state.classicBestScore > 0) "Best Score: ${state.classicBestScore}" else "No limit · Beat your best"
-    val challengeStat = "★ $totalStars/$maxStars · Level ${state.unlockedChallengeLevel} unlocked"
+    val challengeStat = "8 Tactical Puzzle Boards"
 
     CascadeScreenContainer(
         maxContentWidth = 880.dp,

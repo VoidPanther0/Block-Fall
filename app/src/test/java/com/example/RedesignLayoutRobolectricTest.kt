@@ -3,9 +3,11 @@ package com.example
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -74,17 +76,34 @@ class RedesignLayoutRobolectricTest {
         composeRule.onNodeWithTag("shop_tab_vip_teams").performScrollTo().performClick()
         composeRule.waitForIdle()
 
-        // Back, then Home -> Profile (Statistics & Achievements)
+        // Back, then Home -> Profile (Rank, 100-Diamond Name Change, Avatar Picker, Best Score)
         composeRule.onNodeWithTag("shop_back_button").performClick()
         composeRule.waitForIdle()
         composeRule.onNodeWithTag("home_statistics_button").performScrollTo().performClick()
         composeRule.waitForIdle()
         composeRule.onNodeWithTag("statistics_screen").assertIsDisplayed()
         composeRule.onNodeWithTag("player_rank_card").assertIsDisplayed()
+        composeRule.onNodeWithTag("profile_rename_button").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithTag("profile_avatar_picker_card").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithTag("profile_best_score_card").performScrollTo().assertIsDisplayed()
+        assertEquals(0, composeRule.onAllNodesWithText("Challenge Mastery", substring = true).fetchSemanticsNodes().size)
+        assertEquals(0, composeRule.onAllNodesWithText("Career Telemetry", substring = true).fetchSemanticsNodes().size)
+        assertEquals(0, composeRule.onAllNodesWithText("Achievements", substring = true).fetchSemanticsNodes().size)
 
-        // Return to Home
+        // Return to Home -> Play Classic -> Verify Banner Ad footer and no NO FIT/drag hint text
         composeRule.onNodeWithTag("statistics_back_button").performClick()
         composeRule.waitForIdle()
         composeRule.onNodeWithTag("home_screen").assertIsDisplayed()
+        composeRule.onNodeWithTag("home_play_button").performScrollTo().performClick()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag("gameplay_screen").assertIsDisplayed()
+        val bannerNode = composeRule.onNodeWithTag("gameplay_banner_ad").fetchSemanticsNode()
+        org.junit.Assert.assertTrue(
+            "Expected gameplay_banner_ad height > 0, bounds=${bannerNode.boundsInRoot}",
+            bannerNode.boundsInRoot.height > 0f
+        )
+        composeRule.onNodeWithTag("gameplay_banner_ad").assertIsDisplayed()
+        assertEquals(0, composeRule.onAllNodesWithText("Drag or tap", substring = true).fetchSemanticsNodes().size)
+        assertEquals(0, composeRule.onAllNodesWithText("NO FIT", substring = true).fetchSemanticsNodes().size)
     }
 }
