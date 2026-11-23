@@ -387,8 +387,8 @@ fun GameBoard(
                             top = top,
                             cellSize = tileSize,
                             color = dragState.piece.color,
-                            alpha = 0.46f,
-                            glowBoost = if (visualEffectsEnabled) 0.52f else 0f,
+                            alpha = 0.55f,
+                            glowBoost = 0f,
                             blockStyle = blockStyle,
                             boardPalette = boardPalette
                         )
@@ -405,20 +405,6 @@ fun GameBoard(
                             size = Size(tileSize, tileSize),
                             cornerRadius = slotRadius,
                             style = Stroke(width = 2.2f)
-                        )
-                        // Non-color-only cross indicator inside invalid cell
-                        val inset = tileSize * 0.28f
-                        drawLine(
-                            color = Color.White.copy(alpha = 0.72f),
-                            start = Offset(left + inset, top + inset),
-                            end = Offset(left + tileSize - inset, top + tileSize - inset),
-                            strokeWidth = 2f
-                        )
-                        drawLine(
-                            color = Color.White.copy(alpha = 0.72f),
-                            start = Offset(left + tileSize - inset, top + inset),
-                            end = Offset(left + inset, top + tileSize - inset),
-                            strokeWidth = 2f
                         )
                     }
                 }
