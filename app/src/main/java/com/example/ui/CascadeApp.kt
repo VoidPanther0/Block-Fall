@@ -305,6 +305,10 @@ private fun CascadeNavHost(
                     onOpenStatistics = {
                         viewModel.playUiClick()
                         navController.navigate(StatisticsRoute)
+                    },
+                    onOpenSettings = {
+                        viewModel.playUiClick()
+                        navController.navigate(SettingsRoute)
                     }
                 )
             }
