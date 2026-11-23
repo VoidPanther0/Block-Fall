@@ -31,7 +31,6 @@
     <string name="back_label">Back</string>
     <string name="confirm_restart_title">Restart Game?</string>
     <string name="confirm_restart_body">Your current board progress will be cleared and a fresh game will start.</string>
-    <string name="confirm_exit_title">Exit to Home?</string>
     <string name="confirm_reset_title">Reset All Progress?</string>
     <string name="confirm_reset_body">This will erase your high scores, statistics, saved game, and unlocked challenge progress. This action cannot be undone.</string>
 </resources>

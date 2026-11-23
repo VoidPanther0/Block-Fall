@@ -24,9 +24,6 @@ data object GameplayRoute
 data object PauseRoute
 
 @Serializable
-data object HowToPlayRoute
-
-@Serializable
 data object ChallengeSelectionRoute
 
 @Serializable
@@ -49,3 +46,6 @@ data object LeaderboardRoute
 
 @Serializable
 data object ShopRoute
+
+@Serializable
+data object LuckyWheelRoute

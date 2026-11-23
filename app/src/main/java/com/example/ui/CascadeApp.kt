@@ -11,6 +11,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -44,7 +45,6 @@ import com.example.ui.navigation.ChallengeSelectionRoute
 import com.example.ui.navigation.GameOverRoute
 import com.example.ui.navigation.GameplayRoute
 import com.example.ui.navigation.HomeRoute
-import com.example.ui.navigation.HowToPlayRoute
 import com.example.ui.navigation.LeaderboardRoute
 import com.example.ui.navigation.LevelCompleteRoute
 import com.example.ui.navigation.ModeSelectionRoute
@@ -52,14 +52,15 @@ import com.example.ui.navigation.OnboardingRoute
 import com.example.ui.navigation.PauseRoute
 import com.example.ui.navigation.RulesRoute
 import com.example.ui.navigation.SettingsRoute
+import com.example.ui.navigation.LuckyWheelRoute
 import com.example.ui.navigation.ShopRoute
 import com.example.ui.navigation.SplashRoute
 import com.example.ui.navigation.StatisticsRoute
 import com.example.ui.screens.ChallengeSelectionScreen
 import com.example.ui.screens.GameOverScreen
 import com.example.ui.screens.HomeScreen
-import com.example.ui.screens.HowToPlayScreen
 import com.example.ui.screens.LeaderboardScreen
+import com.example.ui.screens.LuckyWheelScreen
 import com.example.ui.screens.LevelCompleteScreen
 import com.example.ui.screens.ModeSelectionScreen
 import com.example.ui.screens.OnboardingScreen
@@ -159,21 +160,29 @@ private fun AuthenticatedCloudSession(
     val gameState by gameViewModel.uiState.collectAsStateWithLifecycle()
     val cloudProfile by cloudViewModel.profileState.collectAsStateWithLifecycle()
 
+    // First cloud snapshot decides ownership of local progress:
+    //  - account already has data -> its own data replaces the guest data (guest score is not pushed up)
+    //  - brand new account -> guest progress is uploaded to it
+    var initialRestoreDone by remember(uid) { mutableStateOf(false) }
+
     LaunchedEffect(cloudProfile) {
-        val profileData = (cloudProfile as? CloudStreamState.Success)?.data
+        val success = cloudProfile as? CloudStreamState.Success ?: return@LaunchedEffect
+        val profileData = success.data
         if (profileData != null) {
-            gameViewModel.applyCloudMerge(profileData)
+            gameViewModel.applyCloudMerge(profileData, replaceLocal = !initialRestoreDone)
         }
+        initialRestoreDone = true
     }
 
     LaunchedEffect(
+        initialRestoreDone,
         uid,
         gameState.classicBestScore,
         gameState.statistics.totalGamesPlayed,
         gameState.playerDisplayName,
         gameState.profileAvatarId
     ) {
-        cloudViewModel.syncLocalStateToCloud(gameState)
+        if (initialRestoreDone) cloudViewModel.syncLocalStateToCloud(gameState)
     }
 
     CascadeNavHost(
@@ -293,10 +302,6 @@ private fun CascadeNavHost(
                         viewModel.playUiClick()
                         navController.navigate(LeaderboardRoute)
                     },
-                    onOpenSettings = {
-                        viewModel.playUiClick()
-                        navController.navigate(SettingsRoute)
-                    },
                     onOpenStatistics = {
                         viewModel.playUiClick()
                         navController.navigate(StatisticsRoute)
@@ -338,10 +343,6 @@ private fun CascadeNavHost(
                             launchSingleTop = true
                         }
                     },
-                    onOpenHowToPlay = {
-                        viewModel.playUiClick()
-                        navController.navigate(HowToPlayRoute)
-                    },
                     onLevelComplete = {
                         navController.navigate(LevelCompleteRoute) {
                             popUpTo<GameplayRoute> { inclusive = true }
@@ -377,17 +378,7 @@ private fun CascadeNavHost(
                         viewModel.playUiClick()
                         viewModel.exitToHome()
                         navController.popBackStack<HomeRoute>(inclusive = false)
-                    },
-                    onOpenSettings = {
-                        viewModel.playUiClick()
-                        navController.navigate(SettingsRoute)
                     }
-                )
-            }
-
-            composable<HowToPlayRoute> {
-                HowToPlayScreen(
-                    onBack = { navController.popBackStack() }
                 )
             }
 
@@ -461,25 +452,7 @@ private fun CascadeNavHost(
                     playerName = effectiveName,
                     googlePhotoUrl = currentUser?.photoUrl?.toString(),
                     onSelectAvatar = viewModel::selectProfileAvatar,
-                    onRenameWithDiamonds = viewModel::renamePlayerWithDiamonds
-                )
-            }
-
-            composable<SettingsRoute> {
-                SettingsScreen(
-                    state = state,
-                    onBack = { navController.popBackStack() },
-                    onToggleSound = viewModel::toggleSound,
-                    onToggleMusic = viewModel::toggleMusic,
-                    onToggleHaptics = viewModel::toggleHaptics,
-                    onToggleVisualEffects = viewModel::toggleVisualEffects,
-                    onTogglePlacementPreview = viewModel::togglePlacementPreview,
-                    onSelectBlockStyle = viewModel::setBlockStyle,
-                    onSelectBoardPalette = viewModel::setBoardPalette,
-                    onResetProgressConfirmed = {
-                        viewModel.playUiClick()
-                        viewModel.resetAllProgress()
-                    },
+                    onRenameWithDiamonds = viewModel::renamePlayerWithDiamonds,
                     cloudAccountContent = {
                         if (currentUser == null || cloudViewModel == null) {
                             GoogleSignInCard()
@@ -497,18 +470,57 @@ private fun CascadeNavHost(
                 )
             }
 
+            composable<SettingsRoute> {
+                SettingsScreen(
+                    state = state,
+                    onBack = { navController.popBackStack() },
+                    onToggleSound = viewModel::toggleSound,
+                    onToggleMusic = viewModel::toggleMusic,
+                    onToggleHaptics = viewModel::toggleHaptics,
+                    onToggleVisualEffects = viewModel::toggleVisualEffects,
+                    onTogglePlacementPreview = viewModel::togglePlacementPreview,
+                    onResetProgressConfirmed = {
+                        viewModel.playUiClick()
+                        viewModel.resetAllProgress()
+                    }
+                )
+            }
+
             composable<ShopRoute> {
+                val diamondAdState by viewModel.diamondAdState.collectAsStateWithLifecycle()
+                val economyMessage by viewModel.economyMessage.collectAsStateWithLifecycle()
                 ShopScreen(
                     state = state,
                     onBack = { navController.popBackStack() },
-                    onPurchase = viewModel::purchaseShopItem,
-                    onWatchAd = if (adState is AdState.Ready && activity != null) {
-                        { viewModel.watchRewardedAd(activity) }
-                    } else {
-                        null
-                    },
-                    onSelectBlockStyle = viewModel::setBlockStyle,
-                    onSelectBoardPalette = viewModel::setBoardPalette
+                    diamondAdReady = diamondAdState is AdState.Ready && activity != null,
+                    goldAdReady = adState is AdState.Ready && activity != null,
+                    message = economyMessage,
+                    onWatchDiamondAd = { activity?.let { viewModel.watchDiamondAd(it) } },
+                    onWatchGoldAd = { activity?.let { viewModel.watchRewardedAd(it) } },
+                    onOpenWheel = {
+                        viewModel.playUiClick()
+                        navController.navigate(LuckyWheelRoute)
+                    }
+                )
+            }
+
+            composable<LuckyWheelRoute> {
+                val wheelAdState by viewModel.wheelAdState.collectAsStateWithLifecycle()
+                val spinPoints by viewModel.wheelSpinPoints.collectAsStateWithLifecycle()
+                val spinning by viewModel.isSpinning.collectAsStateWithLifecycle()
+                val economyMessage by viewModel.economyMessage.collectAsStateWithLifecycle()
+                LuckyWheelScreen(
+                    isSignedIn = currentUser != null,
+                    spinPoints = spinPoints,
+                    isSpinning = spinning,
+                    wheelAdState = wheelAdState,
+                    message = economyMessage,
+                    lastPrize = { viewModel.lastSpinLabel },
+                    onBack = { navController.popBackStack() },
+                    onSpin = { cb -> viewModel.spinLuckyWheel(cb) },
+                    onFinishSpin = viewModel::finishWheelSpin,
+                    onWatchAd = { activity?.let { viewModel.watchWheelAd(it) } },
+                    onRefresh = viewModel::refreshServerWallet
                 )
             }
 

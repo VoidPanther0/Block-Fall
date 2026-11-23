@@ -65,9 +65,7 @@ import com.example.game.GameStatus
 import com.example.ui.components.ArcadeButtonStyle
 import com.example.ui.components.BannerAdBar
 import com.example.ui.components.CascadeCalloutBar
-import com.example.ui.components.ExitConfirmationDialog
 import com.example.ui.components.GameBoard
-import com.example.ui.components.GravityRulesDialog
 import com.example.ui.components.PieceTray
 import com.example.ui.components.PremiumCard
 import com.example.ui.components.PremiumPrimaryButton
@@ -90,7 +88,6 @@ import com.example.ui.theme.TextSecondary
 fun CascadeGameScreen(
     viewModel: GameViewModel = viewModel(),
     onOpenPause: () -> Unit = { viewModel.pauseGame() },
-    onOpenHowToPlay: () -> Unit = { viewModel.toggleRulesDialog(true) },
     onLevelComplete: () -> Unit = {},
     onGameOver: () -> Unit = {},
     onExitToHome: () -> Unit = {}
@@ -106,15 +103,14 @@ fun CascadeGameScreen(
 
     var rootOrigin by remember { mutableStateOf(Offset.Zero) }
     var boardBoundsInRoot by remember { mutableStateOf(Rect.Zero) }
-    var showRestartConfirm by remember { mutableStateOf(false) }
-    var showExitConfirm by remember { mutableStateOf(false) }
 
     BackHandler(enabled = state.showContinueOffer) {
         viewModel.declineContinueOffer()
     }
 
     BackHandler(enabled = state.status == GameStatus.PLAYING && !state.showContinueOffer) {
-        showExitConfirm = true
+        viewModel.pauseGame()
+        onOpenPause()
     }
 
     LaunchedEffect(state.currentCascadeWave) {
@@ -213,13 +209,14 @@ fun CascadeGameScreen(
                     ) {
                         TopGameBar(
                             state = state,
-                            onShowHowToPlay = onOpenHowToPlay,
-                            onRestart = { showRestartConfirm = true },
                             onPause = {
                                 viewModel.pauseGame()
                                 onOpenPause()
                             },
-                            onBack = { showExitConfirm = true }
+                            onBack = {
+                                viewModel.pauseGame()
+                                onOpenPause()
+                            }
                         )
                         ScorePanel(state = state)
                         PieceTray(
@@ -270,13 +267,14 @@ fun CascadeGameScreen(
                     ) {
                         TopGameBar(
                             state = state,
-                            onShowHowToPlay = onOpenHowToPlay,
-                            onRestart = { showRestartConfirm = true },
                             onPause = {
                                 viewModel.pauseGame()
                                 onOpenPause()
                             },
-                            onBack = { showExitConfirm = true }
+                            onBack = {
+                                viewModel.pauseGame()
+                                onOpenPause()
+                            }
                         )
                         ScorePanel(state = state)
                     }
@@ -404,31 +402,7 @@ fun CascadeGameScreen(
             }
         }
 
-        if (showRestartConfirm) {
-            RestartConfirmationDialog(
-                onConfirm = {
-                    showRestartConfirm = false
-                    viewModel.restartCurrentGame()
-                },
-                onDismiss = { showRestartConfirm = false }
-            )
-        }
 
-        if (showExitConfirm) {
-            ExitConfirmationDialog(
-                mode = state.mode,
-                onConfirm = {
-                    showExitConfirm = false
-                    viewModel.exitToHome()
-                    onExitToHome()
-                },
-                onDismiss = { showExitConfirm = false }
-            )
-        }
-
-        if (state.showRulesDialog) {
-            GravityRulesDialog(onDismiss = { viewModel.toggleRulesDialog(false) })
-        }
 
         if (state.showContinueOffer) {
             ContinueCountdownOverlay(

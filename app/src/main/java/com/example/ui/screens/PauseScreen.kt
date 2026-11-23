@@ -21,7 +21,6 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -45,13 +44,10 @@ import com.example.game.GameMode
 import com.example.ui.GameUiState
 import com.example.ui.components.ArcadeButtonStyle
 import com.example.ui.components.CascadeScreenContainer
-import com.example.ui.components.ExitConfirmationDialog
 import com.example.ui.components.FloatingModalBadge
 import com.example.ui.components.PremiumCard
 import com.example.ui.components.PremiumPrimaryButton
 import com.example.ui.components.RestartConfirmationDialog
-import com.example.ui.components.SecondaryButton
-import com.example.ui.theme.AccentCyan
 import com.example.ui.theme.AccentGold
 import com.example.ui.theme.BlueBtnBottom
 import com.example.ui.theme.BlueBtnTop
@@ -67,11 +63,9 @@ fun PauseScreen(
     state: GameUiState,
     onResume: () -> Unit,
     onRestartConfirmed: () -> Unit,
-    onExitToHomeConfirmed: () -> Unit,
-    onOpenSettings: (() -> Unit)? = null
+    onExitToHomeConfirmed: () -> Unit
 ) {
     var showRestartConfirm by remember { mutableStateOf(false) }
-    var showExitConfirm by remember { mutableStateOf(false) }
 
     BackHandler(onBack = onResume)
 
@@ -167,7 +161,7 @@ fun PauseScreen(
                             text = stringResource(R.string.nav_home),
                             icon = Icons.Filled.Home,
                             style = ArcadeButtonStyle.BLUE,
-                            onClick = { showExitConfirm = true },
+                            onClick = onExitToHomeConfirmed,
                             height = 50.dp,
                             cornerRadius = 12.dp,
                             fontSize = 16.sp,
@@ -175,16 +169,6 @@ fun PauseScreen(
                             modifier = Modifier.fillMaxWidth()
                         )
 
-                        if (onOpenSettings != null) {
-                            SecondaryButton(
-                                text = "Audio & Theme Settings",
-                                icon = Icons.Filled.Settings,
-                                accent = AccentCyan,
-                                onClick = onOpenSettings,
-                                testTag = "pause_settings_button",
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        }
                     }
                 }
 
@@ -213,16 +197,6 @@ fun PauseScreen(
         )
     }
 
-    if (showExitConfirm) {
-        ExitConfirmationDialog(
-            mode = state.mode,
-            onConfirm = {
-                showExitConfirm = false
-                onExitToHomeConfirmed()
-            },
-            onDismiss = { showExitConfirm = false }
-        )
-    }
 }
 
 @Composable

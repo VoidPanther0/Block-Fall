@@ -74,8 +74,6 @@ import com.example.ui.theme.TextSecondary
 @Composable
 fun TopGameBar(
     state: GameUiState,
-    onShowHowToPlay: () -> Unit,
-    onRestart: () -> Unit,
     onPause: () -> Unit,
     modifier: Modifier = Modifier,
     onBack: (() -> Unit)? = null
@@ -120,35 +118,6 @@ fun TopGameBar(
                     )
                 }
             }
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                modifier = Modifier
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(SurfaceCard)
-                    .border(1.dp, GlassBorder, RoundedCornerShape(12.dp))
-                    .padding(horizontal = 10.dp, vertical = 7.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(7.dp)
-                        .clip(CircleShape)
-                        .background(modeAccent)
-                )
-                Text(
-                    text = modeBadgeText.uppercase(),
-                    style = MaterialTheme.typography.labelLarge.copy(
-                        fontFamily = OutfitFontFamily,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 11.5.sp,
-                        letterSpacing = 0.5.sp
-                    ),
-                    color = TextPrimary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
         }
 
         Row(
@@ -160,34 +129,6 @@ fun TopGameBar(
                 .border(1.dp, GlassBorder, RoundedCornerShape(12.dp))
                 .padding(horizontal = 4.dp)
         ) {
-            IconButton(
-                onClick = onShowHowToPlay,
-                modifier = Modifier
-                    .size(48.dp)
-                    .testTag("rules_button")
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Outlined.HelpOutline,
-                    contentDescription = stringResource(R.string.how_to_play),
-                    tint = TextSecondary,
-                    modifier = Modifier.size(21.dp)
-                )
-            }
-
-            IconButton(
-                onClick = onRestart,
-                modifier = Modifier
-                    .size(48.dp)
-                    .testTag("restart_button")
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Refresh,
-                    contentDescription = stringResource(R.string.restart),
-                    tint = TextSecondary,
-                    modifier = Modifier.size(21.dp)
-                )
-            }
-
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier

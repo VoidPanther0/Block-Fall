@@ -281,19 +281,21 @@ class GameRepository(
         cloudTotalBlocks: Int,
         cloudFullClears: Int,
         cloudDisplayName: String? = null,
-        cloudAvatarId: String? = null
+        cloudAvatarId: String? = null,
+        replaceLocal: Boolean = false
     ): PersistedProgress {
         context.cascadeDataStore.edit { prefs ->
             val current = readProtectedProgressState(prefs)
-            val mergedBest = maxOf(current.classicBestScore, cloudBestScore.coerceAtLeast(0))
+            val pick: (Int, Int) -> Int = { local, cloud -> if (replaceLocal) cloud.coerceAtLeast(0) else maxOf(local, cloud.coerceAtLeast(0)) }
+            val mergedBest = pick(current.classicBestScore, cloudBestScore)
             val s = current.statistics
             val mergedStats = s.copy(
-                totalGamesPlayed = maxOf(s.totalGamesPlayed, cloudTotalGames.coerceAtLeast(0)),
-                totalLinesCleared = maxOf(s.totalLinesCleared, cloudTotalLines.coerceAtLeast(0)),
-                totalCascadesTriggered = maxOf(s.totalCascadesTriggered, cloudTotalCascades.coerceAtLeast(0)),
-                maxCascadeDepth = maxOf(s.maxCascadeDepth, cloudMaxDepth.coerceAtLeast(0)),
-                totalBlocksPlaced = maxOf(s.totalBlocksPlaced, cloudTotalBlocks.coerceAtLeast(0)),
-                fullBoardClears = maxOf(s.fullBoardClears, cloudFullClears.coerceAtLeast(0)),
+                totalGamesPlayed = pick(s.totalGamesPlayed, cloudTotalGames),
+                totalLinesCleared = pick(s.totalLinesCleared, cloudTotalLines),
+                totalCascadesTriggered = pick(s.totalCascadesTriggered, cloudTotalCascades),
+                maxCascadeDepth = pick(s.maxCascadeDepth, cloudMaxDepth),
+                totalBlocksPlaced = pick(s.totalBlocksPlaced, cloudTotalBlocks),
+                fullBoardClears = pick(s.fullBoardClears, cloudFullClears),
                 classicBestScore = mergedBest
             )
             writeProtectedProgressState(
@@ -304,13 +306,13 @@ class GameRepository(
                     tampered = false
                 )
             )
-            if (prefs[Keys.PLAYER_DISPLAY_NAME].isNullOrBlank() &&
+            if ((replaceLocal || prefs[Keys.PLAYER_DISPLAY_NAME].isNullOrBlank()) &&
                 !cloudDisplayName.isNullOrBlank() &&
                 cloudDisplayName != "Player"
             ) {
                 prefs[Keys.PLAYER_DISPLAY_NAME] = cloudDisplayName.trim().take(24)
             }
-            if (prefs[Keys.PROFILE_AVATAR_ID].isNullOrBlank() &&
+            if ((replaceLocal || prefs[Keys.PROFILE_AVATAR_ID].isNullOrBlank()) &&
                 !cloudAvatarId.isNullOrBlank() &&
                 cloudAvatarId in ProfileAvatar.VALID_IDS
             ) {

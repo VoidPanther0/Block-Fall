@@ -9,7 +9,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DeleteForever
-import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -22,7 +21,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.example.R
-import com.example.game.GameMode
 import com.example.ui.theme.AccentCoral
 import com.example.ui.theme.AccentCyan
 import com.example.ui.theme.AccentGold
@@ -45,31 +43,6 @@ fun RestartConfirmationDialog(
         dialogTag = "restart_confirmation_dialog",
         confirmTag = "confirm_restart_button",
         cancelTag = "cancel_restart_button",
-        onConfirm = onConfirm,
-        onDismiss = onDismiss
-    )
-}
-
-@Composable
-fun ExitConfirmationDialog(
-    mode: GameMode,
-    onConfirm: () -> Unit,
-    onDismiss: () -> Unit
-) {
-    val message = when (mode) {
-        GameMode.CLASSIC -> "Your current Classic board is saved automatically so you can continue anytime."
-        GameMode.CHALLENGE -> "Leaving now will discard your current Challenge attempt."
-    }
-    ConfirmationDialog(
-        icon = Icons.Filled.Home,
-        accent = AccentCyan,
-        title = stringResource(R.string.confirm_exit_title),
-        message = message,
-        confirmLabel = "Exit Home",
-        confirmStyle = ArcadeButtonStyle.BLUE,
-        dialogTag = "exit_confirmation_dialog",
-        confirmTag = "confirm_exit_button",
-        cancelTag = "cancel_exit_button",
         onConfirm = onConfirm,
         onDismiss = onDismiss
     )

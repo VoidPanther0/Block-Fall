@@ -61,20 +61,9 @@ class RedesignLayoutRobolectricTest {
         composeRule.onNodeWithTag("shop_gold_balance").assertIsDisplayed()
         composeRule.onNodeWithTag("shop_diamond_balance").assertIsDisplayed()
 
-        composeRule.onNodeWithTag("shop_tab_diamonds").performScrollTo().performClick()
-        composeRule.waitForIdle()
-        composeRule.onNodeWithTag("shop_item_entitlement_prism_crown").assertIsDisplayed()
-
-        composeRule.onNodeWithTag("shop_tab_gold").performScrollTo().performClick()
-        composeRule.waitForIdle()
-        composeRule.onNodeWithTag("shop_watch_ad_button").assertIsDisplayed()
-
-        composeRule.onNodeWithTag("shop_tab_abilities").performScrollTo().performClick()
-        composeRule.waitForIdle()
-        composeRule.onNodeWithTag("shop_wallet_bar").assertIsDisplayed()
-
-        composeRule.onNodeWithTag("shop_tab_vip_teams").performScrollTo().performClick()
-        composeRule.waitForIdle()
+        composeRule.onNodeWithTag("shop_watch_diamond_ad_button").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithTag("shop_watch_ad_button").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithTag("shop_open_wheel_button").performScrollTo().assertIsDisplayed()
 
         // Back, then Home -> Profile (Rank, 100-Diamond Name Change, Avatar Picker, Best Score)
         composeRule.onNodeWithTag("shop_back_button").performClick()

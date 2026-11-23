@@ -79,7 +79,8 @@ fun StatisticsScreen(
     playerName: String? = null,
     googlePhotoUrl: String? = null,
     onSelectAvatar: (String) -> Unit = {},
-    onRenameWithDiamonds: (String, (Boolean, String) -> Unit) -> Unit = { _, _ -> }
+    onRenameWithDiamonds: (String, (Boolean, String) -> Unit) -> Unit = { _, _ -> },
+    cloudAccountContent: @Composable () -> Unit = {}
 ) {
     val effectiveName = state.playerDisplayName?.takeIf { it.isNotBlank() }
         ?: playerName?.takeIf { it.isNotBlank() }
@@ -117,6 +118,8 @@ fun StatisticsScreen(
             )
 
             BestScoreCard(classicBestScore = state.classicBestScore)
+
+            cloudAccountContent()
 
             Spacer(Modifier.height(6.dp))
         }

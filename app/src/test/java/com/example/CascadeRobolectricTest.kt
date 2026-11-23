@@ -147,23 +147,6 @@ class CascadeRobolectricTest {
         composeRule.waitForIdle()
         assertTrue(composeRule.onAllNodesWithTag("score_card").fetchSemanticsNodes().isNotEmpty())
 
-        // Open How to Play from gameplay HUD '?' button and close with 'Got it!'
-        composeRule.onNodeWithTag("rules_button").performClick()
-        composeRule.waitForIdle()
-        composeRule.onNodeWithTag("how_to_play_screen").assertIsDisplayed()
-        composeRule.onNodeWithTag("how_to_play_demo_board").performClick()
-        composeRule.waitForIdle()
-        composeRule.onNodeWithTag("how_to_play_got_it_button").performScrollTo().performClick()
-        composeRule.waitForIdle()
-        composeRule.onNodeWithTag("game_board").assertIsDisplayed()
-
-        // Open Restart confirmation dialog and cancel
-        composeRule.onNodeWithTag("restart_button").performClick()
-        composeRule.waitForIdle()
-        composeRule.onNodeWithTag("restart_confirmation_dialog").assertIsDisplayed()
-        composeRule.onNodeWithTag("cancel_restart_button").performClick()
-        composeRule.waitForIdle()
-
         // Open Pause screen -> Resume
         composeRule.onNodeWithTag("pause_button").performClick()
         composeRule.waitForIdle()
@@ -177,8 +160,8 @@ class CascadeRobolectricTest {
         // Exit back to Home via confirmation dialog
         composeRule.onNodeWithTag("gameplay_back_button").performClick()
         composeRule.waitForIdle()
-        composeRule.onNodeWithTag("exit_confirmation_dialog").assertIsDisplayed()
-        composeRule.onNodeWithTag("confirm_exit_button").performClick()
+        composeRule.onNodeWithTag("pause_screen").assertIsDisplayed()
+        composeRule.onNodeWithTag("pause_home_button").performClick()
         composeRule.waitForIdle()
         composeRule.onNodeWithTag("home_screen").assertIsDisplayed()
     }
@@ -211,7 +194,7 @@ class CascadeRobolectricTest {
         // Exit Challenge back to Home
         composeRule.onNodeWithTag("gameplay_back_button").performClick()
         composeRule.waitForIdle()
-        composeRule.onNodeWithTag("confirm_exit_button").performClick()
+        composeRule.onNodeWithTag("pause_home_button").performClick()
         composeRule.waitForIdle()
         composeRule.onNodeWithTag("home_screen").assertIsDisplayed()
 
@@ -240,13 +223,6 @@ class CascadeRobolectricTest {
         composeRule.onNodeWithTag("setting_sound_switch").performClick()
         composeRule.waitForIdle()
 
-        composeRule.onNodeWithTag("theme_live_preview").performScrollTo().assertIsDisplayed()
-        composeRule.onNodeWithTag("theme_block_style_retro").performScrollTo().performClick()
-        composeRule.waitForIdle()
-        composeRule.onNodeWithTag("theme_board_palette_sunset").performScrollTo().performClick()
-        composeRule.waitForIdle()
-        composeRule.onNodeWithTag("theme_active_summary").performScrollTo().assertTextEquals("Retro · Sunset")
-        composeRule.onNodeWithTag("google_sign_in_card").performScrollTo().assertIsDisplayed()
 
         composeRule.onNodeWithTag("settings_back_button").performClick()
         composeRule.waitForIdle()

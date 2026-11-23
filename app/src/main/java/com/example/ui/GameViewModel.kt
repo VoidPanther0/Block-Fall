@@ -164,7 +164,27 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         RewardedAdManager(getApplication<Application>(), AdConfig.rewardedContinueUnitId)
     }
 
+    private val diamondAdManager by lazy {
+        RewardedAdManager(getApplication<Application>(), AdConfig.rewardedDiamondUnitId)
+    }
+    private val wheelAdManager by lazy {
+        RewardedAdManager(getApplication<Application>(), AdConfig.rewardedWheelUnitId)
+    }
+    private val serverEconomy by lazy { com.example.data.cloud.ServerEconomyClient() }
+
     val adState: StateFlow<AdState> = adManager.adState
+    val diamondAdState: StateFlow<AdState> = diamondAdManager.adState
+    val wheelAdState: StateFlow<AdState> = wheelAdManager.adState
+
+    private val _wheelSpinPoints = MutableStateFlow(0)
+    val wheelSpinPoints: StateFlow<Int> = _wheelSpinPoints.asStateFlow()
+    private val _economyMessage = MutableStateFlow<String?>(null)
+    val economyMessage: StateFlow<String?> = _economyMessage.asStateFlow()
+    private val _isSpinning = MutableStateFlow(false)
+    val isSpinning: StateFlow<Boolean> = _isSpinning.asStateFlow()
+
+    private fun isSignedIn(): Boolean =
+        runCatching { com.google.firebase.auth.FirebaseAuth.getInstance().currentUser != null }.getOrDefault(false)
     val continueAdState: StateFlow<AdState> = continueAdManager.adState
 
     private var nextIdCounter: Long = 100L
@@ -182,6 +202,8 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     init {
         adManager.loadAd()
         continueAdManager.loadAd()
+        diamondAdManager.loadAd()
+        wheelAdManager.loadAd()
         viewModelScope.launch {
             val saved = repository.loadInitialProgress()
             soundManager.soundEnabled = saved.settings.soundEnabled
@@ -656,14 +678,120 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     fun watchRewardedAd(activity: Activity) {
         adManager.showAd(
             activity = activity,
-            onRewarded = {
-                claimAdReward(
-                    goldAmount = AD_REWARD_GOLD,
-                    transactionId = UUID.randomUUID().toString()
-                )
-            },
-            onDismissed = { /* Ad closed without or after reward */ },
-            onFailed = { /* Ad unavailable — button stays disabled until next load */ }
+            onRewarded = { claimAdRewardOnServer(com.example.data.cloud.AdRewardType.GOLD_50) },
+            onDismissed = { },
+            onFailed = { _economyMessage.value = "Ad unavailable, try again shortly." }
+        )
+    }
+
+    fun watchDiamondAd(activity: Activity) {
+        diamondAdManager.showAd(
+            activity = activity,
+            onRewarded = { claimAdRewardOnServer(com.example.data.cloud.AdRewardType.DIAMOND_5) },
+            onDismissed = { },
+            onFailed = { _economyMessage.value = "Ad unavailable, try again shortly." }
+        )
+    }
+
+    fun watchWheelAd(activity: Activity) {
+        if (!isSignedIn()) {
+            _economyMessage.value = "Sign in with Google to use the Lucky Wheel."
+            return
+        }
+        wheelAdManager.showAd(
+            activity = activity,
+            onRewarded = { claimAdRewardOnServer(com.example.data.cloud.AdRewardType.WHEEL_POINT) },
+            onDismissed = { },
+            onFailed = { _economyMessage.value = "Ad unavailable, try again shortly." }
+        )
+    }
+
+    fun clearEconomyMessage() {
+        _economyMessage.value = null
+    }
+
+    /** Signed-in players are paid by the server; guests get the same reward locally. */
+    private fun claimAdRewardOnServer(type: com.example.data.cloud.AdRewardType) {
+        if (!isSignedIn()) {
+            when (type) {
+                com.example.data.cloud.AdRewardType.GOLD_50 ->
+                    claimAdReward(AD_REWARD_GOLD, UUID.randomUUID().toString())
+                com.example.data.cloud.AdRewardType.DIAMOND_5 -> viewModelScope.launch {
+                    val result = EconomyEngine.creditReward(
+                        wallet = _uiState.value.wallet,
+                        goldDelta = 0,
+                        diamondDelta = AD_REWARD_DIAMONDS,
+                        transactionId = UUID.randomUUID().toString(),
+                        reason = "Rewarded ad"
+                    )
+                    if (result is EconomyMutationResult.Success) applyWalletMutation(result.updatedWallet)
+                }
+                com.example.data.cloud.AdRewardType.WHEEL_POINT -> Unit
+            }
+            return
+        }
+        viewModelScope.launch {
+            serverEconomy.claimAdReward(type)
+                .onSuccess { applyServerWallet(it) }
+                .onFailure { _economyMessage.value = "Reward could not be verified. Please try again." }
+        }
+    }
+
+    /** Spins the server-side wheel; [onResult] receives the winning segment index. */
+    fun spinLuckyWheel(onResult: (Int?) -> Unit) {
+        if (_isSpinning.value) return
+        if (!isSignedIn()) {
+            _economyMessage.value = "Sign in with Google to use the Lucky Wheel."
+            onResult(null)
+            return
+        }
+        _isSpinning.value = true
+        viewModelScope.launch {
+            serverEconomy.spinLuckyWheel()
+                .onSuccess { spin ->
+                    pendingSpinWallet = spin.wallet
+                    _economyMessage.value = null
+                    lastSpinLabel = spin.prizeLabel
+                    onResult(spin.segmentIndex)
+                }
+                .onFailure {
+                    _isSpinning.value = false
+                    _economyMessage.value = "Spin failed. Watch an ad for a spin point and try again."
+                    onResult(null)
+                }
+        }
+    }
+
+    private var pendingSpinWallet: com.example.data.cloud.ServerWallet? = null
+    var lastSpinLabel: String = ""
+        private set
+
+    /** Called by the wheel UI once the spin animation stops, so the balance updates after the reveal. */
+    fun finishWheelSpin() {
+        pendingSpinWallet?.let { wallet ->
+            viewModelScope.launch { applyServerWallet(wallet) }
+        }
+        pendingSpinWallet = null
+        _isSpinning.value = false
+    }
+
+    fun refreshServerWallet() {
+        if (!isSignedIn()) return
+        viewModelScope.launch {
+            serverEconomy.fetchWallet().onSuccess { _wheelSpinPoints.value = it.wheelSpinPoints }
+        }
+    }
+
+    private suspend fun applyServerWallet(w: com.example.data.cloud.ServerWallet) {
+        _wheelSpinPoints.value = w.wheelSpinPoints
+        applyWalletMutation(
+            _uiState.value.wallet.copy(
+                goldCoins = w.goldCoins,
+                diamonds = w.diamonds,
+                hammerCount = w.hammerCount,
+                shuffleCount = w.shuffleCount,
+                refreshCount = w.refreshCount
+            )
         )
     }
 
@@ -1159,7 +1287,8 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun applyCloudMerge(
-        cloudProfile: com.example.data.cloud.UserCloudProfile?
+        cloudProfile: com.example.data.cloud.UserCloudProfile?,
+        replaceLocal: Boolean = false
     ) {
         if (cloudProfile == null) return
         viewModelScope.launch {
@@ -1172,16 +1301,17 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 cloudTotalBlocks = cloudProfile.totalBlocksPlaced.toInt(),
                 cloudFullClears = cloudProfile.fullBoardClears.toInt(),
                 cloudDisplayName = cloudProfile.displayName,
-                cloudAvatarId = cloudProfile.avatarId
+                cloudAvatarId = cloudProfile.avatarId,
+                replaceLocal = replaceLocal
             )
             val rank = computeProgression(merged.statistics)
             _uiState.update { cur ->
                 cur.copy(
-                    classicBestScore = maxOf(cur.classicBestScore, merged.classicBestScore),
+                    classicBestScore = if (replaceLocal) merged.classicBestScore else maxOf(cur.classicBestScore, merged.classicBestScore),
                     statistics = merged.statistics,
                     playerRank = rank,
-                    playerDisplayName = cur.playerDisplayName ?: merged.playerDisplayName,
-                    profileAvatarId = if (cur.profileAvatarId == ProfileAvatar.CLASSIC_BLOCK.id && merged.profileAvatarId != ProfileAvatar.CLASSIC_BLOCK.id) {
+                    playerDisplayName = if (replaceLocal) merged.playerDisplayName else cur.playerDisplayName ?: merged.playerDisplayName,
+                    profileAvatarId = if (replaceLocal) merged.profileAvatarId else if (cur.profileAvatarId == ProfileAvatar.CLASSIC_BLOCK.id && merged.profileAvatarId != ProfileAvatar.CLASSIC_BLOCK.id) {
                         merged.profileAvatarId
                     } else {
                         cur.profileAvatarId
@@ -1219,6 +1349,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     companion object {
         const val AD_REWARD_GOLD = 50
+        const val AD_REWARD_DIAMONDS = 5
         const val CONTINUE_MAX_SCORE = 10_000
         const val CONTINUE_COUNTDOWN_SECONDS = 5
 

@@ -56,8 +56,6 @@ class BoardStabilityRobolectricTest {
                 ) {
                     TopGameBar(
                         state = uiState,
-                        onShowHowToPlay = {},
-                        onRestart = {},
                         onPause = {}
                     )
                     ScorePanel(state = uiState)
