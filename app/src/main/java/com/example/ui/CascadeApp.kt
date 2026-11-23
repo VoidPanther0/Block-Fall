@@ -437,11 +437,6 @@ private fun CascadeNavHost(
                     onHome = {
                         viewModel.playUiClick()
                         navController.popBackStack<HomeRoute>(inclusive = false)
-                    },
-                    onWatchAd = if (adState is AdState.Ready && activity != null) {
-                        { viewModel.watchRewardedAd(activity) }
-                    } else {
-                        null
                     }
                 )
             }

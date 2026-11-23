@@ -360,17 +360,6 @@ fun CascadeGameScreen(
                 val startX = localPointer.x - pieceW / 2f
                 val startY = localPointer.y - dragLiftPx - pieceH
 
-                // Soft footprint glow communicates valid vs invalid hover without a blur.
-                if (activeDrag.hoverAnchor != null) {
-                    val footprintColor = if (activeDrag.isHoverValid) AccentCyan else InvalidTint
-                    drawRoundRect(
-                        color = footprintColor.copy(alpha = 0.14f),
-                        topLeft = Offset(startX - 6f, startY - 6f),
-                        size = Size(pieceW + 12f, pieceH + 12f),
-                        cornerRadius = CornerRadius(14f, 14f)
-                    )
-                }
-
                 for (cell in activeDrag.piece.shape.offsets) {
                     drawBevelBlock(
                         left = startX + cell.col * cellSize + gap / 2f,

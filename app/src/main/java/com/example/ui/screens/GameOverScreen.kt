@@ -64,8 +64,7 @@ import com.example.ui.theme.TextSecondary
 fun GameOverScreen(
     state: GameUiState,
     onRetry: () -> Unit,
-    onHome: () -> Unit,
-    onWatchAd: (() -> Unit)? = null
+    onHome: () -> Unit
 ) {
     val subtitle = when {
         state.isDailyChallenge -> "Today's puzzle · Target ${state.currentChallengeLevel.targetScore} not reached"
@@ -230,16 +229,6 @@ fun GameOverScreen(
                             testTag = "game_over_home_button",
                             modifier = Modifier.fillMaxWidth()
                         )
-
-                        if (onWatchAd != null) {
-                            SecondaryButton(
-                                text = "Watch Ad · +50 Gold",
-                                icon = Icons.Filled.PlayCircle,
-                                accent = AccentEmerald,
-                                onClick = onWatchAd,
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        }
                     }
                 }
 
