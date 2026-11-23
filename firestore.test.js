@@ -273,3 +273,22 @@ test("Public leaderboard enforces query filter visibility=='public' and owner wr
       })
   );
 });
+
+test("Server-authoritative economy, wheelSpins, and rewardLedger allow owner reads only and deny client writes", async () => {
+  const alice = testEnv.authenticatedContext(ALICE_UID).firestore();
+  const bob = testEnv.authenticatedContext(BOB_UID).firestore();
+
+  const aliceWallet = alice.collection("users").doc(ALICE_UID).collection("serverEconomy").doc("wallet");
+  const aliceSpin = alice.collection("users").doc(ALICE_UID).collection("wheelSpins").doc("spin_1");
+  const aliceLedger = alice.collection("users").doc(ALICE_UID).collection("rewardLedger").doc("tx_1");
+
+  // Client cannot forge currency, spin results, or ledger entries
+  await assertFails(aliceWallet.set({ userId: ALICE_UID, diamonds: 99999 }));
+  await assertFails(aliceSpin.set({ userId: ALICE_UID, segmentIndex: 0 }));
+  await assertFails(aliceLedger.set({ userId: ALICE_UID, transactionId: "tx_1", action: "CHEAT" }));
+
+  // Owner can read own wallet/spins; cross-user read is denied
+  await assertSucceeds(aliceWallet.get());
+  await assertSucceeds(alice.collection("users").doc(ALICE_UID).collection("wheelSpins").get());
+  await assertFails(bob.collection("users").doc(ALICE_UID).collection("serverEconomy").doc("wallet").get());
+});

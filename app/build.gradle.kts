@@ -26,6 +26,10 @@ val realAdmobBannerGameplayUnit: String? = envOrDotEnv("ADMOB_BANNER_GAMEPLAY_UN
   ?.takeIf { admobUnitPattern.matches(it) && !it.startsWith("ca-app-pub-3940256099942544/") }
 val realAdmobRewardedContinueUnit: String? = envOrDotEnv("ADMOB_REWARDED_CONTINUE_UNIT_ID")
   ?.takeIf { admobUnitPattern.matches(it) && !it.startsWith("ca-app-pub-3940256099942544/") }
+val realAdmobRewardedDiamondUnit: String? = envOrDotEnv("ADMOB_REWARDED_DIAMOND_UNIT_ID")
+  ?.takeIf { admobUnitPattern.matches(it) && !it.startsWith("ca-app-pub-3940256099942544/") }
+val realAdmobRewardedWheelUnit: String? = envOrDotEnv("ADMOB_REWARDED_WHEEL_UNIT_ID")
+  ?.takeIf { admobUnitPattern.matches(it) && !it.startsWith("ca-app-pub-3940256099942544/") }
 // Release builds fall back to the test App ID only so the project still configures; the
 // verifyReleaseAdConfig task below blocks packaging unless real IDs are supplied.
 val prodAdmobAppId: String = realAdmobAppId ?: TEST_ADMOB_APP_ID
@@ -129,7 +133,9 @@ if (!defaultEnvFile.exists()) {
       "ADMOB_APP_ID=ca-app-pub-3940256099942544~3347511713",
       "ADMOB_REWARDED_GOLD_UNIT_ID=ca-app-pub-3940256099942544/5224354917",
       "ADMOB_BANNER_GAMEPLAY_UNIT_ID=ca-app-pub-3940256099942544/6300978111",
-      "ADMOB_REWARDED_CONTINUE_UNIT_ID=ca-app-pub-3940256099942544/5224354917"
+      "ADMOB_REWARDED_CONTINUE_UNIT_ID=ca-app-pub-3940256099942544/5224354917",
+      "ADMOB_REWARDED_DIAMOND_UNIT_ID=ca-app-pub-3940256099942544/5224354917",
+      "ADMOB_REWARDED_WHEEL_UNIT_ID=ca-app-pub-3940256099942544/5224354917"
     ).joinToString(separator = System.lineSeparator(), postfix = System.lineSeparator())
   )
 }
@@ -175,6 +181,7 @@ dependencies {
   // implementation(libs.firebase.ai)
   implementation(libs.firebase.firestore)
   implementation(libs.firebase.auth)
+  implementation(libs.firebase.functions)
   implementation(libs.androidx.credentials)
   implementation(libs.androidx.credentials.play.services)
   implementation(libs.googleid)
@@ -208,21 +215,23 @@ dependencies {
   // "ksp"(libs.moshi.kotlin.codegen)
 }
 
-// Release builds must not ship Google's test ad IDs. Supply real ADMOB_APP_ID,
-// ADMOB_REWARDED_GOLD_UNIT_ID, ADMOB_BANNER_GAMEPLAY_UNIT_ID, and ADMOB_REWARDED_CONTINUE_UNIT_ID
+// Release builds must not ship Google's test ad IDs. Supply real ADMOB_APP_ID and all 5 unit IDs
 // via environment or the gitignored .env. For non-shipping CI verification only, pass -PallowTestAds=true.
 val verifyReleaseAdConfig = tasks.register("verifyReleaseAdConfig") {
   val ok = realAdmobAppId != null &&
     realAdmobRewardedUnit != null &&
     realAdmobBannerGameplayUnit != null &&
-    realAdmobRewardedContinueUnit != null
+    realAdmobRewardedContinueUnit != null &&
+    realAdmobRewardedDiamondUnit != null &&
+    realAdmobRewardedWheelUnit != null
   val allowTest = project.findProperty("allowTestAds") == "true"
   doLast {
     if (!ok && !allowTest) {
       throw GradleException(
         "Release AdMob configuration incomplete: set real ADMOB_APP_ID, " +
-          "ADMOB_REWARDED_GOLD_UNIT_ID, ADMOB_BANNER_GAMEPLAY_UNIT_ID, and " +
-          "ADMOB_REWARDED_CONTINUE_UNIT_ID (env or .env). Use -PallowTestAds=true only for non-shipping builds."
+          "ADMOB_REWARDED_GOLD_UNIT_ID, ADMOB_BANNER_GAMEPLAY_UNIT_ID, " +
+          "ADMOB_REWARDED_CONTINUE_UNIT_ID, ADMOB_REWARDED_DIAMOND_UNIT_ID, and " +
+          "ADMOB_REWARDED_WHEEL_UNIT_ID (env or .env). Use -PallowTestAds=true only for non-shipping builds."
       )
     }
     if (!ok) logger.warn("WARNING: release build is using Google TEST AdMob IDs (allowTestAds=true).")

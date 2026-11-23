@@ -153,6 +153,24 @@ service cloud.firestore {
 
         allow update, delete: if false;
       }
+
+      match /serverEconomy/{docId} {
+        allow get: if isValidId(userId) && isValidId(docId) && isOwner(userId);
+        allow list: if isOwner(userId);
+        allow create, update, delete: if false;
+      }
+
+      match /wheelSpins/{spinId} {
+        allow get: if isValidId(userId) && isValidId(spinId) && isOwner(userId);
+        allow list: if isOwner(userId);
+        allow create, update, delete: if false;
+      }
+
+      match /rewardLedger/{ledgerId} {
+        allow get: if isValidId(userId) && isValidId(ledgerId) && isOwner(userId);
+        allow list: if isOwner(userId);
+        allow create, update, delete: if false;
+      }
     }
 
     match /leaderboard/{entryId} {

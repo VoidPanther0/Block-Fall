@@ -1,6 +1,6 @@
 # Block Falls — AdMob Ad Units & Integration Guide
 
-This document lists **every AdMob ad placement** in **Block Falls**, formatted so you can copy each Ad Unit straight into your Google AdMob Console (`Apps → Ad units → Add ad unit`), wire `.env` / AI Studio Secrets for release builds, and inspect every reward item name and reward amount.
+This document lists **every AdMob ad placement** in **Block Falls** (5 total units), formatted so you can copy each Ad Unit straight into your Google AdMob Console (`Apps → Ad units → Add ad unit`), wire `.env` / AI Studio Secrets for release builds, and verify reward item names & amounts.
 
 ---
 
@@ -14,13 +14,15 @@ This document lists **every AdMob ad placement** in **Block Falls**, formatted s
 
 ---
 
-## 2. All Ad Placements Summary
+## 2. All 5 Ad Placements Summary
 
-| # | Ad Unit Name | Ad Format | App Area / Screen | `.env` Key | Google Test Ad Unit ID | Reward Item | Reward Amount |
+| # | Ad Unit Name | Ad Format | App Area / Screen | `.env` / Secret Key | Google Test Ad Unit ID | Reward Item | Reward Amount |
 | :-: | :--- | :--- | :--- | :--- | :--- | :--- | :-: |
 | **1** | **Gameplay Bottom Banner** | Banner (`320x50`) | Gameplay screen bottom dock (`CascadeGameScreen`) | `ADMOB_BANNER_GAMEPLAY_UNIT_ID` | `ca-app-pub-3940256099942544/6300978111` | None (Banner) | `—` |
-| **2** | **Rewarded Gold +50** | Rewarded | Shop → Coins Tab → Free Gold Card (`ShopScreen`) | `ADMOB_REWARDED_GOLD_UNIT_ID` | `ca-app-pub-3940256099942544/5224354917` | `Gold` | `50` |
+| **2** | **Rewarded Gold +50** | Rewarded | Shop → Free Rewards (`ShopScreen`) | `ADMOB_REWARDED_GOLD_UNIT_ID` | `ca-app-pub-3940256099942544/5224354917` | `Gold` | `50` |
 | **3** | **Rewarded Continue Run** | Rewarded | 5s Continue Countdown before Game Over when `score <= 10,000` (`CascadeGameScreen`) | `ADMOB_REWARDED_CONTINUE_UNIT_ID` | `ca-app-pub-3940256099942544/5224354917` | `Continue` (Board Rescue) | `1` |
+| **4** | **Rewarded Diamonds +5** | Rewarded | Shop → Free Rewards (`ShopScreen`) | `ADMOB_REWARDED_DIAMOND_UNIT_ID` | `ca-app-pub-3940256099942544/5224354917` | `Diamond` | `5` |
+| **5** | **Rewarded Lucky Wheel Spin** | Rewarded | Lucky Wheel screen & Shop → Lucky Wheel (`LuckyWheelScreen`) | `ADMOB_REWARDED_WHEEL_UNIT_ID` | `ca-app-pub-3940256099942544/5224354917` | `WheelPoint` | `1` |
 
 ---
 
@@ -28,7 +30,7 @@ This document lists **every AdMob ad placement** in **Block Falls**, formatted s
 
 ### Placement 1 — Gameplay Bottom Banner
 
-Replaces the bottom instruction footer on the Gameplay screen (`CascadeGameScreen`). Loads an adaptive/standard `320×50` AdMob `AdView`.
+Shown at the bottom dock of the Gameplay screen (`CascadeGameScreen`) under the Tray & Abilities bar. Loads an adaptive/standard `320×50` AdMob `AdView`.
 
 ```text
 ┌─────────────────────────────────────────────────────────────────────────┐
@@ -42,7 +44,7 @@ Replaces the bottom instruction footer on the Gameplay screen (`CascadeGameScree
 ├──────────────────────┼──────────────────────────────────────────────────┤
 │ Env / Secret key     │ ADMOB_BANNER_GAMEPLAY_UNIT_ID                    │
 ├──────────────────────┼──────────────────────────────────────────────────┤
-│ Screen location      │ Gameplay Screen (bottom dock under Shuffle/Tray) │
+│ Screen location      │ Gameplay Screen (bottom dock under Abilities)    │
 └──────────────────────┴──────────────────────────────────────────────────┘
 ```
 
@@ -50,7 +52,7 @@ Replaces the bottom instruction footer on the Gameplay screen (`CascadeGameScree
 
 ### Placement 2 — Rewarded Gold +50
 
-Triggered from the **Shop → Coins Tab → Free Gold** button (`ShopScreen`).
+Triggered from the **Shop → Free Rewards → Watch Ad (+50 Gold)** button (`ShopScreen`).
 
 ```text
 ┌─────────────────────────────────────────────────────────────────────────┐
@@ -70,12 +72,11 @@ Triggered from the **Shop → Coins Tab → Free Gold** button (`ShopScreen`).
 
 ---
 
-### Placement 3 — Rewarded Continue Run (5s Second-Chance Countdown)
+### Placement 3 — Rewarded Continue Run (5s Extra-Life Cooldown)
 
-Triggered automatically when a Classic run has **no valid moves remaining**, **score ≤ 10,000**, and the user **has not used Continue yet in that run**.
-- Shows a **5-second countdown** (`5s → 1s`) before navigating to the Game Over screen.
-- If `score > 10,000` (or already used once this run), the countdown is skipped and Game Over appears immediately.
-- Watching the rewarded ad clears the center 4 rows of the 8×8 board, deals 3 fresh playable pieces, and resumes gameplay with the player's current score preserved.
+Triggered automatically when a Classic run has **no valid moves remaining**, **score ≤ 10,000**, and the player **has not used Continue yet in that run**.
+- Shows a **5-second countdown** (`5s → 1s`) before navigating to Game Over.
+- Watching the rewarded ad clears the center rows of the 8×8 board, deals 3 fresh playable pieces, and resumes gameplay with the current score preserved.
 
 ```text
 ┌─────────────────────────────────────────────────────────────────────────┐
@@ -95,17 +96,63 @@ Triggered automatically when a Classic run has **no valid moves remaining**, **s
 
 ---
 
-## 4. How to Switch from Test IDs to Production IDs
+### Placement 4 — Rewarded Diamonds +5 (NEW)
 
-1. Never commit real AdMob IDs to `.env.example` or source code.
-2. Open the **Secrets panel in AI Studio** (or create a gitignored `.env` locally matching `.env.example`):
+Triggered from the **Shop → Free Rewards → Watch Ad (+5 Diamonds)** button (`ShopScreen`).
+
+```text
+┌─────────────────────────────────────────────────────────────────────────┐
+│ Ad unit settings                                                        │
+├──────────────────────┬──────────────────────────────────────────────────┤
+│ Ad unit name         │ Rewarded Diamonds +5                             │
+├──────────────────────┼──────────────────────────────────────────────────┤
+│ Ad format            │ Rewarded                                         │
+├──────────────────────┼──────────────────────────────────────────────────┤
+│ Ad unit ID (Test)    │ ca-app-pub-3940256099942544/5224354917           │
+├──────────────────────┼──────────────────────────────────────────────────┤
+│ Env / Secret key     │ ADMOB_REWARDED_DIAMOND_UNIT_ID                   │
+├──────────────────────┼──────────────────────────────────────────────────┤
+│ Reward settings      │ 5 Diamond (Reward amount: 5 | Item name: Diamond)│
+└──────────────────────┴──────────────────────────────────────────────────┘
+```
+
+---
+
+### Placement 5 — Rewarded Lucky Wheel Spin +1 (NEW)
+
+Triggered from **Lucky Wheel → Watch Ad (+1 Spin Point)** (`LuckyWheelScreen`) or **Shop → Free Rewards → Lucky Wheel Ad**. Grants `+1 WheelPoint` server-side via `claimRewardedAd` so the player can spin the server-verified Lucky Wheel once.
+
+```text
+┌─────────────────────────────────────────────────────────────────────────┐
+│ Ad unit settings                                                        │
+├──────────────────────┬──────────────────────────────────────────────────┤
+│ Ad unit name         │ Rewarded Lucky Wheel Spin                        │
+├──────────────────────┼──────────────────────────────────────────────────┤
+│ Ad format            │ Rewarded                                         │
+├──────────────────────┼──────────────────────────────────────────────────┤
+│ Ad unit ID (Test)    │ ca-app-pub-3940256099942544/5224354917           │
+├──────────────────────┼──────────────────────────────────────────────────┤
+│ Env / Secret key     │ ADMOB_REWARDED_WHEEL_UNIT_ID                     │
+├──────────────────────┼──────────────────────────────────────────────────┤
+│ Reward settings      │ 1 WheelPoint (Amount: 1 | Item: WheelPoint)      │
+└──────────────────────┴──────────────────────────────────────────────────┘
+```
+
+---
+
+## 4. Secret Keys & Release Build Setup
+
+1. Never commit real AdMob IDs into `.env.example` or Kotlin source files.
+2. Add **all 6 real secrets** in the **Secrets panel in AI Studio** (and GitHub Actions Secrets for CI release APKs):
 
    ```dotenv
    ADMOB_APP_ID=ca-app-pub-XXXXXXXXXXXXXXXX~YYYYYYYYYY
    ADMOB_BANNER_GAMEPLAY_UNIT_ID=ca-app-pub-XXXXXXXXXXXXXXXX/1111111111
    ADMOB_REWARDED_GOLD_UNIT_ID=ca-app-pub-XXXXXXXXXXXXXXXX/2222222222
    ADMOB_REWARDED_CONTINUE_UNIT_ID=ca-app-pub-XXXXXXXXXXXXXXXX/3333333333
+   ADMOB_REWARDED_DIAMOND_UNIT_ID=ca-app-pub-XXXXXXXXXXXXXXXX/4444444444
+   ADMOB_REWARDED_WHEEL_UNIT_ID=ca-app-pub-XXXXXXXXXXXXXXXX/5555555555
    ```
 
-3. **Debug builds** always force Google's official Test IDs in `AdConfig.kt` to protect your AdMob account from invalid-traffic policy strikes during development.
-4. **Release builds** automatically read `BuildConfig.ADMOB_*` from `.env` / Secrets and enforce `verifyReleaseAdConfig` so accidental test IDs cannot ship to Google Play.
+3. **Debug builds** always force Google's official Test IDs in `AdConfig.kt` to protect your AdMob account from invalid-traffic strikes during development.
+4. **Release builds** automatically read `BuildConfig.ADMOB_*` injected by the Secrets Gradle Plugin (`.env` / Secrets) and run `verifyReleaseAdConfig` so accidental test IDs cannot ship to Google Play.

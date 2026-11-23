@@ -208,6 +208,62 @@
         "createdAt",
         "updatedAt"
       ]
+    },
+    "ServerEconomyWallet": {
+      "title": "ServerEconomyWallet",
+      "description": "Server-authoritative currency, ability inventory, and Lucky Wheel points stored under /users/{userId}/serverEconomy/wallet.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "goldCoins": { "type": "integer" },
+        "diamonds": { "type": "integer" },
+        "hammerCount": { "type": "integer" },
+        "shuffleCount": { "type": "integer" },
+        "refreshCount": { "type": "integer" },
+        "wheelSpinPoints": { "type": "integer" },
+        "totalSpins": { "type": "integer" },
+        "lastAdClaimAtMs": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "userId",
+        "goldCoins",
+        "diamonds",
+        "hammerCount",
+        "shuffleCount",
+        "refreshCount",
+        "wheelSpinPoints",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "WheelSpinRecord": {
+      "title": "WheelSpinRecord",
+      "description": "Immutable server-generated Lucky Wheel spin audit record.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "segmentIndex": { "type": "integer" },
+        "prizeId": { "type": "string" },
+        "prizeLabel": { "type": "string" },
+        "rewardCategory": { "type": "string" },
+        "rewardAmount": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "segmentIndex", "prizeId", "prizeLabel", "rewardCategory", "rewardAmount", "createdAt"]
+    },
+    "RewardLedgerEntry": {
+      "title": "RewardLedgerEntry",
+      "description": "Server-side replay-protected economy transaction ledger entry.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "transactionId": { "type": "string" },
+        "action": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "transactionId", "action", "createdAt"]
     }
   },
   "firestore": {
@@ -218,6 +274,18 @@
     "/users/{userId}/integrityAttestations/{attestationId}": {
       "schema": { "$ref": "#/entities/IntegrityAttestationDoc" },
       "description": "Play Integrity token submissions pending server verification."
+    },
+    "/users/{userId}/serverEconomy/{docId}": {
+      "schema": { "$ref": "#/entities/ServerEconomyWallet" },
+      "description": "Server-authoritative wallet read-only to client and written exclusively by Cloud Functions."
+    },
+    "/users/{userId}/wheelSpins/{spinId}": {
+      "schema": { "$ref": "#/entities/WheelSpinRecord" },
+      "description": "Immutable Lucky Wheel spin history written exclusively by Cloud Functions."
+    },
+    "/users/{userId}/rewardLedger/{ledgerId}": {
+      "schema": { "$ref": "#/entities/RewardLedgerEntry" },
+      "description": "Server-side economy idempotency ledger written exclusively by Cloud Functions."
     },
     "/leaderboard/{entryId}": {
       "schema": { "$ref": "#/entities/LeaderboardEntry" },
