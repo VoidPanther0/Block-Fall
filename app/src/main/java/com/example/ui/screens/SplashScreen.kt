@@ -110,23 +110,23 @@ fun SplashScreen(
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
-                        .clip(RoundedCornerShape(32.dp))
-                        .background(SurfaceCardElevated.copy(alpha = 0.52f))
-                        .border(1.dp, GlassBorder.copy(alpha = 0.45f), RoundedCornerShape(32.dp))
-                        .padding(22.dp)
+                        .clip(RoundedCornerShape(22.dp))
+                        .background(com.example.ui.theme.ObsidianBg)
+                        .border(1.5.dp, GlassBorder, RoundedCornerShape(22.dp))
+                        .padding(20.dp)
                 ) {
-                    ArcadeBlockEmblem(size = 96.dp)
+                    ArcadeBlockEmblem(size = 92.dp)
                 }
 
                 Spacer(Modifier.height(22.dp))
-                ArcadeTitleLogo(fontSize = 46.sp)
+                ArcadeTitleLogo(fontSize = 44.sp)
                 Spacer(Modifier.height(10.dp))
 
                 Box(
                     modifier = Modifier
                         .clip(CircleShape)
-                        .background(SurfaceCardElevated.copy(alpha = 0.8f))
-                        .border(1.dp, AccentCyan.copy(alpha = 0.35f), CircleShape)
+                        .background(com.example.ui.theme.SurfaceCard)
+                        .border(1.dp, GlassBorder, CircleShape)
                         .padding(horizontal = 14.dp, vertical = 6.dp)
                 ) {
                     Text(
@@ -134,7 +134,7 @@ fun SplashScreen(
                         style = MaterialTheme.typography.labelMedium.copy(
                             fontFamily = OutfitFontFamily,
                             fontWeight = FontWeight.Bold,
-                            letterSpacing = 1.6.sp,
+                            letterSpacing = 1.4.sp,
                             fontSize = 11.sp
                         ),
                         color = TextSecondary
@@ -152,7 +152,7 @@ fun SplashScreen(
                         .height(10.dp)
                         .clip(CircleShape)
                         .background(BoardWellBg)
-                        .border(1.dp, GlassBorder.copy(alpha = 0.65f), CircleShape)
+                        .border(1.dp, GlassBorder, CircleShape)
                         .padding(2.dp)
                 ) {
                     Box(
@@ -171,7 +171,7 @@ fun SplashScreen(
                 Text(
                     text = "Tap anywhere to continue",
                     style = MaterialTheme.typography.bodyMedium.copy(fontSize = 12.sp),
-                    color = TextPrimary.copy(alpha = 0.65f)
+                    color = TextSecondary
                 )
             }
         }

@@ -90,8 +90,8 @@ fun PremiumPrimaryButton(
     style: ArcadeButtonStyle = ArcadeButtonStyle.GOLD,
     icon: ImageVector? = null,
     enabled: Boolean = true,
-    height: Dp = 54.dp,
-    cornerRadius: Dp = 18.dp,
+    height: Dp = 52.dp,
+    cornerRadius: Dp = 12.dp,
     fontSize: TextUnit = 16.sp,
     testTag: String? = null
 ) {
@@ -156,18 +156,18 @@ fun IconActionButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     tint: Color = TextPrimary,
-    borderColor: Color = GlassBorder.copy(alpha = 0.52f),
+    borderColor: Color = GlassBorder,
     size: Dp = 48.dp,
     testTag: String? = null
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
     val scale by animateFloatAsState(
-        targetValue = if (pressed) 0.93f else 1f,
-        animationSpec = spring(dampingRatio = 0.7f, stiffness = 500f),
+        targetValue = if (pressed) 0.94f else 1f,
+        animationSpec = spring(dampingRatio = 0.72f, stiffness = 500f),
         label = "icon_action_scale"
     )
-    val shape = RoundedCornerShape(14.dp)
+    val shape = RoundedCornerShape(12.dp)
     Box(
         contentAlignment = Alignment.Center,
         modifier = modifier
@@ -176,12 +176,13 @@ fun IconActionButton(
                 scaleX = scale
                 scaleY = scale
             }
+            .shadow(2.dp, shape, clip = false)
             .clip(shape)
-            .background(Brush.verticalGradient(listOf(SurfaceCardElevated, SurfaceCard)))
+            .background(SurfaceCard)
             .border(1.dp, borderColor, shape)
             .clickable(
                 interactionSource = interactionSource,
-                indication = ripple(color = Color.White),
+                indication = ripple(color = TextPrimary),
                 role = Role.Button,
                 onClick = onClick
             )
@@ -199,8 +200,8 @@ fun IconActionButton(
 @Composable
 fun PremiumCard(
     modifier: Modifier = Modifier,
-    cornerRadius: Dp = 20.dp,
-    borderColor: Color = GlassBorder.copy(alpha = 0.45f),
+    cornerRadius: Dp = 16.dp,
+    borderColor: Color = GlassBorder,
     content: @Composable ColumnScope.() -> Unit
 ) {
     FrostedGlassCard(
@@ -268,15 +269,15 @@ private fun CurrencyPill(
     compact: Boolean,
     modifier: Modifier = Modifier
 ) {
-    val shape = RoundedCornerShape(if (compact) 12.dp else 14.dp)
+    val shape = RoundedCornerShape(12.dp)
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(if (compact) 5.dp else 7.dp),
         modifier = modifier
-            .defaultMinSize(minHeight = if (compact) 30.dp else 36.dp)
+            .defaultMinSize(minHeight = if (compact) 32.dp else 36.dp)
             .clip(shape)
-            .background(BoardWellBg.copy(alpha = 0.92f))
-            .border(1.dp, tint.copy(alpha = 0.38f), shape)
+            .background(SurfaceCard)
+            .border(1.dp, GlassBorder, shape)
             .padding(
                 horizontal = if (compact) 9.dp else 12.dp,
                 vertical = if (compact) 4.dp else 6.dp
@@ -481,8 +482,8 @@ fun ConfirmationDialog(
 ) {
     Dialog(onDismissRequest = onDismiss) {
         PremiumCard(
-            cornerRadius = 24.dp,
-            borderColor = accent.copy(alpha = 0.45f),
+            cornerRadius = 18.dp,
+            borderColor = GlassBorder,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(4.dp)

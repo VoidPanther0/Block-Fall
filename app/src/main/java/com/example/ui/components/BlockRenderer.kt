@@ -58,88 +58,65 @@ private fun DrawScope.drawModernBevelBlock(
     alpha: Float,
     glowBoost: Float
 ) {
-    val radius = (minOf(w, h) * 0.22f).coerceAtLeast(2.5f)
-    val bevel = (minOf(w, h) * 0.14f).coerceAtLeast(2f)
+    val radius = (minOf(w, h) * 0.18f).coerceAtLeast(2.5f)
+    val bevel = (minOf(w, h) * 0.13f).coerceAtLeast(2f)
 
     if (glowBoost > 0f) {
         drawRoundRect(
-            color = palette.glow.copy(alpha = (0.42f * glowBoost * alpha).coerceIn(0f, 1f)),
-            topLeft = Offset(x - bevel * 0.65f, y - bevel * 0.65f),
-            size = Size(w + bevel * 1.3f, h + bevel * 1.3f),
-            cornerRadius = CornerRadius(radius * 1.3f, radius * 1.3f)
+            color = palette.glow.copy(alpha = (0.35f * glowBoost * alpha).coerceIn(0f, 1f)),
+            topLeft = Offset(x - bevel * 0.5f, y - bevel * 0.5f),
+            size = Size(w + bevel, h + bevel),
+            cornerRadius = CornerRadius(radius * 1.25f, radius * 1.25f)
         )
     }
 
+    // Crisp bottom lip for tactile classic puzzle depth
     drawRoundRect(
-        color = Color(0xFF071130).copy(alpha = 0.42f * alpha),
-        topLeft = Offset(x, y + bevel * 0.28f),
-        size = Size(w, h),
-        cornerRadius = CornerRadius(radius, radius)
-    )
-
-    drawRoundRect(
-        brush = Brush.verticalGradient(
-            colors = listOf(
-                palette.fill.copy(alpha = alpha),
-                palette.shadow.copy(alpha = alpha)
-            ),
-            startY = y,
-            endY = y + h
-        ),
+        color = palette.shadow.copy(alpha = 0.95f * alpha),
         topLeft = Offset(x, y),
         size = Size(w, h),
         cornerRadius = CornerRadius(radius, radius)
     )
 
+    val faceHeight = (h - bevel * 0.55f).coerceAtLeast(1f)
+    drawRoundRect(
+        brush = Brush.verticalGradient(
+            colors = listOf(
+                palette.fill.copy(alpha = alpha),
+                palette.fill.copy(alpha = 0.94f * alpha)
+            ),
+            startY = y,
+            endY = y + faceHeight
+        ),
+        topLeft = Offset(x, y),
+        size = Size(w, faceHeight),
+        cornerRadius = CornerRadius(radius, radius)
+    )
+
+    // Subtle top-left bevel edge highlight
     val highlightPath = (scratchHighlightPath.get() ?: Path()).apply {
         rewind()
-        moveTo(x + radius * 0.55f, y + h - bevel * 0.85f)
+        moveTo(x + radius * 0.55f, y + faceHeight - bevel * 0.65f)
         lineTo(x + bevel * 0.25f, y + radius * 0.55f)
         lineTo(x + radius * 0.55f, y + bevel * 0.25f)
-        lineTo(x + w - bevel * 0.85f, y + bevel * 0.25f)
-        lineTo(x + w - bevel * 1.15f, y + bevel)
-        lineTo(x + bevel, y + bevel)
-        lineTo(x + bevel, y + h - bevel * 1.15f)
+        lineTo(x + w - bevel * 0.75f, y + bevel * 0.25f)
+        lineTo(x + w - bevel * 1.05f, y + bevel * 0.9f)
+        lineTo(x + bevel * 0.9f, y + bevel * 0.9f)
+        lineTo(x + bevel * 0.9f, y + faceHeight - bevel * 0.9f)
         close()
     }
     drawPath(
         path = highlightPath,
-        color = palette.highlight.copy(alpha = 0.65f * alpha)
+        color = palette.highlight.copy(alpha = 0.58f * alpha)
     )
 
-    val inset = bevel * 0.92f
-    if (w > inset * 2.5f && h > inset * 2.5f) {
-        drawRoundRect(
-            brush = Brush.verticalGradient(
-                colors = listOf(
-                    palette.highlight.copy(alpha = 0.34f * alpha),
-                    palette.fill.copy(alpha = 0.96f * alpha),
-                    palette.shadow.copy(alpha = 0.24f * alpha)
-                ),
-                startY = y + inset,
-                endY = y + h - inset
-            ),
-            topLeft = Offset(x + inset, y + inset),
-            size = Size(w - inset * 2f, h - inset * 2f),
-            cornerRadius = CornerRadius((radius * 0.65f).coerceAtLeast(1.5f))
-        )
-    }
-
-    if (w > bevel * 4f && h > bevel * 4f) {
-        drawRoundRect(
-            color = Color.White.copy(alpha = 0.36f * alpha),
-            topLeft = Offset(x + bevel * 1.2f, y + bevel * 0.85f),
-            size = Size((w - bevel * 2.4f).coerceAtLeast(2f), (h * 0.14f).coerceAtLeast(1.5f)),
-            cornerRadius = CornerRadius(radius, radius)
-        )
-    }
-
+    // Clean top edge crisp rim
     drawRoundRect(
-        color = palette.highlight.copy(alpha = 0.45f * alpha),
+        color = palette.highlight.copy(alpha = 0.28f * alpha),
         topLeft = Offset(x + 0.5f, y + 0.5f),
         size = Size((w - 1f).coerceAtLeast(1f), (h - 1f).coerceAtLeast(1f)),
         cornerRadius = CornerRadius(radius, radius),
-        style = Stroke(width = 1.25f)
+        style = Stroke(width = 1f)
     )
 }
 

@@ -83,18 +83,18 @@ fun OnboardingScreen(
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
-                        .size(104.dp)
-                        .clip(RoundedCornerShape(28.dp))
-                        .background(Brush.verticalGradient(listOf(SurfaceCardElevated, SurfaceCard)))
-                        .border(1.dp, AccentCyan.copy(alpha = 0.45f), RoundedCornerShape(28.dp))
+                        .size(96.dp)
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(com.example.ui.theme.ObsidianBg)
+                        .border(1.5.dp, GlassBorder, RoundedCornerShape(20.dp))
                 ) {
-                    ArcadeBlockEmblem(size = 66.dp)
+                    ArcadeBlockEmblem(size = 62.dp)
                 }
 
-                ArcadeTitleLogo(fontSize = 38.sp)
+                ArcadeTitleLogo(fontSize = 36.sp)
 
                 Text(
-                    text = "A premium gravity puzzle. Plan every drop, clear lines and chain cascades for huge scores.",
+                    text = "Place classic shapes on the 8×8 grid, clear full lines, and trigger gravity cascades.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = TextSecondary,
                     textAlign = TextAlign.Center,
@@ -169,8 +169,8 @@ private fun OnboardingBenefit(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
-            .background(SurfaceCard.copy(alpha = 0.8f))
-            .border(1.dp, GlassBorder.copy(alpha = 0.38f), RoundedCornerShape(14.dp))
+            .background(SurfaceCard)
+            .border(1.dp, GlassBorder, RoundedCornerShape(14.dp))
             .padding(horizontal = 14.dp, vertical = 10.dp)
     ) {
         Box(

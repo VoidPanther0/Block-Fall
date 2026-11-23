@@ -247,7 +247,7 @@ private fun ChallengeLevelGrid(
                     )
                 }
                 if (rowIndex == rows.lastIndex && rowLevels.size == 2) {
-                    val masteryShape = RoundedCornerShape(18.dp)
+                    val masteryShape = RoundedCornerShape(14.dp)
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center,
@@ -255,8 +255,8 @@ private fun ChallengeLevelGrid(
                             .weight(1f)
                             .aspectRatio(1f)
                             .clip(masteryShape)
-                            .background(SurfaceCard.copy(alpha = 0.85f))
-                            .border(1.dp, GlassBorder.copy(alpha = 0.45f), masteryShape)
+                            .background(SurfaceCard)
+                            .border(1.dp, GlassBorder, masteryShape)
                             .padding(8.dp)
                     ) {
                         Icon(
@@ -548,24 +548,25 @@ private fun ChallengeGridTile(
 ) {
     val stars = progress?.stars ?: 0
     val completed = progress?.completed == true
-    val shape = RoundedCornerShape(18.dp)
+    val shape = RoundedCornerShape(14.dp)
     val bgBrush = when {
-        isSelected -> Brush.verticalGradient(listOf(GoldBtnTop, GoldBtnBottom))
-        isUnlocked -> Brush.verticalGradient(listOf(BlueBtnTop, BlueBtnBottom))
-        else -> Brush.verticalGradient(listOf(SurfaceCardElevated.copy(alpha = 0.6f), SurfaceCard.copy(alpha = 0.8f)))
+        isSelected -> Brush.verticalGradient(listOf(BlueBtnTop, BlueBtnBottom))
+        isUnlocked -> Brush.verticalGradient(listOf(SurfaceCard, SurfaceCard))
+        else -> Brush.verticalGradient(listOf(BoardWellBg, BoardWellBg))
     }
     val borderColor = when {
-        isSelected -> TextPrimary
-        completed -> AccentEmerald.copy(alpha = 0.68f)
-        isUnlocked -> AccentGold.copy(alpha = 0.4f)
-        else -> GlassBorder.copy(alpha = 0.32f)
+        isSelected -> AccentCyan
+        completed -> AccentEmerald
+        isUnlocked -> GlassBorder
+        else -> GlassBorder.copy(alpha = 0.7f)
     }
+    val numberColor = if (isSelected) androidx.compose.ui.graphics.Color.White else TextPrimary
 
     Box(
         contentAlignment = Alignment.Center,
         modifier = modifier
             .aspectRatio(1f)
-            .shadow(if (isUnlocked) 6.dp else 1.dp, shape, clip = false)
+            .shadow(if (isUnlocked) 2.dp else 0.dp, shape, clip = false)
             .clip(shape)
             .background(bgBrush)
             .border(if (isSelected) 2.dp else 1.dp, borderColor, shape)
@@ -577,7 +578,7 @@ private fun ChallengeGridTile(
             Icon(
                 imageVector = Icons.Filled.CheckCircle,
                 contentDescription = "Completed",
-                tint = if (isSelected) GoldBtnText else AccentEmerald,
+                tint = if (isSelected) androidx.compose.ui.graphics.Color.White else AccentEmerald,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .size(16.dp)
@@ -592,8 +593,8 @@ private fun ChallengeGridTile(
                 Icon(
                     imageVector = Icons.Filled.Lock,
                     contentDescription = "Locked level ${level.levelNumber}",
-                    tint = TextSecondary.copy(alpha = 0.7f),
-                    modifier = Modifier.size(26.dp)
+                    tint = TextSecondary.copy(alpha = 0.65f),
+                    modifier = Modifier.size(24.dp)
                 )
             } else {
                 Text(
@@ -601,9 +602,9 @@ private fun ChallengeGridTile(
                     style = MaterialTheme.typography.headlineMedium.copy(
                         fontFamily = OutfitFontFamily,
                         fontWeight = FontWeight.ExtraBold,
-                        fontSize = 27.sp
+                        fontSize = 26.sp
                     ),
-                    color = if (isSelected) GoldBtnText else TextPrimary
+                    color = numberColor
                 )
                 Spacer(Modifier.height(3.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -613,10 +614,9 @@ private fun ChallengeGridTile(
                             imageVector = if (filled) Icons.Filled.Star else Icons.Outlined.StarBorder,
                             contentDescription = null,
                             tint = when {
-                                filled && isSelected -> GoldBtnText
                                 filled -> AccentGold
-                                isSelected -> GoldBtnText.copy(alpha = 0.4f)
-                                else -> TextPrimary.copy(alpha = 0.4f)
+                                isSelected -> androidx.compose.ui.graphics.Color.White.copy(alpha = 0.55f)
+                                else -> TextSecondary.copy(alpha = 0.38f)
                             },
                             modifier = Modifier.size(14.dp)
                         )

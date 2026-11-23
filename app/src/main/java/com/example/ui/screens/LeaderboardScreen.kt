@@ -143,11 +143,11 @@ fun LeaderboardScreen(
                                     0 -> AccentGold
                                     1 -> AccentCyan
                                     2 -> AccentPurple
-                                    else -> GlassBorder
+                                    else -> TextSecondary
                                 }
                                 PremiumCard(
-                                    cornerRadius = 16.dp,
-                                    borderColor = if (isCurrentUser) AccentGold else rankColor.copy(alpha = 0.35f),
+                                    cornerRadius = 14.dp,
+                                    borderColor = if (isCurrentUser) AccentGold else GlassBorder,
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
                                     Row(
@@ -162,8 +162,8 @@ fun LeaderboardScreen(
                                             modifier = Modifier
                                                 .size(34.dp)
                                                 .clip(CircleShape)
-                                                .background(rankColor.copy(alpha = 0.18f))
-                                                .border(1.dp, rankColor.copy(alpha = 0.45f), CircleShape)
+                                                .background(rankColor.copy(alpha = 0.14f))
+                                                .border(1.dp, rankColor.copy(alpha = 0.4f), CircleShape)
                                         ) {
                                             Text(
                                                 text = "#${index + 1}",
@@ -172,7 +172,7 @@ fun LeaderboardScreen(
                                                     fontWeight = FontWeight.Bold,
                                                     fontSize = 12.sp
                                                 ),
-                                                color = if (index < 3) rankColor else Color.White
+                                                color = if (index < 3) rankColor else TextPrimary
                                             )
                                         }
                                         Column(modifier = Modifier.weight(1f)) {
@@ -197,7 +197,7 @@ fun LeaderboardScreen(
                                         Box(
                                             modifier = Modifier
                                                 .clip(RoundedCornerShape(10.dp))
-                                                .background(SurfaceCardElevated.copy(alpha = 0.8f))
+                                                .background(BoardWellBg)
                                                 .padding(horizontal = 10.dp, vertical = 6.dp)
                                         ) {
                                             Text(

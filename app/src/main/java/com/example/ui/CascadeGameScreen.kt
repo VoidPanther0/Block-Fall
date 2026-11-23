@@ -405,27 +405,27 @@ fun CascadeGameScreen(
 
 @Composable
 private fun ShuffleBoosterButton(count: Int, enabled: Boolean, onClick: () -> Unit) {
-    OutlinedButton(
-        onClick = onClick,
+    com.example.ui.components.SecondaryButton(
+        text = "Shuffle Tray ($count)",
+        icon = Icons.Filled.Shuffle,
+        accent = AccentCyan,
         enabled = enabled,
-        modifier = Modifier.testTag("shuffle_booster_button")
-    ) {
-        Icon(Icons.Filled.Shuffle, contentDescription = null)
-        Spacer(Modifier.width(6.dp))
-        Text("Shuffle ($count)")
-    }
+        height = 48.dp,
+        onClick = onClick,
+        testTag = "shuffle_booster_button"
+    )
 }
 
 @Composable
 private fun HintFooter(hasSelectedPiece: Boolean) {
     Text(
         text = if (hasSelectedPiece) {
-            "Tap any board square to drop the selected piece"
+            "Tap any board square to place your piece"
         } else {
-            "Drag any piece onto the board · Clear lines to trigger gravity"
+            "Drag or tap a piece to place · Complete lines to clear"
         },
         style = MaterialTheme.typography.bodyMedium.copy(fontSize = 11.sp),
-        color = TextSecondary.copy(alpha = 0.85f),
+        color = TextSecondary,
         textAlign = TextAlign.Center,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis

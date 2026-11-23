@@ -87,76 +87,30 @@ enum class ArcadeButtonStyle {
 }
 
 /**
- * Luminous Prism Atelier backdrop that reacts dynamically to the active [BoardColorPalette].
+ * Clean, bright daylight canvas backdrop that adapts subtly to the active [BoardColorPalette].
  */
 @Composable
 fun RoyalSkyBackdrop(modifier: Modifier = Modifier) {
     val palette = LocalBoardPalette.current
     val themeColors = palette.toBoardColors()
 
-    Canvas(modifier = modifier.fillMaxSize()) {
-        drawRect(
-            brush = Brush.verticalGradient(
-                colors = listOf(
-                    themeColors.studioTop,
-                    themeColors.studioMid,
-                    themeColors.studioBottom
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        themeColors.studioTop,
+                        themeColors.studioMid,
+                        themeColors.studioBottom
+                    )
                 )
             )
-        )
-
-        // Soft upper-left ambient light bloom
-        drawCircle(
-            brush = Brush.radialGradient(
-                colors = listOf(
-                    themeColors.studioGlowPrimary.copy(alpha = 0.24f),
-                    Color.Transparent
-                ),
-                center = Offset(size.width * 0.18f, size.height * 0.12f),
-                radius = size.maxDimension * 0.55f
-            ),
-            radius = size.maxDimension * 0.55f,
-            center = Offset(size.width * 0.18f, size.height * 0.12f)
-        )
-
-        // Secondary lower-right cyan/accent bloom
-        drawCircle(
-            brush = Brush.radialGradient(
-                colors = listOf(
-                    themeColors.studioGlowSecondary.copy(alpha = 0.14f),
-                    Color.Transparent
-                ),
-                center = Offset(size.width * 0.86f, size.height * 0.82f),
-                radius = size.maxDimension * 0.48f
-            ),
-            radius = size.maxDimension * 0.48f,
-            center = Offset(size.width * 0.86f, size.height * 0.82f)
-        )
-
-        // Subtle floating prism tile watermarks
-        val silhouettes = listOf(
-            Triple(Offset(size.width * 0.12f, size.height * 0.18f), 42f, -14f),
-            Triple(Offset(size.width * 0.88f, size.height * 0.15f), 34f, 18f),
-            Triple(Offset(size.width * 0.08f, size.height * 0.68f), 46f, 12f),
-            Triple(Offset(size.width * 0.90f, size.height * 0.60f), 40f, -16f),
-            Triple(Offset(size.width * 0.24f, size.height * 0.88f), 32f, -10f),
-            Triple(Offset(size.width * 0.78f, size.height * 0.86f), 38f, 15f)
-        )
-        silhouettes.forEach { (center, side, angle) ->
-            rotate(degrees = angle, pivot = center) {
-                drawRoundRect(
-                    color = Color.White.copy(alpha = 0.032f),
-                    topLeft = Offset(center.x - side / 2f, center.y - side / 2f),
-                    size = Size(side, side),
-                    cornerRadius = CornerRadius(10f, 10f)
-                )
-            }
-        }
-    }
+    )
 }
 
 /**
- * 2x2 Tilted jewel block emblem rendered in the user's selected BlockStyle & BoardPalette.
+ * 2x2 puzzle block emblem rendered in the user's selected BlockStyle & BoardPalette.
  */
 @Composable
 fun ArcadeBlockEmblem(
@@ -166,35 +120,28 @@ fun ArcadeBlockEmblem(
     val blockStyle = LocalBlockStyle.current
     val boardPalette = LocalBoardPalette.current
     Canvas(modifier = modifier.size(size)) {
-        rotate(degrees = -7f) {
-            val cell = this.size.width / 2f
-            val gap = cell * 0.11f
-            val tile = cell - gap
-            drawBevelBlock(gap / 2f, gap / 2f, tile, BlockColor.CORAL, blockStyle = blockStyle, boardPalette = boardPalette)
-            drawBevelBlock(cell + gap / 2f, gap / 2f, tile, BlockColor.AMBER, blockStyle = blockStyle, boardPalette = boardPalette)
-            drawBevelBlock(gap / 2f, cell + gap / 2f, tile, BlockColor.CYAN, blockStyle = blockStyle, boardPalette = boardPalette)
-            drawBevelBlock(cell + gap / 2f, cell + gap / 2f, tile, BlockColor.EMERALD, blockStyle = blockStyle, boardPalette = boardPalette)
-        }
+        val cell = this.size.width / 2f
+        val gap = cell * 0.11f
+        val tile = cell - gap
+        drawBevelBlock(gap / 2f, gap / 2f, tile, BlockColor.CORAL, blockStyle = blockStyle, boardPalette = boardPalette)
+        drawBevelBlock(cell + gap / 2f, gap / 2f, tile, BlockColor.AMBER, blockStyle = blockStyle, boardPalette = boardPalette)
+        drawBevelBlock(gap / 2f, cell + gap / 2f, tile, BlockColor.CYAN, blockStyle = blockStyle, boardPalette = boardPalette)
+        drawBevelBlock(cell + gap / 2f, cell + gap / 2f, tile, BlockColor.EMERALD, blockStyle = blockStyle, boardPalette = boardPalette)
     }
 }
 
 /**
- * Stacked studio brand title ("Block" / "Falls") with crisp crispness & accent glow.
+ * Crisp classic puzzle title ("BLOCK" / "FALL").
  */
 @Composable
 fun ArcadeTitleLogo(
-    fontSize: TextUnit = 42.sp,
+    fontSize: TextUnit = 40.sp,
     modifier: Modifier = Modifier
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = modifier
     ) {
-        val shadowStyle = Shadow(
-            color = Color(0xFF04091A),
-            offset = Offset(0f, 6f),
-            blurRadius = 10f
-        )
         Text(
             text = "BLOCK",
             style = MaterialTheme.typography.displaySmall.copy(
@@ -202,21 +149,19 @@ fun ArcadeTitleLogo(
                 fontWeight = FontWeight.ExtraBold,
                 fontSize = fontSize,
                 lineHeight = fontSize * 0.96f,
-                letterSpacing = 1.5.sp,
-                shadow = shadowStyle
+                letterSpacing = 1.2.sp
             ),
             color = TextPrimary,
             textAlign = TextAlign.Center
         )
         Text(
-            text = "FALLS",
+            text = "FALL",
             style = MaterialTheme.typography.displaySmall.copy(
                 fontFamily = OutfitFontFamily,
                 fontWeight = FontWeight.ExtraBold,
                 fontSize = fontSize,
                 lineHeight = fontSize * 0.96f,
-                letterSpacing = 2.5.sp,
-                shadow = shadowStyle
+                letterSpacing = 2.0.sp
             ),
             color = AccentCyan,
             textAlign = TextAlign.Center
@@ -225,7 +170,7 @@ fun ArcadeTitleLogo(
 }
 
 /**
- * Tactile Neo-Glass 3D rounded button with top rim sheen and crisp bottom depth lip.
+ * Tactile classic puzzle button with crisp bottom lip and subtle elevation.
  */
 @Composable
 fun GlossyArcadeButton(
@@ -235,8 +180,8 @@ fun GlossyArcadeButton(
     style: ArcadeButtonStyle = ArcadeButtonStyle.BLUE,
     icon: ImageVector? = null,
     enabled: Boolean = true,
-    height: Dp = 54.dp,
-    cornerRadius: Dp = 18.dp,
+    height: Dp = 52.dp,
+    cornerRadius: Dp = 12.dp,
     fontSize: TextUnit = 16.sp,
     testTag: String? = null
 ) {
@@ -251,12 +196,15 @@ fun GlossyArcadeButton(
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val pressScale by animateFloatAsState(
-        targetValue = if (isPressed && enabled) 0.968f else 1f,
-        animationSpec = spring(dampingRatio = 0.72f, stiffness = 550f),
+        targetValue = if (isPressed && enabled) 0.975f else 1f,
+        animationSpec = spring(dampingRatio = 0.78f, stiffness = 580f),
         label = "arcade_btn_press"
     )
 
     val shape = RoundedCornerShape(cornerRadius)
+    val rippleColor = if (style == ArcadeButtonStyle.SLATE) TextPrimary else Color.White
+    val borderStrokeColor = if (style == ArcadeButtonStyle.SLATE) GlassBorder else Color.White.copy(alpha = 0.16f)
+
     val outerModifier = modifier
         .height(height)
         .graphicsLayer {
@@ -264,13 +212,13 @@ fun GlossyArcadeButton(
             scaleY = pressScale
         }
         .then(if (testTag != null) Modifier.testTag(testTag) else Modifier)
-        .alpha(if (enabled) 1f else 0.44f)
-        .shadow(elevation = 6.dp, shape = shape, clip = false)
+        .alpha(if (enabled) 1f else 0.45f)
+        .shadow(elevation = 2.dp, shape = shape, clip = false)
         .clip(shape)
         .background(lipColor)
         .clickable(
             interactionSource = interactionSource,
-            indication = androidx.compose.material3.ripple(color = Color.White),
+            indication = androidx.compose.material3.ripple(color = rippleColor),
             enabled = enabled,
             onClick = onClick
         )
@@ -280,28 +228,15 @@ fun GlossyArcadeButton(
             contentAlignment = Alignment.Center,
             modifier = Modifier
                 .fillMaxSize()
-                .padding(bottom = 4.dp)
+                .padding(bottom = 3.dp)
                 .clip(shape)
                 .background(Brush.verticalGradient(listOf(topColor, bottomColor)))
-                .border(1.dp, Color.White.copy(alpha = 0.28f), shape)
+                .border(1.dp, borderStrokeColor, shape)
         ) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .fillMaxWidth()
-                    .height(height * 0.34f)
-                    .padding(horizontal = 8.dp, vertical = 2.dp)
-                    .clip(RoundedCornerShape(50))
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(Color.White.copy(alpha = 0.24f), Color.Transparent)
-                        )
-                    )
-            )
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center,
-                modifier = Modifier.padding(horizontal = 16.dp)
+                modifier = Modifier.padding(horizontal = 14.dp)
             ) {
                 if (icon != null) {
                     Icon(
@@ -316,9 +251,9 @@ fun GlossyArcadeButton(
                     text = text,
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontFamily = OutfitFontFamily,
-                        fontWeight = FontWeight.ExtraBold,
+                        fontWeight = FontWeight.Bold,
                         fontSize = fontSize,
-                        letterSpacing = 0.3.sp
+                        letterSpacing = 0.2.sp
                     ),
                     color = contentColor,
                     maxLines = 1,
@@ -330,17 +265,17 @@ fun GlossyArcadeButton(
 }
 
 /**
- * Elevated Neo-Glass container card with crisp top specular hairline and deep shadow.
+ * Clean white container card with crisp 1dp border and subtle shadow.
  */
 @Composable
 fun FrostedGlassCard(
     modifier: Modifier = Modifier,
-    cornerRadius: Dp = 20.dp,
-    borderColor: Color = GlassBorder.copy(alpha = 0.48f),
+    cornerRadius: Dp = 16.dp,
+    borderColor: Color = GlassBorder,
     backgroundBrush: Brush = Brush.verticalGradient(
         colors = listOf(
-            SurfaceCardElevated.copy(alpha = 0.92f),
-            SurfaceCard.copy(alpha = 0.95f)
+            SurfaceCard,
+            SurfaceCardElevated
         )
     ),
     content: @Composable ColumnScope.() -> Unit
@@ -348,7 +283,7 @@ fun FrostedGlassCard(
     val shape = RoundedCornerShape(cornerRadius)
     Column(
         modifier = modifier
-            .shadow(10.dp, shape, clip = false)
+            .shadow(3.dp, shape, clip = false)
             .clip(shape)
             .background(backgroundBrush)
             .border(1.dp, borderColor, shape),
@@ -357,23 +292,23 @@ fun FrostedGlassCard(
 }
 
 /**
- * Floating circular emblem badge for Pause, Level Complete, and Game Over modals.
+ * Clean circular badge for Pause, Level Complete, and Game Over modals.
  */
 @Composable
 fun FloatingModalBadge(
     backgroundBrush: Brush,
     modifier: Modifier = Modifier,
-    size: Dp = 74.dp,
+    size: Dp = 68.dp,
     content: @Composable BoxScope.() -> Unit
 ) {
     Box(
         contentAlignment = Alignment.Center,
         modifier = modifier
             .size(size)
-            .shadow(10.dp, CircleShape, clip = false)
+            .shadow(4.dp, CircleShape, clip = false)
             .clip(CircleShape)
             .background(backgroundBrush)
-            .border(2.dp, Color.White.copy(alpha = 0.38f), CircleShape),
+            .border(2.dp, Color.White, CircleShape),
         content = content
     )
 }

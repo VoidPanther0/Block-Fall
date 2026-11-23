@@ -243,7 +243,7 @@ private fun ThemeSwitcherCard(
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 BlockStyle.entries.forEach { style ->
                     val selected = style == selectedBlockStyle
-                    val chipShape = RoundedCornerShape(14.dp)
+                    val chipShape = RoundedCornerShape(12.dp)
                     Box(
                         contentAlignment = Alignment.Center,
                         modifier = Modifier
@@ -252,11 +252,11 @@ private fun ThemeSwitcherCard(
                             .clip(chipShape)
                             .background(
                                 if (selected) Brush.verticalGradient(listOf(BlueBtnTop, BlueBtnBottom))
-                                else Brush.verticalGradient(listOf(SurfaceCardElevated.copy(alpha = 0.7f), SurfaceCard.copy(alpha = 0.85f)))
+                                else Brush.verticalGradient(listOf(SurfaceCardElevated, SurfaceCardElevated))
                             )
                             .border(
                                 width = if (selected) 1.5.dp else 1.dp,
-                                color = if (selected) AccentGold else GlassBorder.copy(alpha = 0.45f),
+                                color = if (selected) BlueBtnBottom else GlassBorder,
                                 shape = chipShape
                             )
                             .clickable { onSelectBlockStyle(style) }
@@ -267,10 +267,10 @@ private fun ThemeSwitcherCard(
                             text = style.displayName,
                             style = MaterialTheme.typography.labelLarge.copy(
                                 fontFamily = OutfitFontFamily,
-                                fontWeight = if (selected) FontWeight.ExtraBold else FontWeight.SemiBold,
+                                fontWeight = if (selected) FontWeight.Bold else FontWeight.SemiBold,
                                 fontSize = 13.sp
                             ),
-                            color = Color.White,
+                            color = if (selected) Color.White else TextPrimary,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -283,7 +283,7 @@ private fun ThemeSwitcherCard(
                 BoardColorPalette.entries.forEach { palette ->
                     val selected = palette == selectedBoardPalette
                     val boardColors = palette.toBoardColors()
-                    val chipShape = RoundedCornerShape(14.dp)
+                    val chipShape = RoundedCornerShape(12.dp)
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center,
@@ -291,10 +291,10 @@ private fun ThemeSwitcherCard(
                             .weight(1f)
                             .defaultMinSize(minHeight = 56.dp)
                             .clip(chipShape)
-                            .background(if (selected) SurfaceCardElevated.copy(alpha = 0.94f) else SurfaceCard.copy(alpha = 0.78f))
+                            .background(if (selected) AccentCyan.copy(alpha = 0.08f) else SurfaceCardElevated)
                             .border(
                                 width = if (selected) 1.5.dp else 1.dp,
-                                color = if (selected) AccentGold else GlassBorder.copy(alpha = 0.45f),
+                                color = if (selected) AccentCyan else GlassBorder,
                                 shape = chipShape
                             )
                             .clickable { onSelectBoardPalette(palette) }
@@ -306,17 +306,17 @@ private fun ThemeSwitcherCard(
                                 .size(22.dp)
                                 .clip(CircleShape)
                                 .background(Brush.linearGradient(listOf(boardColors.swatchPrimary, boardColors.swatchSecondary)))
-                                .border(1.5.dp, Color.White.copy(alpha = 0.78f), CircleShape)
+                                .border(1.5.dp, Color.White, CircleShape)
                         )
                         Spacer(Modifier.height(4.dp))
                         Text(
                             text = palette.displayName,
                             style = MaterialTheme.typography.labelMedium.copy(
                                 fontFamily = OutfitFontFamily,
-                                fontWeight = if (selected) FontWeight.ExtraBold else FontWeight.Medium,
+                                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
                                 fontSize = 11.sp
                             ),
-                            color = if (selected) AccentGold else Color.White,
+                            color = if (selected) AccentCyan else TextPrimary,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )

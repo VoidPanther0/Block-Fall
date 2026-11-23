@@ -91,7 +91,7 @@ fun PauseScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 PremiumCard(
-                    cornerRadius = 26.dp,
+                    cornerRadius = 18.dp,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 34.dp)
@@ -101,14 +101,14 @@ fun PauseScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(start = 22.dp, end = 22.dp, top = 48.dp, bottom = 22.dp)
+                            .padding(start = 22.dp, end = 22.dp, top = 46.dp, bottom = 22.dp)
                     ) {
                         Text(
                             text = "Game Paused",
                             style = MaterialTheme.typography.headlineMedium.copy(
                                 fontFamily = OutfitFontFamily,
                                 fontWeight = FontWeight.ExtraBold,
-                                fontSize = 26.sp
+                                fontSize = 25.sp
                             ),
                             color = TextPrimary
                         )
@@ -126,9 +126,9 @@ fun PauseScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(14.dp))
+                                .clip(RoundedCornerShape(12.dp))
                                 .background(BoardWellBg)
-                                .border(1.dp, GlassBorder.copy(alpha = 0.42f), RoundedCornerShape(14.dp))
+                                .border(1.dp, GlassBorder, RoundedCornerShape(12.dp))
                                 .padding(vertical = 10.dp, horizontal = 8.dp),
                             horizontalArrangement = Arrangement.SpaceEvenly
                         ) {
@@ -145,7 +145,7 @@ fun PauseScreen(
                             style = ArcadeButtonStyle.GREEN,
                             onClick = onResume,
                             height = 54.dp,
-                            cornerRadius = 16.dp,
+                            cornerRadius = 12.dp,
                             fontSize = 17.sp,
                             testTag = "pause_resume_button",
                             modifier = Modifier.fillMaxWidth()
@@ -157,7 +157,7 @@ fun PauseScreen(
                             style = ArcadeButtonStyle.GOLD,
                             onClick = { showRestartConfirm = true },
                             height = 50.dp,
-                            cornerRadius = 16.dp,
+                            cornerRadius = 12.dp,
                             fontSize = 16.sp,
                             testTag = "pause_restart_button",
                             modifier = Modifier.fillMaxWidth()
@@ -169,7 +169,7 @@ fun PauseScreen(
                             style = ArcadeButtonStyle.BLUE,
                             onClick = { showExitConfirm = true },
                             height = 50.dp,
-                            cornerRadius = 16.dp,
+                            cornerRadius = 12.dp,
                             fontSize = 16.sp,
                             testTag = "pause_home_button",
                             modifier = Modifier.fillMaxWidth()

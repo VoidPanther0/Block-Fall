@@ -78,7 +78,7 @@ fun PieceTray(
     val blockStyle = LocalBlockStyle.current
     val boardPalette = LocalBoardPalette.current
     val boardTheme = remember(boardPalette) { boardPalette.toBoardColors() }
-    val trayCorner = if (blockStyle == BlockStyle.RETRO) 10.dp else 18.dp
+    val trayCorner = if (blockStyle == BlockStyle.RETRO) 10.dp else 14.dp
     val trayShape = RoundedCornerShape(trayCorner)
 
     // Legality comes from the authoritative validator — the UI only reflects it.
@@ -90,52 +90,16 @@ fun PieceTray(
     val anyUsable = usableSlots.any { it }
 
     Column(
-        verticalArrangement = Arrangement.spacedBy(7.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
         modifier = modifier
             .fillMaxWidth()
-            .shadow(8.dp, trayShape, clip = false)
+            .shadow(2.dp, trayShape, clip = false)
             .clip(trayShape)
             .background(Brush.verticalGradient(listOf(boardTheme.trayTop, boardTheme.trayBottom)))
-            .border(1.25.dp, boardTheme.trayBorder, trayShape)
-            .padding(horizontal = 10.dp, vertical = 9.dp)
+            .border(1.dp, boardTheme.trayBorder, trayShape)
+            .padding(horizontal = 10.dp, vertical = 8.dp)
             .testTag("piece_tray")
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "YOUR PIECES",
-                style = MaterialTheme.typography.labelSmall.copy(
-                    fontFamily = OutfitFontFamily,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 0.8.sp,
-                    fontSize = 10.sp
-                ),
-                color = TextSecondary,
-                maxLines = 1
-            )
-            val statusText = when {
-                !anyUsable && status == GameStatus.PLAYING -> "NO VALID PLACEMENT"
-                status != GameStatus.PLAYING -> "WAITING"
-                else -> "${slots.count { it.piece != null }}/3 READY"
-            }
-            Text(
-                text = statusText,
-                style = MaterialTheme.typography.labelSmall.copy(
-                    fontFamily = OutfitFontFamily,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 0.5.sp,
-                    fontSize = 9.5.sp
-                ),
-                color = if (!anyUsable && status == GameStatus.PLAYING) AccentWarning else AccentCyan,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.testTag("piece_tray_status")
-            )
-        }
-
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally),
@@ -162,14 +126,18 @@ fun PieceTray(
         }
 
         if (!anyUsable && status == GameStatus.PLAYING) {
-            Spacer(Modifier.height(1.dp))
             Text(
-                text = "No piece fits the board right now.",
-                style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.5.sp),
+                text = "No valid placement — shuffle or clear space",
+                style = MaterialTheme.typography.bodySmall.copy(
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.SemiBold
+                ),
                 color = AccentWarning,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.testTag("piece_tray_no_valid_hint")
+                modifier = Modifier
+                    .align(Alignment.CenterHorizontally)
+                    .testTag("piece_tray_no_valid_hint")
             )
         }
     }
@@ -195,21 +163,21 @@ private fun TraySlotCard(
     val boardTheme = remember(boardPalette) { boardPalette.toBoardColors() }
     val borderColor by animateColorAsState(
         targetValue = when {
-            isSelected -> AccentGold
-            slot.piece != null && !isUsable -> AccentWarning.copy(alpha = 0.55f)
-            slot.piece != null -> AccentCyan.copy(alpha = 0.42f)
-            else -> boardTheme.rim.copy(alpha = 0.2f)
+            isSelected -> AccentCyan
+            slot.piece != null && !isUsable -> AccentWarning.copy(alpha = 0.6f)
+            slot.piece != null -> boardTheme.trayBorder
+            else -> boardTheme.trayBorder.copy(alpha = 0.55f)
         },
         label = "slot_border"
     )
     val selectionScale by animateFloatAsState(
-        targetValue = if (isSelected) 1.04f else 1f,
-        animationSpec = spring(dampingRatio = 0.72f, stiffness = 460f),
+        targetValue = if (isSelected) 1.03f else 1f,
+        animationSpec = spring(dampingRatio = 0.76f, stiffness = 480f),
         label = "slot_scale"
     )
 
     val bgColor = if (isSelected) boardTheme.selectedSlotBg else boardTheme.slotBg
-    val slotCorner = if (blockStyle == BlockStyle.RETRO) 6.dp else 16.dp
+    val slotCorner = if (blockStyle == BlockStyle.RETRO) 6.dp else 12.dp
     val desc = slot.piece?.let { "Piece ${slot.index + 1}, ${it.shape.cellCount} cells" }
         ?: "Empty piece slot ${slot.index + 1}"
 
@@ -264,14 +232,14 @@ private fun TraySlotCard(
                 modifier = Modifier
                     .fillMaxSize()
                     .clip(RoundedCornerShape(slotCorner))
-                    .background(androidx.compose.ui.graphics.Color(0x99070B18))
+                    .background(androidx.compose.ui.graphics.Color(0xCCF8FAFC))
             )
             Text(
                 text = "NO FIT",
                 style = MaterialTheme.typography.labelSmall.copy(
                     fontFamily = OutfitFontFamily,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 9.sp
+                    fontSize = 9.5.sp
                 ),
                 color = AccentWarning,
                 maxLines = 1

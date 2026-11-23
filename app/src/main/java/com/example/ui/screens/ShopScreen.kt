@@ -171,7 +171,7 @@ fun ShopScreen(
         ) {
             StoreSection.entries.forEach { section ->
                 val selected = section == selectedSection
-                val shape = RoundedCornerShape(14.dp)
+                val shape = RoundedCornerShape(12.dp)
                 val accent = when (section) {
                     StoreSection.DIAMONDS -> AccentDiamond
                     StoreSection.GOLD -> AccentGold
@@ -183,10 +183,10 @@ fun ShopScreen(
                     modifier = Modifier
                         .defaultMinSize(minHeight = 48.dp)
                         .clip(shape)
-                        .background(if (selected) accent.copy(alpha = 0.18f) else SurfaceCardElevated.copy(alpha = 0.72f))
+                        .background(if (selected) accent.copy(alpha = 0.12f) else SurfaceCard)
                         .border(
                             width = if (selected) 1.5.dp else 1.dp,
-                            color = if (selected) accent else GlassBorder.copy(alpha = 0.38f),
+                            color = if (selected) accent else GlassBorder,
                             shape = shape
                         )
                         .clickable { selectedSection = section }

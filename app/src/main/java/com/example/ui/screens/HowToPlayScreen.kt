@@ -298,7 +298,7 @@ private fun TutorialBoardCard(
                         modifier = Modifier
                             .size(54.dp)
                             .clip(CircleShape)
-                            .background(BoardWellBg.copy(alpha = 0.88f))
+                            .background(com.example.ui.theme.SurfaceCard.copy(alpha = 0.94f))
                             .border(1.5.dp, AccentGold, CircleShape)
                     ) {
                         Icon(

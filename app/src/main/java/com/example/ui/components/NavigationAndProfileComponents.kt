@@ -87,6 +87,7 @@ import com.example.ui.theme.SurfaceCardElevated
 import com.example.ui.theme.TextMuted
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
+import com.example.ui.theme.toBoardColors
 
 @Composable
 fun PlayerProfileHeader(
@@ -125,24 +126,24 @@ fun PlayerProfileHeader(
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
-                        .size(46.dp)
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(Brush.verticalGradient(listOf(SurfaceCardElevated, SurfaceCard)))
+                        .size(48.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(SurfaceCard)
                         .border(
                             width = if (hasCrownCosmetic) 1.5.dp else 1.dp,
-                            color = accent.copy(alpha = if (hasCrownCosmetic) 0.9f else 0.5f),
-                            shape = RoundedCornerShape(14.dp)
+                            color = if (hasCrownCosmetic) AccentGold else GlassBorder,
+                            shape = RoundedCornerShape(12.dp)
                         )
                 ) {
-                    ArcadeBlockEmblem(size = 27.dp)
+                    ArcadeBlockEmblem(size = 28.dp)
                 }
 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = playerName?.takeIf { it.isNotBlank() } ?: "Block Tactician",
+                        text = playerName?.takeIf { it.isNotBlank() } ?: "Player",
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontFamily = OutfitFontFamily,
-                            fontWeight = FontWeight.ExtraBold,
+                            fontWeight = FontWeight.Bold,
                             fontSize = 15.sp
                         ),
                         color = TextPrimary,
@@ -150,11 +151,11 @@ fun PlayerProfileHeader(
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
-                        text = "TIER ${rank.tierNumber} · ${rank.title}",
+                        text = "Tier ${rank.tierNumber} · ${rank.title}",
                         style = MaterialTheme.typography.labelSmall.copy(
                             fontFamily = JetBrainsMonoFontFamily,
-                            fontSize = 10.sp,
-                            letterSpacing = 0.2.sp
+                            fontSize = 10.5.sp,
+                            letterSpacing = 0.1.sp
                         ),
                         color = accent,
                         maxLines = 1,
@@ -164,7 +165,7 @@ fun PlayerProfileHeader(
             }
 
             Row(
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconActionButton(
@@ -172,7 +173,7 @@ fun PlayerProfileHeader(
                     contentDescription = "Leaderboard & Cloud",
                     size = 48.dp,
                     tint = if (isCloudSignedIn) AccentEmerald else AccentCyan,
-                    borderColor = if (isCloudSignedIn) AccentEmerald.copy(alpha = 0.6f) else AccentCyan.copy(alpha = 0.45f),
+                    borderColor = GlassBorder,
                     onClick = onOpenLeaderboard,
                     testTag = "home_leaderboard_button"
                 )
@@ -231,8 +232,8 @@ fun GameModeCard(
     enabled: Boolean = true
 ) {
     PremiumCard(
-        cornerRadius = 22.dp,
-        borderColor = accent.copy(alpha = if (enabled) 0.45f else 0.25f),
+        cornerRadius = 16.dp,
+        borderColor = GlassBorder,
         modifier = modifier.fillMaxWidth()
     ) {
         Column(
@@ -338,9 +339,10 @@ fun SkinCard(
         isUnlocked -> AccentCyan
         else -> TextMuted
     }
+    val boardWellColor = boardPalette.toBoardColors().wellTop
     PremiumCard(
-        cornerRadius = 18.dp,
-        borderColor = accent.copy(alpha = if (isEquipped) 0.72f else 0.34f),
+        cornerRadius = 16.dp,
+        borderColor = if (isEquipped) AccentEmerald else GlassBorder,
         modifier = modifier
             .fillMaxWidth()
             .then(if (testTag != null) Modifier.testTag(testTag) else Modifier)
@@ -356,9 +358,9 @@ fun SkinCard(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
                     .size(56.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(BoardWellBg)
-                    .border(1.dp, accent.copy(alpha = 0.38f), RoundedCornerShape(14.dp))
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(boardWellColor)
+                    .border(1.dp, accent.copy(alpha = 0.45f), RoundedCornerShape(12.dp))
                     .padding(6.dp)
             ) {
                 Canvas(modifier = Modifier.size(42.dp)) {
@@ -485,12 +487,12 @@ fun AchievementCard(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .background(if (unlocked) SurfaceCardElevated.copy(alpha = 0.78f) else BoardWellBg)
+            .clip(RoundedCornerShape(12.dp))
+            .background(if (unlocked) SurfaceCard else BoardWellBg)
             .border(
                 width = 1.dp,
-                color = if (unlocked) AccentGold.copy(alpha = 0.42f) else GlassBorder.copy(alpha = 0.25f),
-                shape = RoundedCornerShape(14.dp)
+                color = if (unlocked) AccentGold.copy(alpha = 0.65f) else GlassBorder,
+                shape = RoundedCornerShape(12.dp)
             )
             .padding(horizontal = 12.dp, vertical = 10.dp)
     ) {

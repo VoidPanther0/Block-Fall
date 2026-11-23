@@ -374,7 +374,7 @@ fun AuthenticatedCloudAccountCard(
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.Logout,
                     contentDescription = null,
-                    tint = GlassBorder,
+                    tint = TextSecondary,
                     modifier = Modifier.size(16.dp)
                 )
                 Spacer(Modifier.size(6.dp))

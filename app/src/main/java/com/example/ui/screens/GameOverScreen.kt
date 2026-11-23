@@ -95,25 +95,25 @@ fun GameOverScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 PremiumCard(
-                    cornerRadius = 26.dp,
-                    borderColor = AccentCoral.copy(alpha = 0.45f),
+                    cornerRadius = 18.dp,
+                    borderColor = GlassBorder,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 38.dp)
+                        .padding(top = 36.dp)
                 ) {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(start = 22.dp, end = 22.dp, top = 50.dp, bottom = 22.dp)
+                            .padding(start = 22.dp, end = 22.dp, top = 46.dp, bottom = 22.dp)
                     ) {
                         Text(
                             text = stringResource(R.string.game_over_title),
                             style = MaterialTheme.typography.headlineMedium.copy(
                                 fontFamily = OutfitFontFamily,
                                 fontWeight = FontWeight.ExtraBold,
-                                fontSize = 28.sp
+                                fontSize = 26.sp
                             ),
                             color = TextPrimary
                         )
@@ -134,7 +134,7 @@ fun GameOverScreen(
                                 ),
                                 color = GoldBtnText,
                                 modifier = Modifier
-                                    .clip(RoundedCornerShape(10.dp))
+                                    .clip(RoundedCornerShape(8.dp))
                                     .background(AccentGold)
                                     .padding(horizontal = 12.dp, vertical = 4.dp)
                             )
@@ -145,9 +145,9 @@ fun GameOverScreen(
                             verticalArrangement = Arrangement.spacedBy(6.dp),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(16.dp))
+                                .clip(RoundedCornerShape(14.dp))
                                 .background(BoardWellBg)
-                                .border(1.dp, GlassBorder.copy(alpha = 0.42f), RoundedCornerShape(16.dp))
+                                .border(1.dp, GlassBorder, RoundedCornerShape(14.dp))
                                 .padding(16.dp)
                         ) {
                             Text(
@@ -160,7 +160,7 @@ fun GameOverScreen(
                                 style = MaterialTheme.typography.displaySmall.copy(
                                     fontFamily = JetBrainsMonoFontFamily,
                                     fontWeight = FontWeight.Bold,
-                                    fontSize = 42.sp
+                                    fontSize = 40.sp
                                 ),
                                 color = AccentCyan
                             )
@@ -207,12 +207,12 @@ fun GameOverScreen(
                         Spacer(Modifier.height(2.dp))
 
                         PremiumPrimaryButton(
-                            text = "Retry",
+                            text = "Play Again",
                             icon = Icons.Filled.Refresh,
-                            style = ArcadeButtonStyle.GOLD,
+                            style = ArcadeButtonStyle.GREEN,
                             onClick = onRetry,
                             height = 54.dp,
-                            cornerRadius = 16.dp,
+                            cornerRadius = 12.dp,
                             fontSize = 18.sp,
                             testTag = "game_over_retry_button",
                             modifier = Modifier.fillMaxWidth()
@@ -221,11 +221,11 @@ fun GameOverScreen(
                         PremiumPrimaryButton(
                             text = stringResource(R.string.nav_home),
                             icon = Icons.Filled.Home,
-                            style = ArcadeButtonStyle.BLUE,
+                            style = ArcadeButtonStyle.SLATE,
                             onClick = onHome,
                             height = 50.dp,
-                            cornerRadius = 16.dp,
-                            fontSize = 17.sp,
+                            cornerRadius = 12.dp,
+                            fontSize = 16.sp,
                             testTag = "game_over_home_button",
                             modifier = Modifier.fillMaxWidth()
                         )

@@ -106,9 +106,9 @@ fun TopGameBar(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
                         .size(48.dp)
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(Brush.verticalGradient(listOf(SurfaceCardElevated, SurfaceCard)))
-                        .border(1.dp, GlassBorder.copy(alpha = 0.5f), RoundedCornerShape(14.dp))
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(SurfaceCard)
+                        .border(1.dp, GlassBorder, RoundedCornerShape(12.dp))
                         .clickable(onClick = onBack)
                         .testTag("gameplay_back_button")
                 ) {
@@ -125,10 +125,10 @@ fun TopGameBar(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 modifier = Modifier
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(SurfaceCardElevated.copy(alpha = 0.9f))
-                    .border(1.dp, modeAccent.copy(alpha = 0.48f), RoundedCornerShape(14.dp))
-                    .padding(horizontal = 11.dp, vertical = 8.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(SurfaceCard)
+                    .border(1.dp, GlassBorder, RoundedCornerShape(12.dp))
+                    .padding(horizontal = 10.dp, vertical = 7.dp)
             ) {
                 Box(
                     modifier = Modifier
@@ -140,9 +140,9 @@ fun TopGameBar(
                     text = modeBadgeText.uppercase(),
                     style = MaterialTheme.typography.labelLarge.copy(
                         fontFamily = OutfitFontFamily,
-                        fontWeight = FontWeight.ExtraBold,
-                        fontSize = 12.sp,
-                        letterSpacing = 0.7.sp
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 11.5.sp,
+                        letterSpacing = 0.5.sp
                     ),
                     color = TextPrimary,
                     maxLines = 1,
@@ -155,9 +155,9 @@ fun TopGameBar(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(2.dp),
             modifier = Modifier
-                .clip(RoundedCornerShape(16.dp))
-                .background(SurfaceCard.copy(alpha = 0.88f))
-                .border(1.dp, GlassBorder.copy(alpha = 0.44f), RoundedCornerShape(16.dp))
+                .clip(RoundedCornerShape(12.dp))
+                .background(SurfaceCard)
+                .border(1.dp, GlassBorder, RoundedCornerShape(12.dp))
                 .padding(horizontal = 4.dp)
         ) {
             IconButton(
@@ -193,10 +193,8 @@ fun TopGameBar(
                 modifier = Modifier
                     .size(48.dp)
                     .padding(5.dp)
-                    .shadow(4.dp, RoundedCornerShape(12.dp), clip = false)
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(RoundedCornerShape(10.dp))
                     .background(Brush.verticalGradient(listOf(BlueBtnTop, BlueBtnBottom)))
-                    .border(1.dp, Color.White.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
                     .clickable(onClick = onPause)
                     .testTag("pause_button")
             ) {
@@ -384,17 +382,11 @@ fun CascadeCalloutBar(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(7.dp),
                     modifier = Modifier
+                        .shadow(2.dp, CircleShape, clip = false)
                         .clip(CircleShape)
-                        .background(
-                            Brush.horizontalGradient(
-                                listOf(
-                                    SurfaceCardElevated.copy(alpha = 0.96f),
-                                    SurfaceCard.copy(alpha = 0.96f)
-                                )
-                            )
-                        )
-                        .border(1.25.dp, accent.copy(alpha = 0.85f), CircleShape)
-                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                        .background(SurfaceCard)
+                        .border(1.25.dp, accent.copy(alpha = 0.8f), CircleShape)
+                        .padding(horizontal = 12.dp, vertical = 4.dp)
                         .testTag("cascade_banner")
                 ) {
                     Text(
@@ -403,7 +395,7 @@ fun CascadeCalloutBar(
                             fontFamily = OutfitFontFamily,
                             fontWeight = FontWeight.ExtraBold,
                             fontSize = 11.sp,
-                            letterSpacing = 0.6.sp
+                            letterSpacing = 0.5.sp
                         ),
                         color = tierColor,
                         maxLines = 1
@@ -418,11 +410,11 @@ fun CascadeCalloutBar(
                         text = banner.headline,
                         style = MaterialTheme.typography.labelLarge.copy(
                             fontFamily = OutfitFontFamily,
-                            fontWeight = FontWeight.ExtraBold,
+                            fontWeight = FontWeight.Bold,
                             fontSize = 11.sp,
-                            letterSpacing = 0.4.sp
+                            letterSpacing = 0.3.sp
                         ),
-                        color = Color.White,
+                        color = TextPrimary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f, fill = false)
@@ -454,24 +446,17 @@ private fun StudioHudCard(
     badgeText: String? = null,
     valueColor: Color = TextPrimary
 ) {
-    val shape = RoundedCornerShape(18.dp)
+    val shape = RoundedCornerShape(14.dp)
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(9.dp),
         modifier = modifier
-            .shadow(6.dp, shape, clip = false)
+            .shadow(2.dp, shape, clip = false)
             .clip(shape)
-            .background(
-                Brush.verticalGradient(
-                    listOf(
-                        SurfaceCardElevated.copy(alpha = 0.94f),
-                        SurfaceCard.copy(alpha = 0.96f)
-                    )
-                )
-            )
+            .background(SurfaceCard)
             .border(
                 width = if (highlight) 1.5.dp else 1.dp,
-                color = if (highlight) AccentGold.copy(alpha = 0.85f) else GlassBorder.copy(alpha = 0.45f),
+                color = if (highlight) AccentGold else GlassBorder,
                 shape = shape
             )
             .padding(horizontal = 11.dp, vertical = 8.dp)
@@ -480,15 +465,14 @@ private fun StudioHudCard(
             contentAlignment = Alignment.Center,
             modifier = Modifier
                 .size(32.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(accent.copy(alpha = 0.16f))
-                .border(1.dp, accent.copy(alpha = 0.36f), RoundedCornerShape(10.dp))
+                .clip(RoundedCornerShape(9.dp))
+                .background(accent.copy(alpha = 0.14f))
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
                 tint = accent,
-                modifier = Modifier.size(17.dp)
+                modifier = Modifier.size(18.dp)
             )
         }
         Column(modifier = Modifier.weight(1f)) {

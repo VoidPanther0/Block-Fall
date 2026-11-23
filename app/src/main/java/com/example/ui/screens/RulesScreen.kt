@@ -81,7 +81,7 @@ fun RulesScreen(
             )
 
             PremiumCard(
-                cornerRadius = 20.dp,
+                cornerRadius = 16.dp,
                 borderColor = AccentGold.copy(alpha = 0.42f),
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -126,7 +126,7 @@ private fun RuleSectionCard(
     bullets: List<String>
 ) {
     PremiumCard(
-        cornerRadius = 20.dp,
+        cornerRadius = 16.dp,
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(

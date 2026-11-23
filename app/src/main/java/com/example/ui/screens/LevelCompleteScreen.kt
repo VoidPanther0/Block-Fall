@@ -161,7 +161,7 @@ fun LevelCompleteScreen(
             Spacer(Modifier.height(16.dp))
 
             PremiumCard(
-                cornerRadius = 22.dp,
+                cornerRadius = 18.dp,
                 borderColor = AccentGold.copy(alpha = 0.45f),
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -227,7 +227,7 @@ fun LevelCompleteScreen(
                     style = ArcadeButtonStyle.GREEN,
                     onClick = onNextLevel,
                     height = 54.dp,
-                    cornerRadius = 16.dp,
+                    cornerRadius = 12.dp,
                     fontSize = 18.sp,
                     testTag = "level_complete_next_button",
                     modifier = Modifier.fillMaxWidth()
@@ -256,7 +256,7 @@ fun LevelCompleteScreen(
                     style = ArcadeButtonStyle.GOLD,
                     onClick = onReplay,
                     height = 50.dp,
-                    cornerRadius = 16.dp,
+                    cornerRadius = 12.dp,
                     fontSize = 16.sp,
                     testTag = "level_complete_replay_button",
                     modifier = Modifier.weight(1f)
@@ -267,7 +267,7 @@ fun LevelCompleteScreen(
                     style = ArcadeButtonStyle.BLUE,
                     onClick = onHome,
                     height = 50.dp,
-                    cornerRadius = 16.dp,
+                    cornerRadius = 12.dp,
                     fontSize = 16.sp,
                     testTag = "level_complete_home_button",
                     modifier = Modifier.weight(1f)

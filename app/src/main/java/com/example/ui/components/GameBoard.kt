@@ -78,7 +78,7 @@ fun GameBoard(
     val boardBrush = remember(boardTheme) {
         Brush.verticalGradient(listOf(boardTheme.wellTop, boardTheme.wellBottom))
     }
-    val boardCorner = if (blockStyle == BlockStyle.RETRO) 10.dp else 24.dp
+    val boardCorner = if (blockStyle == BlockStyle.RETRO) 10.dp else 16.dp
     val boardShape = RoundedCornerShape(boardCorner)
 
     val particleProgress = remember { Animatable(1f) }
@@ -94,19 +94,19 @@ fun GameBoard(
 
     val isInvalidHover = dragState != null && dragState.hoverAnchor != null && !dragState.isHoverValid
     val rimColor = when {
-        isInvalidHover -> InvalidTint.copy(alpha = 0.85f)
-        hasSelectedSlot && dragState == null -> AccentCyan.copy(alpha = 0.72f)
+        isInvalidHover -> InvalidTint.copy(alpha = 0.9f)
+        hasSelectedSlot && dragState == null -> AccentCyan.copy(alpha = 0.82f)
         else -> boardTheme.rim
     }
 
     Box(
         modifier = modifier
             .aspectRatio(1f)
-            .shadow(14.dp, boardShape, clip = false)
+            .shadow(4.dp, boardShape, clip = false)
             .clip(boardShape)
             .background(boardBrush)
             .border(2.dp, rimColor, boardShape)
-            .padding(10.dp)
+            .padding(8.dp)
             .testTag("game_board")
             .semantics {
                 contentDescription = "8 by 8 Block Falls puzzle board"

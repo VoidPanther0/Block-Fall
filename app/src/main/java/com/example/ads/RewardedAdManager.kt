@@ -50,24 +50,30 @@ class RewardedAdManager(private val context: Context) {
         if (_adState.value is AdState.Loading || _adState.value is AdState.Ready) return
         _adState.value = AdState.Loading
         val adRequest = AdRequest.Builder().build()
-        RewardedAd.load(
-            context,
-            AdConfig.rewardedGoldUnitId,
-            adRequest,
-            object : RewardedAdLoadCallback() {
-                override fun onAdLoaded(ad: RewardedAd) {
-                    rewardedAd = ad
-                    _adState.value = AdState.Ready
-                    Log.d(TAG, "Ad loaded")
-                }
+        try {
+            RewardedAd.load(
+                context,
+                AdConfig.rewardedGoldUnitId,
+                adRequest,
+                object : RewardedAdLoadCallback() {
+                    override fun onAdLoaded(ad: RewardedAd) {
+                        rewardedAd = ad
+                        _adState.value = AdState.Ready
+                        Log.d(TAG, "Ad loaded")
+                    }
 
-                override fun onAdFailedToLoad(error: LoadAdError) {
-                    rewardedAd = null
-                    _adState.value = AdState.Error(error.message)
-                    Log.w(TAG, "Ad failed to load: ${error.message}")
+                    override fun onAdFailedToLoad(error: LoadAdError) {
+                        rewardedAd = null
+                        _adState.value = AdState.Error(error.message)
+                        Log.w(TAG, "Ad failed to load: ${error.message}")
+                    }
                 }
-            }
-        )
+            )
+        } catch (t: Throwable) {
+            rewardedAd = null
+            _adState.value = AdState.Error(t.message ?: "Unable to load ad")
+            Log.w(TAG, "Ad load failed synchronously: ${t.message}")
+        }
     }
 
     fun showAd(

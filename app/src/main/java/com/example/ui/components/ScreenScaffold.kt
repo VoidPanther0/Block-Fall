@@ -107,13 +107,9 @@ fun ScreenTopBar(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
                     .size(48.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(SurfaceCardElevated, SurfaceCard)
-                        )
-                    )
-                    .border(1.dp, GlassBorder.copy(alpha = 0.55f), RoundedCornerShape(14.dp))
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(SurfaceCard)
+                    .border(1.dp, GlassBorder, RoundedCornerShape(12.dp))
                     .clickable(onClick = onBack)
                     .testTag(backTestTag)
             ) {
@@ -134,9 +130,9 @@ fun ScreenTopBar(
                 fontFamily = OutfitFontFamily,
                 fontWeight = FontWeight.ExtraBold,
                 fontSize = 19.sp,
-                letterSpacing = 0.2.sp
+                letterSpacing = 0.1.sp
             ),
-            color = Color.White,
+            color = TextPrimary,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center,

@@ -238,12 +238,12 @@ private fun PlayerRankAndMilestonesCard(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
                         .size(52.dp)
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(Brush.verticalGradient(listOf(SurfaceCardElevated, SurfaceCard)))
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(com.example.ui.theme.ObsidianBg)
                         .border(
                             width = 1.5.dp,
-                            color = if (hasCrown) AccentGold else AccentCyan.copy(alpha = 0.5f),
-                            shape = RoundedCornerShape(16.dp)
+                            color = if (hasCrown) AccentGold else GlassBorder,
+                            shape = RoundedCornerShape(12.dp)
                         )
                 ) {
                     ArcadeBlockEmblem(size = 30.dp)

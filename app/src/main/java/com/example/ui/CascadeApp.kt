@@ -270,6 +270,11 @@ private fun CascadeNavHost(
                             navController.navigate(GameplayRoute)
                         }
                     },
+                    onPlayDaily = {
+                        viewModel.playUiClick()
+                        viewModel.startDailyChallenge()
+                        navController.navigate(GameplayRoute)
+                    },
                     onOpenModes = {
                         viewModel.playUiClick()
                         navController.navigate(ModeSelectionRoute)
