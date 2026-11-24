@@ -7,6 +7,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -21,9 +22,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Diamond
+import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.MonetizationOn
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Star
@@ -37,12 +37,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -55,14 +56,19 @@ import com.example.game.EconomyEngine
 import com.example.ui.GameUiState
 import com.example.ui.components.ArcadeButtonStyle
 import com.example.ui.components.CascadeScreenContainer
-import com.example.ui.components.PremiumCard
-import com.example.ui.components.PremiumPrimaryButton
+import com.example.ui.components.CrystalCoinBadge
+import com.example.ui.components.CrystalDiamondBadge
+import com.example.ui.components.FrostedGlassCard
+import com.example.ui.components.GoldMetallicBanner
+import com.example.ui.components.GlossyArcadeButton
 import com.example.ui.components.RoyalSkyBackdrop
 import com.example.ui.theme.AccentCoral
 import com.example.ui.theme.AccentCyan
 import com.example.ui.theme.AccentDiamond
 import com.example.ui.theme.AccentEmerald
 import com.example.ui.theme.AccentGold
+import com.example.ui.theme.AccentGoldBright
+import com.example.ui.theme.AccentGoldDeep
 import com.example.ui.theme.BoardWellBg
 import com.example.ui.theme.CascadeTextStyles
 import com.example.ui.theme.GlassBorder
@@ -84,18 +90,18 @@ fun LevelCompleteScreen(
     val stars = state.lastChallengeStarsEarned.coerceIn(1, 3)
     val (rewardGold, rewardDiamonds) = EconomyEngine.calculateChallengeWinReward(stars)
 
-    val starScales = remember { List(3) { Animatable(0.4f) } }
+    val starScales = remember { List(3) { Animatable(0.35f) } }
     LaunchedEffect(stars) {
         starScales.forEachIndexed { index, anim ->
-            delay(index * 90L)
-            anim.animateTo(1f, spring(dampingRatio = 0.55f, stiffness = 420f))
+            delay(index * 110L)
+            anim.animateTo(1f, spring(dampingRatio = 0.52f, stiffness = 420f))
         }
     }
 
     BackHandler(onBack = onHome)
 
     CascadeScreenContainer(
-        maxContentWidth = 440.dp,
+        maxContentWidth = 460.dp,
         backdrop = {
             RoyalSkyBackdrop()
             if (state.settings.visualEffectsEnabled) {
@@ -111,18 +117,67 @@ fun LevelCompleteScreen(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            // Winged celebration emblem
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .size(80.dp)
+                    .shadow(12.dp, CircleShape, clip = false)
+                    .clip(CircleShape)
+                    .background(
+                        Brush.radialGradient(
+                            listOf(AccentGoldBright, AccentGold, AccentGoldDeep)
+                        )
+                    )
+                    .border(2.5.dp, Color.White, CircleShape)
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.EmojiEvents,
+                    contentDescription = "Victory Trophy",
+                    tint = Color(0xFF241300),
+                    modifier = Modifier.size(44.dp)
+                )
+            }
+
+            Spacer(Modifier.height(14.dp))
+
+            GoldMetallicBanner(
+                text = if (state.isDailyChallenge) "DAILY VICTORY!" else "LEVEL COMPLETE!",
+                isPurple = false
+            )
+
+            Spacer(Modifier.height(8.dp))
+
+            Text(
+                text = if (state.isDailyChallenge) {
+                    "Daily Gravity · ${state.currentChallengeLevel.title}"
+                } else {
+                    "Level ${state.currentChallengeLevel.levelNumber} · ${state.currentChallengeLevel.title}"
+                },
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    fontFamily = OutfitFontFamily,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 14.sp
+                ),
+                color = AccentCyan
+            )
+
+            Spacer(Modifier.height(16.dp))
+
+            // 3-Star Celebration Arch
             Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(vertical = 4.dp)
             ) {
                 for (i in 1..3) {
                     val earned = i <= stars
-                    val starSize = if (i == 2) 70.dp else 52.dp
+                    val starSize = if (i == 2) 74.dp else 56.dp
                     val yShift = if (i == 2) (-10).dp else 0.dp
                     Icon(
                         imageVector = if (earned) Icons.Filled.Star else Icons.Outlined.StarBorder,
                         contentDescription = if (earned) "Earned star $i" else "Empty star $i",
-                        tint = if (earned) AccentGold else TextSecondary.copy(alpha = 0.4f),
+                        tint = if (earned) AccentGoldBright else TextSecondary.copy(alpha = 0.35f),
                         modifier = Modifier
                             .size(starSize)
                             .offset(y = yShift)
@@ -135,71 +190,52 @@ fun LevelCompleteScreen(
                 }
             }
 
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(18.dp))
 
-            Text(
-                text = stringResource(R.string.challenge_complete_title),
-                style = MaterialTheme.typography.displaySmall.copy(
-                    fontFamily = OutfitFontFamily,
-                    fontWeight = FontWeight.ExtraBold,
-                    fontSize = 30.sp
-                ),
-                color = TextPrimary,
-                textAlign = TextAlign.Center
-            )
-
-            Text(
-                text = if (state.isDailyChallenge) {
-                    "Daily Gravity · ${state.currentChallengeLevel.title}"
-                } else {
-                    "Level ${state.currentChallengeLevel.levelNumber} · ${state.currentChallengeLevel.title}"
-                },
-                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
-                color = TextSecondary
-            )
-
-            Spacer(Modifier.height(16.dp))
-
-            PremiumCard(
-                cornerRadius = 18.dp,
-                borderColor = AccentGold.copy(alpha = 0.45f),
+            // Summary Card
+            FrostedGlassCard(
+                cornerRadius = 22.dp,
+                borderColor = AccentGold.copy(alpha = 0.55f),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(18.dp)
+                        .padding(20.dp)
                 ) {
                     Text(
                         text = "SCORE EARNED",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = TextSecondary
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            letterSpacing = 1.2.sp,
+                            fontWeight = FontWeight.ExtraBold
+                        ),
+                        color = AccentGold
                     )
                     Text(
                         text = "${state.score}",
                         style = MaterialTheme.typography.displaySmall.copy(
                             fontFamily = JetBrainsMonoFontFamily,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 44.sp
+                            fontWeight = FontWeight.Black,
+                            fontSize = 46.sp
                         ),
-                        color = AccentGold
+                        color = Color.White
                     )
 
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         RewardEarnedPill(
-                            icon = Icons.Filled.MonetizationOn,
+                            badge = { CrystalCoinBadge(size = 20.dp) },
                             tint = AccentGold,
                             text = "+$rewardGold Gold"
                         )
                         RewardEarnedPill(
-                            icon = Icons.Filled.Diamond,
+                            badge = { CrystalDiamondBadge(size = 20.dp) },
                             tint = AccentDiamond,
-                            text = "+$rewardDiamonds Gems"
+                            text = "+$rewardDiamonds Diamonds"
                         )
                     }
 
@@ -211,23 +247,23 @@ fun LevelCompleteScreen(
                         CompleteMetricChip("Moves Left", "${state.movesRemaining}", Modifier.weight(1f))
                         CompleteMetricChip(
                             "Max Chain",
-                            if (state.bestCascadeDepth > 0) "x${state.bestCascadeDepth}" else "—",
+                            if (state.bestCascadeDepth > 0) "×${state.bestCascadeDepth}" else "—",
                             Modifier.weight(1f)
                         )
                     }
                 }
             }
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(18.dp))
 
             if (hasNextLevel) {
-                PremiumPrimaryButton(
+                GlossyArcadeButton(
                     text = stringResource(R.string.next_level),
                     icon = Icons.Filled.PlayArrow,
                     style = ArcadeButtonStyle.GREEN,
                     onClick = onNextLevel,
-                    height = 54.dp,
-                    cornerRadius = 12.dp,
+                    height = 56.dp,
+                    cornerRadius = 16.dp,
                     fontSize = 18.sp,
                     testTag = "level_complete_next_button",
                     modifier = Modifier.fillMaxWidth()
@@ -239,7 +275,11 @@ fun LevelCompleteScreen(
                     } else {
                         "ALL ${ChallengeLevels.levels.size} CHALLENGES MASTERED!"
                     },
-                    style = MaterialTheme.typography.labelLarge.copy(fontFamily = OutfitFontFamily),
+                    style = MaterialTheme.typography.labelLarge.copy(
+                        fontFamily = OutfitFontFamily,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.5.sp
+                    ),
                     color = AccentGold
                 )
             }
@@ -250,25 +290,25 @@ fun LevelCompleteScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                PremiumPrimaryButton(
+                GlossyArcadeButton(
                     text = "Replay",
                     icon = Icons.Filled.Refresh,
                     style = ArcadeButtonStyle.GOLD,
                     onClick = onReplay,
                     height = 50.dp,
-                    cornerRadius = 12.dp,
-                    fontSize = 16.sp,
+                    cornerRadius = 14.dp,
+                    fontSize = 15.sp,
                     testTag = "level_complete_replay_button",
                     modifier = Modifier.weight(1f)
                 )
-                PremiumPrimaryButton(
+                GlossyArcadeButton(
                     text = stringResource(R.string.nav_home),
                     icon = Icons.Filled.Home,
                     style = ArcadeButtonStyle.BLUE,
                     onClick = onHome,
                     height = 50.dp,
-                    cornerRadius = 12.dp,
-                    fontSize = 16.sp,
+                    cornerRadius = 14.dp,
+                    fontSize = 15.sp,
                     testTag = "level_complete_home_button",
                     modifier = Modifier.weight(1f)
                 )
@@ -279,28 +319,26 @@ fun LevelCompleteScreen(
 
 @Composable
 private fun RewardEarnedPill(
-    icon: ImageVector,
+    badge: @Composable () -> Unit,
     tint: Color,
     text: String
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(5.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
         modifier = Modifier
             .clip(CircleShape)
             .background(BoardWellBg)
-            .border(1.dp, tint.copy(alpha = 0.4f), CircleShape)
-            .padding(horizontal = 10.dp, vertical = 5.dp)
+            .border(1.2.dp, tint.copy(alpha = 0.5f), CircleShape)
+            .padding(horizontal = 12.dp, vertical = 6.dp)
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = tint,
-            modifier = Modifier.size(15.dp)
-        )
+        badge()
         Text(
             text = text,
-            style = CascadeTextStyles.NumericBalance.copy(fontSize = 12.sp),
+            style = CascadeTextStyles.NumericBalance.copy(
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold
+            ),
             color = TextPrimary
         )
     }
@@ -315,14 +353,17 @@ private fun CompleteMetricChip(
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = modifier
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(14.dp))
             .background(BoardWellBg)
-            .border(1.dp, GlassBorder.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
-            .padding(vertical = 8.dp, horizontal = 4.dp)
+            .border(1.dp, GlassBorder.copy(alpha = 0.45f), RoundedCornerShape(14.dp))
+            .padding(vertical = 9.dp, horizontal = 4.dp)
     ) {
         Text(
             text = label.uppercase(),
-            style = MaterialTheme.typography.labelMedium.copy(fontSize = 10.sp),
+            style = MaterialTheme.typography.labelMedium.copy(
+                fontSize = 10.sp,
+                fontWeight = FontWeight.SemiBold
+            ),
             color = TextSecondary
         )
         Text(
@@ -340,7 +381,7 @@ private fun CompleteMetricChip(
 @Composable
 private fun ConfettiCelebrationOverlay() {
     Canvas(modifier = Modifier.fillMaxSize()) {
-        val confettiColors = listOf(AccentGold, AccentCoral, AccentCyan, AccentEmerald, TextPrimary)
+        val confettiColors = listOf(AccentGoldBright, AccentCoral, AccentCyan, AccentEmerald, TextPrimary, Color(0xFFA855F7))
         val pieces = listOf(
             Triple(0.14f, 0.12f, 25f),
             Triple(0.28f, 0.08f, -18f),
@@ -357,7 +398,7 @@ private fun ConfettiCelebrationOverlay() {
             val c = confettiColors[idx % confettiColors.size]
             rotate(degrees = angle, pivot = center) {
                 drawRect(
-                    color = c.copy(alpha = 0.78f),
+                    color = c.copy(alpha = 0.85f),
                     topLeft = Offset(center.x - 7f, center.y - 3.5f),
                     size = Size(14f, 7f)
                 )

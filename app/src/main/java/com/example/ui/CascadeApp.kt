@@ -41,28 +41,37 @@ import com.example.data.cloud.attemptAutoSignIn
 import com.example.data.cloud.authStateFlow
 import com.example.security.PlayIntegrityManager
 import com.example.ui.components.AuthenticatedCloudAccountCard
+import com.example.ui.components.BottomNavTab
 import com.example.ui.components.GoogleSignInCard
+import com.example.ui.navigation.AchievementsRoute
 import com.example.ui.navigation.ChallengeSelectionRoute
+import com.example.ui.navigation.DailyMissionsRoute
+import com.example.ui.navigation.DailyRewardsRoute
+import com.example.ui.navigation.EventsRoute
 import com.example.ui.navigation.GameOverRoute
 import com.example.ui.navigation.GameplayRoute
 import com.example.ui.navigation.HomeRoute
 import com.example.ui.navigation.LeaderboardRoute
 import com.example.ui.navigation.LevelCompleteRoute
+import com.example.ui.navigation.LuckyWheelRoute
 import com.example.ui.navigation.ModeSelectionRoute
 import com.example.ui.navigation.OnboardingRoute
 import com.example.ui.navigation.PauseRoute
 import com.example.ui.navigation.RulesRoute
 import com.example.ui.navigation.SettingsRoute
-import com.example.ui.navigation.LuckyWheelRoute
 import com.example.ui.navigation.ShopRoute
 import com.example.ui.navigation.SplashRoute
 import com.example.ui.navigation.StatisticsRoute
+import com.example.ui.screens.AchievementsScreen
 import com.example.ui.screens.ChallengeSelectionScreen
+import com.example.ui.screens.DailyMissionsScreen
+import com.example.ui.screens.DailyRewardsScreen
+import com.example.ui.screens.EventsScreen
 import com.example.ui.screens.GameOverScreen
 import com.example.ui.screens.HomeScreen
 import com.example.ui.screens.LeaderboardScreen
-import com.example.ui.screens.LuckyWheelScreen
 import com.example.ui.screens.LevelCompleteScreen
+import com.example.ui.screens.LuckyWheelScreen
 import com.example.ui.screens.ModeSelectionScreen
 import com.example.ui.screens.OnboardingScreen
 import com.example.ui.screens.PauseScreen
@@ -79,12 +88,6 @@ import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.flow.emptyFlow
-
-/**
- * Single first-launch onboarding: the [OnboardingRoute] NavHost destination, persisted via
- * [com.example.data.OnboardingPrefs] (the same flag earlier builds used, so existing installs
- * are not shown onboarding again). Google sign-in and guest (Skip) both complete it.
- */
 
 @Composable
 fun CascadeApp(
@@ -171,9 +174,6 @@ private fun rememberAuthenticatedCloudViewModel(
         val gameState by gameViewModel.uiState.collectAsStateWithLifecycle()
         val cloudProfile by cloudViewModel.profileState.collectAsStateWithLifecycle()
 
-        // First cloud snapshot decides ownership of local progress:
-        //  - account already has data -> its own data replaces the guest data (guest score is not pushed up)
-        //  - brand new account -> guest progress is uploaded to it
         var initialRestoreDone by remember(uid) { mutableStateOf(false) }
 
         LaunchedEffect(cloudProfile) {
@@ -241,6 +241,42 @@ private fun CascadeNavHost(
     val safePopToHome: () -> Unit = {
         runCatching {
             navController.popBackStack<HomeRoute>(inclusive = false)
+        }
+    }
+
+    val handleBottomNavTab: (BottomNavTab) -> Unit = { tab ->
+        viewModel.playUiClick()
+        when (tab) {
+            BottomNavTab.HOME -> {
+                navController.navigate(HomeRoute) {
+                    popUpTo<HomeRoute> { inclusive = false }
+                    launchSingleTop = true
+                }
+            }
+            BottomNavTab.MODES -> {
+                navController.navigate(ModeSelectionRoute) {
+                    popUpTo<HomeRoute>()
+                    launchSingleTop = true
+                }
+            }
+            BottomNavTab.EVENTS -> {
+                navController.navigate(EventsRoute) {
+                    popUpTo<HomeRoute>()
+                    launchSingleTop = true
+                }
+            }
+            BottomNavTab.SHOP -> {
+                navController.navigate(ShopRoute) {
+                    popUpTo<HomeRoute>()
+                    launchSingleTop = true
+                }
+            }
+            BottomNavTab.PROFILE -> {
+                navController.navigate(StatisticsRoute) {
+                    popUpTo<HomeRoute>()
+                    launchSingleTop = true
+                }
+            }
         }
     }
 
@@ -367,6 +403,22 @@ private fun CascadeNavHost(
                     onOpenSettings = {
                         viewModel.playUiClick()
                         navController.navigate(SettingsRoute) { launchSingleTop = true }
+                    },
+                    onOpenDailyRewards = {
+                        viewModel.playUiClick()
+                        navController.navigate(DailyRewardsRoute) { launchSingleTop = true }
+                    },
+                    onOpenAchievements = {
+                        viewModel.playUiClick()
+                        navController.navigate(AchievementsRoute) { launchSingleTop = true }
+                    },
+                    onOpenDailyMissions = {
+                        viewModel.playUiClick()
+                        navController.navigate(DailyMissionsRoute) { launchSingleTop = true }
+                    },
+                    onOpenEvents = {
+                        viewModel.playUiClick()
+                        navController.navigate(EventsRoute) { launchSingleTop = true }
                     }
                 )
             }
@@ -394,7 +446,8 @@ private fun CascadeNavHost(
                             launchSingleTop = true
                         }
                     },
-                    state = state
+                    state = state,
+                    onOpenTab = handleBottomNavTab
                 )
             }
 
@@ -440,7 +493,9 @@ private fun CascadeNavHost(
                         viewModel.playUiClick()
                         viewModel.exitToHome()
                         safePopToHome()
-                    }
+                    },
+                    onToggleSound = viewModel::toggleSound,
+                    onToggleMusic = viewModel::toggleMusic
                 )
             }
 
@@ -472,8 +527,6 @@ private fun CascadeNavHost(
                     },
                     onReplay = {
                         viewModel.playUiClick()
-                        // restartCurrentGame keeps Daily Gravity in daily mode; a raw
-                        // startChallengeLevel(0) would fall back to campaign Level 1.
                         viewModel.restartCurrentGame()
                         navController.navigate(GameplayRoute) {
                             popUpTo<HomeRoute>()
@@ -501,7 +554,9 @@ private fun CascadeNavHost(
                     onHome = {
                         viewModel.playUiClick()
                         safePopToHome()
-                    }
+                    },
+                    bonusAdReady = adState is AdState.Ready && activity != null,
+                    onWatchBonusAd = { activity?.let { viewModel.watchRewardedAd(it) } }
                 )
             }
 
@@ -538,7 +593,8 @@ private fun CascadeNavHost(
                                 onSignedOut = viewModel::onCloudSignedOut
                             )
                         }
-                    }
+                    },
+                    onOpenTab = handleBottomNavTab
                 )
             }
 
@@ -554,7 +610,10 @@ private fun CascadeNavHost(
                     onResetProgressConfirmed = {
                         viewModel.playUiClick()
                         viewModel.resetAllProgress()
-                    }
+                    },
+                    onSelectBlockStyle = viewModel::setBlockStyle,
+                    onSelectBoardPalette = viewModel::setBoardPalette,
+                    onSelectLanguage = viewModel::setLanguage
                 )
             }
 
@@ -569,7 +628,9 @@ private fun CascadeNavHost(
                     message = economyMessage,
                     onWatchDiamondAd = { activity?.let { viewModel.watchDiamondAd(it) } },
                     onWatchGoldAd = { activity?.let { viewModel.watchRewardedAd(it) } },
-                    onEnsureAdsLoaded = viewModel::ensureAdsLoaded
+                    onEnsureAdsLoaded = viewModel::ensureAdsLoaded,
+                    onPurchaseItem = viewModel::purchaseShopItem,
+                    onOpenTab = handleBottomNavTab
                 )
             }
 
@@ -593,6 +654,46 @@ private fun CascadeNavHost(
                         viewModel.refreshServerWallet()
                         viewModel.ensureAdsLoaded()
                     }
+                )
+            }
+
+            composable<DailyRewardsRoute> {
+                DailyRewardsScreen(
+                    state = state,
+                    onBack = safePopBackStack,
+                    onClaimReward = viewModel::claimDailyReward
+                )
+            }
+
+            composable<AchievementsRoute> {
+                AchievementsScreen(
+                    state = state,
+                    onBack = safePopBackStack,
+                    onClaimAchievement = viewModel::claimAchievement
+                )
+            }
+
+            composable<DailyMissionsRoute> {
+                DailyMissionsScreen(
+                    state = state,
+                    onBack = safePopBackStack,
+                    onClaimMission = viewModel::claimDailyMission
+                )
+            }
+
+            composable<EventsRoute> {
+                EventsScreen(
+                    state = state,
+                    onBack = safePopBackStack,
+                    onPlayEventChallenge = {
+                        viewModel.playUiClick()
+                        viewModel.startDailyChallenge()
+                        navController.navigate(GameplayRoute) {
+                            popUpTo<HomeRoute>()
+                            launchSingleTop = true
+                        }
+                    },
+                    onOpenTab = handleBottomNavTab
                 )
             }
 

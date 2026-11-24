@@ -3,7 +3,7 @@ package com.example.ui.navigation
 import kotlinx.serialization.Serializable
 
 /**
- * Type-safe Navigation Compose route keys for Block Falls.
+ * Type-safe Navigation Compose route keys for Block Fall.
  */
 @Serializable
 data object OnboardingRoute
@@ -49,3 +49,15 @@ data object ShopRoute
 
 @Serializable
 data object LuckyWheelRoute
+
+@Serializable
+data object DailyRewardsRoute
+
+@Serializable
+data object AchievementsRoute
+
+@Serializable
+data object DailyMissionsRoute
+
+@Serializable
+data object EventsRoute

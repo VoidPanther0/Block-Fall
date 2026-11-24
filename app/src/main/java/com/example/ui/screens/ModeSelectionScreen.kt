@@ -26,6 +26,8 @@ import com.example.game.BlockColor
 import com.example.game.DailyChallengeGenerator
 import com.example.ui.GameUiState
 import com.example.ui.components.ArcadeButtonStyle
+import com.example.ui.components.BlockFallBottomNav
+import com.example.ui.components.BottomNavTab
 import com.example.ui.components.CascadeScreenContainer
 import com.example.ui.components.GameModeCard
 import com.example.ui.components.ScreenTopBar
@@ -44,13 +46,17 @@ fun ModeSelectionScreen(
     onPlayNewClassic: () -> Unit,
     onSelectChallengeLevels: () -> Unit,
     onPlayDaily: () -> Unit = {},
-    state: GameUiState = GameUiState()
+    state: GameUiState = GameUiState(),
+    onOpenTab: ((BottomNavTab) -> Unit)? = null
 ) {
     val classicStat = if (state.classicBestScore > 0) "Best Score: ${state.classicBestScore}" else "No limit · Beat your best"
     val challengeStat = "8 Tactical Puzzle Boards"
 
     CascadeScreenContainer(
-        maxContentWidth = 880.dp,
+        maxContentWidth = 880.dp,
+        footerBar = if (onOpenTab != null) {
+            { BlockFallBottomNav(selectedTab = BottomNavTab.MODES, onSelectTab = onOpenTab) }
+        } else null,
         modifier = Modifier.testTag("mode_selection_screen")
     ) {
         ScreenTopBar(

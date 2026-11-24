@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -40,7 +39,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -50,11 +51,13 @@ import com.example.game.EconomyEngine
 import com.example.game.ProfileAvatar
 import com.example.ui.GameUiState
 import com.example.ui.components.ArcadeButtonStyle
+import com.example.ui.components.BlockFallBottomNav
+import com.example.ui.components.BottomNavTab
 import com.example.ui.components.CascadeScreenContainer
 import com.example.ui.components.CurrencyWallet
+import com.example.ui.components.FrostedGlassCard
+import com.example.ui.components.GlossyArcadeButton
 import com.example.ui.components.PlayerAvatarBadge
-import com.example.ui.components.PremiumCard
-import com.example.ui.components.PremiumPrimaryButton
 import com.example.ui.components.ScreenTopBar
 import com.example.ui.components.SectionHeader
 import com.example.ui.theme.AccentCoral
@@ -80,7 +83,8 @@ fun StatisticsScreen(
     googlePhotoUrl: String? = null,
     onSelectAvatar: (String) -> Unit = {},
     onRenameWithDiamonds: (String, (Boolean, String) -> Unit) -> Unit = { _, _ -> },
-    cloudAccountContent: @Composable () -> Unit = {}
+    cloudAccountContent: @Composable () -> Unit = {},
+    onOpenTab: ((BottomNavTab) -> Unit)? = null
 ) {
     val effectiveName = state.playerDisplayName?.takeIf { it.isNotBlank() }
         ?: playerName?.takeIf { it.isNotBlank() }
@@ -89,6 +93,9 @@ fun StatisticsScreen(
 
     CascadeScreenContainer(
         maxContentWidth = 760.dp,
+        footerBar = if (onOpenTab != null) {
+            { BlockFallBottomNav(selectedTab = BottomNavTab.PROFILE, onSelectTab = onOpenTab) }
+        } else null,
         modifier = Modifier.testTag("statistics_screen")
     ) {
         ScreenTopBar(
@@ -117,11 +124,15 @@ fun StatisticsScreen(
                 onSelectAvatar = onSelectAvatar
             )
 
-            BestScoreCard(classicBestScore = state.classicBestScore)
+            BestScoreCard(
+                classicBestScore = state.classicBestScore,
+                totalGames = state.statistics.totalGamesPlayed,
+                totalLines = state.statistics.totalLinesCleared
+            )
 
             cloudAccountContent()
 
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(8.dp))
         }
     }
 
@@ -153,9 +164,9 @@ private fun ProfileIdentityCard(
     val rank = state.playerRank
     val hasCrown = "cosmetic_prism_crown" in state.wallet.unlockedEntitlements
 
-    PremiumCard(
-        cornerRadius = 20.dp,
-        borderColor = (if (hasCrown) AccentGold else AccentCyan).copy(alpha = 0.45f),
+    FrostedGlassCard(
+        cornerRadius = 22.dp,
+        borderColor = (if (hasCrown) AccentGold else AccentCyan).copy(alpha = 0.5f),
         modifier = Modifier
             .fillMaxWidth()
             .testTag("player_rank_card")
@@ -227,13 +238,13 @@ private fun ProfileIdentityCard(
                 }
             }
 
-            PremiumPrimaryButton(
+            GlossyArcadeButton(
                 text = "Change Name · ${EconomyEngine.RENAME_DIAMOND_COST} Diamonds",
                 icon = Icons.Filled.Edit,
                 style = ArcadeButtonStyle.BLUE,
                 onClick = onOpenRename,
-                height = 48.dp,
-                cornerRadius = 12.dp,
+                height = 46.dp,
+                cornerRadius = 14.dp,
                 fontSize = 14.sp,
                 testTag = "profile_rename_button",
                 modifier = Modifier.fillMaxWidth()
@@ -257,8 +268,8 @@ private fun AvatarPickerCard(
     hasCrown: Boolean,
     onSelectAvatar: (String) -> Unit
 ) {
-    PremiumCard(
-        cornerRadius = 20.dp,
+    FrostedGlassCard(
+        cornerRadius = 22.dp,
         modifier = Modifier
             .fillMaxWidth()
             .testTag("profile_avatar_picker_card")
@@ -285,7 +296,7 @@ private fun AvatarPickerCard(
                         verticalArrangement = Arrangement.spacedBy(6.dp),
                         modifier = Modifier
                             .clip(RoundedCornerShape(14.dp))
-                            .background(if (isSelected) AccentCyan.copy(alpha = 0.12f) else BoardWellBg)
+                            .background(if (isSelected) AccentCyan.copy(alpha = 0.16f) else BoardWellBg)
                             .border(
                                 width = if (isSelected) 2.dp else 1.dp,
                                 color = if (isSelected) AccentCyan else GlassBorder,
@@ -335,51 +346,115 @@ private fun AvatarPickerCard(
 }
 
 @Composable
-private fun BestScoreCard(classicBestScore: Int) {
-    PremiumCard(
-        cornerRadius = 20.dp,
-        borderColor = AccentGold.copy(alpha = 0.42f),
+private fun BestScoreCard(
+    classicBestScore: Int,
+    totalGames: Int = 0,
+    totalLines: Int = 0
+) {
+    FrostedGlassCard(
+        cornerRadius = 22.dp,
+        borderColor = AccentGold.copy(alpha = 0.5f),
         modifier = Modifier
             .fillMaxWidth()
             .testTag("profile_best_score_card")
     ) {
-        Row(
+        Column(
+            verticalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(18.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(14.dp)
+                .padding(18.dp)
         ) {
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(AccentGold.copy(alpha = 0.16f))
-                    .border(1.dp, AccentGold.copy(alpha = 0.42f), RoundedCornerShape(14.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Filled.EmojiEvents,
-                    contentDescription = null,
-                    tint = AccentGold,
-                    modifier = Modifier.size(26.dp)
-                )
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .size(52.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(AccentGold.copy(alpha = 0.16f))
+                        .border(1.2.dp, AccentGold.copy(alpha = 0.55f), RoundedCornerShape(16.dp))
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.EmojiEvents,
+                        contentDescription = null,
+                        tint = AccentGold,
+                        modifier = Modifier.size(30.dp)
+                    )
+                }
+                Column {
+                    Text(
+                        text = "BEST SCORE",
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            letterSpacing = 1.sp,
+                            fontWeight = FontWeight.ExtraBold
+                        ),
+                        color = AccentGold
+                    )
+                    Text(
+                        text = "$classicBestScore",
+                        style = MaterialTheme.typography.headlineMedium.copy(
+                            fontFamily = JetBrainsMonoFontFamily,
+                            fontWeight = FontWeight.Black,
+                            fontSize = 32.sp
+                        ),
+                        color = TextPrimary
+                    )
+                }
             }
-            Column {
-                Text(
-                    text = "BEST SCORE",
-                    style = MaterialTheme.typography.labelMedium.copy(letterSpacing = 0.8.sp),
-                    color = AccentGold
-                )
-                Text(
-                    text = "$classicBestScore",
-                    style = MaterialTheme.typography.headlineMedium.copy(
-                        fontFamily = JetBrainsMonoFontFamily,
-                        fontWeight = FontWeight.ExtraBold,
-                        fontSize = 30.sp
-                    ),
-                    color = TextPrimary
-                )
+
+            HorizontalDivider(color = GlassBorder.copy(alpha = 0.35f))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(BoardWellBg)
+                        .padding(10.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "GAMES PLAYED",
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                        color = TextSecondary
+                    )
+                    Text(
+                        text = "$totalGames",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontFamily = JetBrainsMonoFontFamily,
+                            fontWeight = FontWeight.Bold
+                        ),
+                        color = TextPrimary
+                    )
+                }
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(BoardWellBg)
+                        .padding(10.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "LINES CLEARED",
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                        color = TextSecondary
+                    )
+                    Text(
+                        text = "$totalLines",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontFamily = JetBrainsMonoFontFamily,
+                            fontWeight = FontWeight.Bold
+                        ),
+                        color = TextPrimary
+                    )
+                }
             }
         }
     }

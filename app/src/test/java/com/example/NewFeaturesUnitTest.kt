@@ -1,7 +1,12 @@
 package com.example
 
+import com.example.game.AchievementsCatalog
 import com.example.game.Board
 import com.example.game.DailyChallengeGenerator
+import com.example.game.DailyMissionSnapshot
+import com.example.game.DailyMissionsCatalog
+import com.example.game.DailyRewardProgress
+import com.example.game.DailyRewardsCatalog
 import com.example.game.EconomyEngine
 import com.example.game.EconomyMutationResult
 import com.example.game.GameStatistics
@@ -149,5 +154,55 @@ class NewFeaturesUnitTest {
         assertTrue(BlockTheme.IVORY_BRASS.isUnlocked(freshStats.copy(totalLinesCleared = 15), emptyMap()))
         assertTrue(BlockTheme.SEAFOAM_ARCADE.isUnlocked(freshStats.copy(classicBestScore = 250), emptyMap()))
         assertTrue(BlockTheme.ROYAL_VELVET.isUnlocked(freshStats.copy(maxCascadeDepth = 3), emptyMap()))
+    }
+
+    @Test
+    fun `daily_rewards_catalog_progresses_through_7_day_cycle`() {
+        assertEquals(7, DailyRewardsCatalog.tiers.size)
+        val day7 = DailyRewardsCatalog.tiers.last()
+        assertTrue(day7.isGrandPrize)
+        assertEquals(1000, day7.gold)
+        assertEquals(50, day7.diamonds)
+
+        var prog = DailyRewardProgress()
+        assertTrue(prog.canClaimToday("2026-11-24"))
+        assertEquals(1, prog.currentCycleDay())
+
+        prog = prog.copy(claimedDaysCount = 1, lastClaimedDateKey = "2026-11-24")
+        assertFalse(prog.canClaimToday("2026-11-24"))
+        assertTrue(prog.canClaimToday("2026-11-25"))
+        assertEquals(2, prog.currentCycleDay())
+
+        prog = prog.copy(claimedDaysCount = 7, lastClaimedDateKey = "2026-11-30")
+        assertEquals(1, prog.currentCycleDay())
+    }
+
+    @Test
+    fun `daily_missions_catalog_evaluates_anchored_progress`() {
+        assertEquals(4, DailyMissionsCatalog.missions.size)
+        val initialStats = GameStatistics(totalGamesPlayed = 10, totalLinesCleared = 50)
+        val snap = DailyMissionSnapshot().anchoredTo("2026-11-24", initialStats)
+
+        val updatedStats = initialStats.copy(totalGamesPlayed = 12, totalLinesCleared = 58)
+        val playMission = DailyMissionsCatalog.missions.first { it.id == "mission_play_games" }
+        val clearMission = DailyMissionsCatalog.missions.first { it.id == "mission_clear_lines" }
+
+        assertEquals(2, playMission.progressProvider(updatedStats, snap))
+        assertEquals(8, clearMission.progressProvider(updatedStats, snap))
+        assertTrue(playMission.progressProvider(updatedStats, snap) >= playMission.target)
+        assertTrue(clearMission.progressProvider(updatedStats, snap) >= clearMission.target)
+    }
+
+    @Test
+    fun `achievements_catalog_tracks_all_categories_properly`() {
+        assertEquals(8, AchievementsCatalog.items.size)
+        val stats = GameStatistics(classicBestScore = 1500, totalLinesCleared = 30)
+        val firstSpark = AchievementsCatalog.items.first { it.id == "ach_first_spark" }
+        val scoreKnight = AchievementsCatalog.items.first { it.id == "ach_score_knight" }
+        val lineSweeper = AchievementsCatalog.items.first { it.id == "ach_line_sweeper" }
+
+        assertTrue(firstSpark.progressProvider(stats, emptyMap()) >= firstSpark.target)
+        assertTrue(scoreKnight.progressProvider(stats, emptyMap()) >= scoreKnight.target)
+        assertTrue(lineSweeper.progressProvider(stats, emptyMap()) >= lineSweeper.target)
     }
 }

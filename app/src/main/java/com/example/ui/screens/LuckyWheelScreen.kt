@@ -22,8 +22,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -38,6 +42,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -54,9 +59,19 @@ import androidx.compose.ui.unit.sp
 import com.example.ads.AdState
 import com.example.ui.components.ArcadeButtonStyle
 import com.example.ui.components.CascadeScreenContainer
-import com.example.ui.components.PremiumPrimaryButton
+import com.example.ui.components.GlossyArcadeButton
+import com.example.ui.components.GoldMetallicBanner
+import com.example.ui.components.RoyalSkyBackdrop
 import com.example.ui.components.ScreenTopBar
+import com.example.ui.theme.AccentCyan
 import com.example.ui.theme.AccentGold
+import com.example.ui.theme.AccentGoldBright
+import com.example.ui.theme.AccentGoldDeep
+import com.example.ui.theme.BoardWellBg
+import com.example.ui.theme.GlassBorder
+import com.example.ui.theme.OutfitFontFamily
+import com.example.ui.theme.TextPrimary
+import com.example.ui.theme.TextSecondary
 import kotlinx.coroutines.launch
 import kotlin.math.cos
 import kotlin.math.sin
@@ -72,8 +87,6 @@ private val WheelColors = listOf(
     Color(0xFFFFB300), Color(0xFFFF8F00), Color(0xFFFF6D00), Color(0xFFFFA726),
     Color(0xFF26C281), Color(0xFFEC407A), Color(0xFFFF5252)
 )
-private val PanelDark = Color(0xFFF3EAFF)
-private val PanelDeep = Color(0xFFD9C6FF)
 
 @Composable
 fun LuckyWheelScreen(
@@ -105,7 +118,7 @@ fun LuckyWheelScreen(
             isFakeBoldText = true
             textAlign = android.graphics.Paint.Align.CENTER
             isAntiAlias = true
-            setShadowLayer(4f, 0f, 2f, android.graphics.Color.argb(160, 0, 0, 0))
+            setShadowLayer(4f, 0f, 2f, android.graphics.Color.argb(180, 0, 0, 0))
         }
     }
     val currentSpinning by rememberUpdatedState(isSpinning)
@@ -124,13 +137,7 @@ fun LuckyWheelScreen(
 
     CascadeScreenContainer(
         maxContentWidth = 520.dp,
-        backdrop = {
-            Box(
-                Modifier
-                    .fillMaxSize()
-                    .background(Brush.verticalGradient(listOf(PanelDark, PanelDeep)))
-            )
-        },
+        backdrop = { RoyalSkyBackdrop() },
         modifier = Modifier.testTag("lucky_wheel_screen")
     ) {
         ScreenTopBar(title = "Lucky Wheel", onBack = onBack, backTestTag = "wheel_back_button")
@@ -142,18 +149,30 @@ fun LuckyWheelScreen(
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
         ) {
+            // Spin Points Pill
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier
-                    .clip(RoundedCornerShape(50))
-                    .background(Color(0xFF3A1B7A))
-                    .border(1.5.dp, AccentGold.copy(alpha = 0.8f), RoundedCornerShape(50))
-                    .padding(horizontal = 18.dp, vertical = 8.dp)
+                    .shadow(6.dp, CircleShape, clip = false)
+                    .clip(CircleShape)
+                    .background(BoardWellBg)
+                    .border(1.5.dp, AccentGold.copy(alpha = 0.85f), CircleShape)
+                    .padding(horizontal = 20.dp, vertical = 9.dp)
             ) {
+                Icon(
+                    imageVector = Icons.Filled.AutoAwesome,
+                    contentDescription = null,
+                    tint = AccentGold,
+                    modifier = Modifier.padding(end = 2.dp)
+                )
                 Text(
                     text = "Spins: $spinPoints",
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.ExtraBold),
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontFamily = OutfitFontFamily,
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 17.sp
+                    ),
                     color = AccentGold,
                     modifier = Modifier.testTag("wheel_spin_points")
                 )
@@ -173,6 +192,7 @@ fun LuckyWheelScreen(
                     val radius = outer - rim - 4f
                     val sweep = 360f / WheelLabels.size
 
+                    // Outer ambient radial glow
                     drawCircle(
                         Brush.radialGradient(
                             listOf(AccentGold.copy(alpha = 0.45f * glow), Color.Transparent),
@@ -180,12 +200,15 @@ fun LuckyWheelScreen(
                         ),
                         radius = outer * 1.15f, center = center
                     )
+
+                    // Metallic gold outer rim
                     drawCircle(
-                        Brush.linearGradient(listOf(Color(0xFFFFE082), Color(0xFFFFA000), Color(0xFFFFE082))),
+                        Brush.linearGradient(listOf(AccentGoldBright, AccentGold, AccentGoldDeep, AccentGoldBright)),
                         radius = outer, center = center
                     )
-                    drawCircle(Color(0xFF3A1B7A), radius = radius + 3f, center = center)
+                    drawCircle(Color(0xFF0C173B), radius = radius + 3f, center = center)
 
+                    // Rotating segmented wheel
                     rotate(rotation.value, pivot = center) {
                         WheelLabels.forEachIndexed { i, label ->
                             val start = -90f + i * sweep
@@ -201,7 +224,7 @@ fun LuckyWheelScreen(
                             )
                             drawArc(
                                 brush = Brush.radialGradient(
-                                    listOf(Color.Transparent, Color.Black.copy(alpha = 0.22f)),
+                                    listOf(Color.Transparent, Color.Black.copy(alpha = 0.28f)),
                                     center = center, radius = radius
                                 ),
                                 startAngle = start, sweepAngle = sweep, useCenter = true,
@@ -226,6 +249,7 @@ fun LuckyWheelScreen(
                         }
                     }
 
+                    // Rim neon bulbs
                     val bulbs = 20
                     for (b in 0 until bulbs) {
                         val ang = Math.toRadians((b * 360.0 / bulbs) - 90.0)
@@ -239,15 +263,17 @@ fun LuckyWheelScreen(
                         )
                     }
 
+                    // Center wheel hub
                     drawCircle(
                         Brush.radialGradient(
-                            listOf(Color(0xFFFFF59D), Color(0xFFFFA000)),
+                            listOf(AccentGoldBright, AccentGold, AccentGoldDeep),
                             center = center, radius = radius * 0.2f
                         ),
-                        radius = radius * 0.17f, center = center
+                        radius = radius * 0.18f, center = center
                     )
-                    drawCircle(Color(0xFF3A1B7A), radius = radius * 0.1f, center = center)
+                    drawCircle(Color(0xFF060B21), radius = radius * 0.11f, center = center)
 
+                    // Top indicator arrow/pointer
                     val pointer = Path().apply {
                         moveTo(center.x, center.y - radius + 26f)
                         lineTo(center.x - 24f, center.y - outer - 12f)
@@ -264,12 +290,30 @@ fun LuckyWheelScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier
                         .fillMaxWidth()
+                        .shadow(8.dp, RoundedCornerShape(18.dp), clip = false)
                         .clip(RoundedCornerShape(18.dp))
-                        .background(Brush.horizontalGradient(listOf(Color(0xFFFFB300), Color(0xFFFF6D00))))
-                        .padding(vertical = 10.dp)
+                        .background(
+                            Brush.horizontalGradient(
+                                listOf(AccentGoldDeep, AccentGold, AccentGoldDeep)
+                            )
+                        )
+                        .border(1.2.dp, Color.White.copy(alpha = 0.5f), RoundedCornerShape(18.dp))
+                        .padding(vertical = 12.dp, horizontal = 16.dp)
                 ) {
-                    Text("YOU WON", color = Color.White.copy(alpha = 0.9f), fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                    Text(it, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.Center)
+                    Text(
+                        "PRIZE WON!",
+                        color = Color(0xFF241300),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 1.sp
+                    )
+                    Text(
+                        it,
+                        color = Color.White,
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        textAlign = TextAlign.Center
+                    )
                 }
             }
 
@@ -277,16 +321,16 @@ fun LuckyWheelScreen(
                 Text(
                     it,
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color(0xFF3A1B7A),
+                    color = AccentCyan,
                     textAlign = TextAlign.Center
                 )
             }
 
             val adReady = wheelAdState is AdState.Ready
             if (hasSpin || isSpinning) {
-                // Has spin points -> SPIN comes first.
-                PremiumPrimaryButton(
-                    text = if (isSpinning) "Spinning..." else "SPIN",
+                // Has spin points -> SPIN is the primary glossy button
+                GlossyArcadeButton(
+                    text = if (isSpinning) "Spinning..." else "SPIN NOW",
                     style = ArcadeButtonStyle.GOLD,
                     enabled = hasSpin && !isSpinning,
                     onClick = {
@@ -308,33 +352,35 @@ fun LuckyWheelScreen(
                         }
                     },
                     height = 58.dp,
+                    cornerRadius = 16.dp,
                     fontSize = 20.sp,
                     testTag = "wheel_spin_button",
                     modifier = Modifier.fillMaxWidth()
                 )
-                PremiumPrimaryButton(
-                    text = if (adReady) "Watch Ad · +1 Spin" else "Tap for Ad · +1 Spin",
+                GlossyArcadeButton(
+                    text = if (adReady) "Watch Ad · +1 Free Spin" else "Prepare Ad · +1 Spin",
                     style = ArcadeButtonStyle.GREEN,
                     enabled = !isSpinning,
                     onClick = {
                         if (!adReady) onRefresh()
                         onWatchAd()
                     },
-                    height = 44.dp,
-                    fontSize = 13.sp,
+                    height = 46.dp,
+                    cornerRadius = 14.dp,
+                    fontSize = 14.sp,
                     testTag = "wheel_watch_ad_button",
                     modifier = Modifier.fillMaxWidth()
                 )
             } else {
-                // No spin points -> Watch Ad is the main action.
+                // No spin points left -> Watch Ad is the primary action
                 Text(
                     "No spins left. Watch a short ad to get 1 free spin!",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color(0xFF3A1B7A),
+                    color = TextSecondary,
                     textAlign = TextAlign.Center
                 )
-                PremiumPrimaryButton(
-                    text = if (adReady) "Watch Ad · +1 Spin" else "Tap for Ad · +1 Spin",
+                GlossyArcadeButton(
+                    text = if (adReady) "Watch Ad · +1 Free Spin" else "Prepare Ad · +1 Spin",
                     style = ArcadeButtonStyle.GREEN,
                     enabled = true,
                     onClick = {
@@ -342,7 +388,8 @@ fun LuckyWheelScreen(
                         onWatchAd()
                     },
                     height = 58.dp,
-                    fontSize = 18.sp,
+                    cornerRadius = 16.dp,
+                    fontSize = 17.sp,
                     testTag = "wheel_watch_ad_button",
                     modifier = Modifier.fillMaxWidth()
                 )
