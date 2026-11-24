@@ -110,16 +110,9 @@ fun ScreenTopBar(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
                     .size(48.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(
-                                com.example.ui.theme.PurpleBtnTop,
-                                com.example.ui.theme.PurpleBtnBottom
-                            )
-                        )
-                    )
-                    .border(1.2.dp, Color.White.copy(alpha = 0.28f), RoundedCornerShape(14.dp))
+                    .clip(CircleShape)
+                    .background(Color(0xFF181818))
+                    .border(1.dp, com.example.ui.theme.HairlineDark, CircleShape)
                     .clickable(onClick = onBack)
                     .testTag(backTestTag)
             ) {
@@ -127,7 +120,7 @@ fun ScreenTopBar(
                     imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
                     contentDescription = stringResource(R.string.back_label),
                     tint = Color.White,
-                    modifier = Modifier.size(28.dp)
+                    modifier = Modifier.size(26.dp)
                 )
             }
         } else {
@@ -138,8 +131,8 @@ fun ScreenTopBar(
             text = title,
             style = MaterialTheme.typography.headlineMedium.copy(
                 fontFamily = OutfitFontFamily,
-                fontWeight = FontWeight.ExtraBold,
-                fontSize = 19.sp,
+                fontWeight = FontWeight.Medium,
+                fontSize = 20.sp,
                 letterSpacing = 0.2.sp
             ),
             color = TextPrimary,

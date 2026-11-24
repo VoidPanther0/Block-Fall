@@ -335,13 +335,13 @@ fun GameModeCard(
     enabled: Boolean = true
 ) {
     PremiumCard(
-        cornerRadius = 16.dp,
-        borderColor = GlassBorder,
+        cornerRadius = 8.dp,
+        borderColor = HairlineDark,
         modifier = modifier.fillMaxWidth()
     ) {
         Column(
             verticalArrangement = Arrangement.spacedBy(14.dp),
-            modifier = Modifier.padding(18.dp)
+            modifier = Modifier.padding(16.dp)
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -352,9 +352,9 @@ fun GameModeCard(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
                         .size(56.dp)
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(accent.copy(alpha = 0.14f))
-                        .border(1.dp, accent.copy(alpha = 0.42f), RoundedCornerShape(16.dp))
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(accent.copy(alpha = 0.12f))
+                        .border(1.dp, accent.copy(alpha = 0.35f), RoundedCornerShape(8.dp))
                 ) {
                     if (artwork != null) {
                         artwork()
@@ -368,23 +368,18 @@ fun GameModeCard(
                     }
                 }
                 Column(modifier = Modifier.weight(1f)) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Text(
-                            text = badge.uppercase(),
-                            style = CascadeTextStyles.SectionKicker,
-                            color = accent,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
+                    Text(
+                        text = badge.uppercase(),
+                        style = CascadeTextStyles.SectionKicker,
+                        color = accent,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                     Text(
                         text = title,
                         style = MaterialTheme.typography.headlineSmall.copy(
                             fontFamily = OutfitFontFamily,
-                            fontWeight = FontWeight.ExtraBold,
+                            fontWeight = FontWeight.Medium,
                             fontSize = 20.sp
                         ),
                         color = TextPrimary,
@@ -414,8 +409,8 @@ fun GameModeCard(
                 style = buttonStyle,
                 enabled = enabled,
                 onClick = onAction,
-                height = 50.dp,
-                cornerRadius = 15.dp,
+                height = 48.dp,
+                cornerRadius = 9999.dp,
                 fontSize = 15.sp,
                 testTag = buttonTag,
                 modifier = Modifier.fillMaxWidth()
@@ -579,42 +574,30 @@ fun BlockFallBottomNav(
     onSelectTab: (BottomNavTab) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val shape = RoundedCornerShape(22.dp)
+    val shape = RoundedCornerShape(9999.dp)
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceEvenly,
         modifier = modifier
             .fillMaxWidth()
             .clip(shape)
-            .background(
-                Brush.verticalGradient(
-                    listOf(SurfaceCardElevated, Color(0xFF091233))
-                )
-            )
-            .border(1.2.dp, GlassBorder, shape)
+            .background(SurfaceDarkElevated)
+            .border(1.dp, HairlineDark, shape)
             .padding(horizontal = 6.dp, vertical = 6.dp)
             .testTag("block_fall_bottom_nav")
     ) {
         BottomNavTab.entries.forEach { tab ->
             val selected = tab == selectedTab
             val tint by animateColorAsState(
-                targetValue = if (selected) AccentGold else TextSecondary,
+                targetValue = if (selected) Color.White else MuteDark,
                 label = "nav_tint"
             )
             val bgModifier = if (selected) {
                 Modifier
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(
-                                AccentCyan.copy(alpha = 0.22f),
-                                AccentPurple.copy(alpha = 0.16f)
-                            )
-                        )
-                    )
-                    .border(1.dp, AccentCyan.copy(alpha = 0.45f), RoundedCornerShape(14.dp))
+                    .clip(RoundedCornerShape(9999.dp))
+                    .background(com.example.ui.theme.PsBlue)
             } else {
-                Modifier.clip(RoundedCornerShape(14.dp))
+                Modifier.clip(RoundedCornerShape(9999.dp))
             }
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -628,22 +611,23 @@ fun BlockFallBottomNav(
                         onClick = { onSelectTab(tab) }
                     )
                     .semantics { this.selected = selected }
-                    .padding(vertical = 4.dp, horizontal = 2.dp)
+                    .padding(vertical = 6.dp, horizontal = 4.dp)
                     .testTag(tab.tag)
             ) {
                 Icon(
                     imageVector = tab.icon,
                     contentDescription = tab.label,
                     tint = tint,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(19.dp)
                 )
                 Spacer(Modifier.height(2.dp))
                 Text(
                     text = tab.label,
                     style = MaterialTheme.typography.labelSmall.copy(
                         fontFamily = OutfitFontFamily,
-                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                        fontSize = 10.sp
+                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                        fontSize = 10.sp,
+                        letterSpacing = 0.3.sp
                     ),
                     color = tint,
                     maxLines = 1,

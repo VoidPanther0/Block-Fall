@@ -94,6 +94,7 @@ import kotlin.math.sin
 enum class ArcadeButtonStyle {
     GOLD,
     BLUE,
+    COMMERCE,
     PURPLE,
     GOLD_BLUE,
     GOLD_PURPLE,
@@ -103,23 +104,21 @@ enum class ArcadeButtonStyle {
 }
 
 /**
- * Deep midnight crystal cavern backdrop matching the BLOCK FALL reference style sheet:
- * vertical navy gradient, ambient cyan & violet cavern glows, subtle stars, and faceted crystal spires.
+ * PlayStation editorial canvas backdrop (per DESIGN.md):
+ * Alternating chapter contrast starting with Canvas Dark (#000000)
+ * and deep graphite elevation (#121314) with subtle PlayStation Blue ambient accent.
  */
 @Composable
 fun RoyalSkyBackdrop(modifier: Modifier = Modifier) {
-    val palette = LocalBoardPalette.current
-    val themeColors = palette.toBoardColors()
-
     Box(
         modifier = modifier
             .fillMaxSize()
             .background(
                 Brush.verticalGradient(
                     colors = listOf(
-                        themeColors.studioTop,
-                        themeColors.studioMid,
-                        themeColors.studioBottom
+                        CanvasDark,
+                        Color(0xFF08090C),
+                        SurfaceDarkElevated
                     )
                 )
             )
@@ -128,140 +127,35 @@ fun RoyalSkyBackdrop(modifier: Modifier = Modifier) {
             val w = size.width
             val h = size.height
 
-            // Atmospheric cavern glows
+            // Quiet, cinematic PlayStation Blue atmospheric ambient glow at top-right
             drawCircle(
                 brush = Brush.radialGradient(
                     colors = listOf(
-                        themeColors.studioGlowSecondary.copy(alpha = 0.24f),
+                        PsBlue.copy(alpha = 0.16f),
                         Color.Transparent
                     ),
-                    center = Offset(w * 0.16f, h * 0.20f),
-                    radius = w * 0.65f
+                    center = Offset(w * 0.88f, h * 0.18f),
+                    radius = w * 0.70f
                 ),
-                radius = w * 0.65f,
-                center = Offset(w * 0.16f, h * 0.20f)
-            )
-            drawCircle(
-                brush = Brush.radialGradient(
-                    colors = listOf(
-                        themeColors.studioGlowPrimary.copy(alpha = 0.22f),
-                        Color.Transparent
-                    ),
-                    center = Offset(w * 0.82f, h * 0.56f),
-                    radius = w * 0.72f
-                ),
-                radius = w * 0.72f,
-                center = Offset(w * 0.82f, h * 0.56f)
-            )
-            drawCircle(
-                brush = Brush.radialGradient(
-                    colors = listOf(
-                        themeColors.studioGlowPrimary.copy(alpha = 0.18f),
-                        Color.Transparent
-                    ),
-                    center = Offset(w * 0.5f, h * 0.94f),
-                    radius = w * 0.85f
-                ),
-                radius = w * 0.85f,
-                center = Offset(w * 0.5f, h * 0.94f)
+                radius = w * 0.70f,
+                center = Offset(w * 0.88f, h * 0.18f)
             )
 
-            // Subtle starry sparkles
-            val starCoords = listOf(
-                Triple(0.12f, 0.08f, 2.2f),
-                Triple(0.32f, 0.14f, 1.5f),
-                Triple(0.54f, 0.06f, 2.0f),
-                Triple(0.76f, 0.11f, 2.6f),
-                Triple(0.89f, 0.22f, 1.6f),
-                Triple(0.20f, 0.34f, 1.8f),
-                Triple(0.68f, 0.29f, 1.4f),
-                Triple(0.42f, 0.44f, 1.7f),
-                Triple(0.85f, 0.42f, 2.1f),
-                Triple(0.10f, 0.62f, 1.5f),
-                Triple(0.92f, 0.72f, 1.8f)
-            )
-            for ((sx, sy, r) in starCoords) {
-                val cx = w * sx
-                val cy = h * sy
-                drawCircle(
-                    color = Color.White.copy(alpha = 0.55f),
-                    radius = r,
-                    center = Offset(cx, cy)
-                )
-            }
-
-            // Bottom-left crystal spire cluster
-            drawCrystalCluster(
-                baseX = w * 0.02f,
-                baseY = h,
-                scale = w * 0.16f,
-                primary = themeColors.studioGlowPrimary,
-                secondary = themeColors.studioGlowSecondary,
-                flipX = false
-            )
-            // Bottom-right crystal spire cluster
-            drawCrystalCluster(
-                baseX = w * 0.98f,
-                baseY = h,
-                scale = w * 0.16f,
-                primary = themeColors.studioGlowSecondary,
-                secondary = themeColors.studioGlowPrimary,
-                flipX = true
+            // Subtle lower-left dim glow
+            drawCircle(
+                brush = Brush.radialGradient(
+                    colors = listOf(
+                        PsGoldStart.copy(alpha = 0.05f),
+                        Color.Transparent
+                    ),
+                    center = Offset(w * 0.12f, h * 0.75f),
+                    radius = w * 0.55f
+                ),
+                radius = w * 0.55f,
+                center = Offset(w * 0.12f, h * 0.75f)
             )
         }
     }
-}
-
-private fun DrawScope.drawCrystalCluster(
-    baseX: Float,
-    baseY: Float,
-    scale: Float,
-    primary: Color,
-    secondary: Color,
-    flipX: Boolean
-) {
-    val dir = if (flipX) -1f else 1f
-
-    // Tall main shard
-    val mainPath = Path().apply {
-        moveTo(baseX, baseY)
-        lineTo(baseX + dir * scale * 0.12f, baseY - scale * 1.15f)
-        lineTo(baseX + dir * scale * 0.42f, baseY - scale * 1.42f)
-        lineTo(baseX + dir * scale * 0.66f, baseY - scale * 0.98f)
-        lineTo(baseX + dir * scale * 0.72f, baseY)
-        close()
-    }
-    drawPath(
-        path = mainPath,
-        brush = Brush.verticalGradient(
-            colors = listOf(primary.copy(alpha = 0.34f), primary.copy(alpha = 0.08f)),
-            startY = baseY - scale * 1.42f,
-            endY = baseY
-        )
-    )
-    drawPath(
-        path = mainPath,
-        color = primary.copy(alpha = 0.28f),
-        style = Stroke(width = 1.5f)
-    )
-
-    // Side secondary shard
-    val sidePath = Path().apply {
-        moveTo(baseX + dir * scale * 0.45f, baseY)
-        lineTo(baseX + dir * scale * 0.75f, baseY - scale * 0.85f)
-        lineTo(baseX + dir * scale * 1.02f, baseY - scale * 0.98f)
-        lineTo(baseX + dir * scale * 1.18f, baseY - scale * 0.52f)
-        lineTo(baseX + dir * scale * 1.24f, baseY)
-        close()
-    }
-    drawPath(
-        path = sidePath,
-        brush = Brush.verticalGradient(
-            colors = listOf(secondary.copy(alpha = 0.30f), secondary.copy(alpha = 0.06f)),
-            startY = baseY - scale * 0.98f,
-            endY = baseY
-        )
-    )
 }
 
 /**
@@ -286,59 +180,51 @@ fun ArcadeBlockEmblem(
 }
 
 /**
- * Glossy 3D BLOCK FALL logo matching the crystal & metallic gold visual identity.
+ * Editorial PlayStation SST style BLOCK FALL title logo (per DESIGN.md):
+ * Clean white display tier at light/airy weight paired with signature PlayStation Blue.
  */
 @Composable
 fun ArcadeTitleLogo(
-    fontSize: TextUnit = 38.sp,
+    fontSize: TextUnit = 36.sp,
     modifier: Modifier = Modifier
 ) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
         modifier = modifier
     ) {
         Text(
             text = "BLOCK",
-            style = MaterialTheme.typography.displaySmall.copy(
+            style = MaterialTheme.typography.displayMedium.copy(
                 fontFamily = OutfitFontFamily,
-                fontWeight = FontWeight.Black,
+                fontWeight = FontWeight.Light,
                 fontSize = fontSize,
-                lineHeight = fontSize * 0.94f,
-                letterSpacing = 1.6.sp,
-                shadow = Shadow(
-                    color = Color(0xFF03081C),
-                    offset = Offset(0f, 5f),
-                    blurRadius = 10f
-                )
+                letterSpacing = 1.2.sp
             ),
             color = Color.White,
             textAlign = TextAlign.Center
         )
+        Spacer(Modifier.width(8.dp))
         Text(
             text = "FALL",
-            style = MaterialTheme.typography.displaySmall.copy(
+            style = MaterialTheme.typography.displayMedium.copy(
                 fontFamily = OutfitFontFamily,
-                fontWeight = FontWeight.Black,
+                fontWeight = FontWeight.Bold,
                 fontSize = fontSize,
-                lineHeight = fontSize * 0.94f,
-                letterSpacing = 2.6.sp,
-                brush = Brush.verticalGradient(
-                    colors = listOf(AccentGoldBright, AccentGold, AccentCyan)
-                ),
-                shadow = Shadow(
-                    color = Color(0xFF040A24),
-                    offset = Offset(0f, 5f),
-                    blurRadius = 12f
-                )
+                letterSpacing = 1.6.sp
             ),
+            color = PsBlue,
             textAlign = TextAlign.Center
         )
     }
 }
 
 /**
- * Tactile 3D glossy arcade button with reflective top highlight, crisp bottom lip,
- * and optional metallic gold rim matching the BLOCK FALL style reference.
+ * PlayStation CTA Button (per DESIGN.md button-primary / button-commerce / button-secondary-dark):
+ * - Primary: PlayStation Blue (#0070d1), fully-rounded pill (rounded.full), height ~48-52dp.
+ * - Commerce: Orange (#d53b00) reserved for store/buy actions.
+ * - Secondary: Sleek outline on dark canvas with hairline border.
+ * - Type: Bold 700 with +0.45sp tracking.
  */
 @Composable
 fun GlossyArcadeButton(
@@ -348,147 +234,139 @@ fun GlossyArcadeButton(
     style: ArcadeButtonStyle = ArcadeButtonStyle.BLUE,
     icon: ImageVector? = null,
     enabled: Boolean = true,
-    height: Dp = 52.dp,
-    cornerRadius: Dp = 26.dp,
+    height: Dp = 50.dp,
+    cornerRadius: Dp = 9999.dp, // Fully rounded pill per DESIGN.md rounded.full
     fontSize: TextUnit = 16.sp,
     testTag: String? = null
 ) {
-    val hasGoldRim = style == ArcadeButtonStyle.GOLD_BLUE || style == ArcadeButtonStyle.GOLD_PURPLE
-    val (topColor, bottomColor, lipColor, contentColor) = when (style) {
-        ArcadeButtonStyle.GOLD -> Quad(GoldBtnTop, GoldBtnBottom, GoldBtnLip, GoldBtnText)
-        ArcadeButtonStyle.BLUE, ArcadeButtonStyle.GOLD_BLUE -> Quad(BlueBtnTop, BlueBtnBottom, BlueBtnLip, Color.White)
-        ArcadeButtonStyle.PURPLE, ArcadeButtonStyle.GOLD_PURPLE -> Quad(PurpleBtnTop, PurpleBtnBottom, PurpleBtnLip, Color.White)
-        ArcadeButtonStyle.GREEN -> Quad(GreenBtnTop, GreenBtnBottom, GreenBtnLip, Color.White)
-        ArcadeButtonStyle.RED -> Quad(RedBtnTop, RedBtnBottom, RedBtnLip, Color.White)
-        ArcadeButtonStyle.SLATE -> Quad(SlateBtnTop, SlateBtnBottom, SlateBtnLip, TextPrimary)
+    val (bgBrush, borderColor, contentColor) = when (style) {
+        ArcadeButtonStyle.BLUE -> Triple(
+            Brush.verticalGradient(listOf(PsBlue, PsBluePressed)),
+            Color.Transparent,
+            Color.White
+        )
+        ArcadeButtonStyle.COMMERCE -> Triple(
+            Brush.verticalGradient(listOf(PsCommerce, PsCommercePressed)),
+            Color.Transparent,
+            Color.White
+        )
+        ArcadeButtonStyle.GOLD -> Triple(
+            Brush.horizontalGradient(listOf(PsGoldStart, PsGoldMid, PsGoldEnd)),
+            Color.Transparent,
+            Color(0xFF121314)
+        )
+        ArcadeButtonStyle.GOLD_BLUE -> Triple(
+            Brush.verticalGradient(listOf(PsBlue, PsBluePressed)),
+            PsGoldStart.copy(alpha = 0.85f),
+            Color.White
+        )
+        ArcadeButtonStyle.GOLD_PURPLE -> Triple(
+            Brush.verticalGradient(listOf(Color(0xFF7040E6), Color(0xFF5020B0))),
+            PsGoldStart.copy(alpha = 0.85f),
+            Color.White
+        )
+        ArcadeButtonStyle.PURPLE -> Triple(
+            Brush.verticalGradient(listOf(Color(0xFF7040E6), Color(0xFF5020B0))),
+            Color.Transparent,
+            Color.White
+        )
+        ArcadeButtonStyle.GREEN -> Triple(
+            Brush.verticalGradient(listOf(Color(0xFF0CA34A), Color(0xFF087A36))),
+            Color.Transparent,
+            Color.White
+        )
+        ArcadeButtonStyle.RED -> Triple(
+            Brush.verticalGradient(listOf(Color(0xFFD9163B), Color(0xFFA60C2A))),
+            Color.Transparent,
+            Color.White
+        )
+        ArcadeButtonStyle.SLATE -> Triple(
+            Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent)),
+            HairlineDark,
+            Color.White
+        )
     }
 
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val pressScale by animateFloatAsState(
         targetValue = if (isPressed && enabled) 0.97f else 1f,
-        animationSpec = spring(dampingRatio = 0.76f, stiffness = 560f),
-        label = "arcade_btn_press"
+        animationSpec = spring(dampingRatio = 0.78f, stiffness = 550f),
+        label = "ps_btn_press"
     )
 
-    val shape = RoundedCornerShape(cornerRadius)
-    val rippleColor = if (style == ArcadeButtonStyle.SLATE) AccentCyan else Color.White
+    val pillShape = RoundedCornerShape(9999.dp)
 
-    val outerModifier = modifier
-        .height(height)
-        .graphicsLayer {
-            scaleX = pressScale
-            scaleY = pressScale
-        }
-        .then(if (testTag != null) Modifier.testTag(testTag) else Modifier)
-        .alpha(if (enabled) 1f else 0.45f)
-        .shadow(elevation = 6.dp, shape = shape, clip = false)
-        .clip(shape)
-        .background(
-            if (hasGoldRim) {
-                Brush.verticalGradient(listOf(AccentGoldBright, AccentGold, AccentGoldDeep))
-            } else {
-                Brush.verticalGradient(listOf(lipColor, lipColor))
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = modifier
+            .height(height)
+            .graphicsLayer {
+                scaleX = pressScale
+                scaleY = pressScale
             }
-        )
-        .clickable(
-            interactionSource = interactionSource,
-            indication = androidx.compose.material3.ripple(color = rippleColor),
-            enabled = enabled,
-            onClick = onClick
-        )
-
-    Box(modifier = outerModifier) {
-        val innerShape = RoundedCornerShape((cornerRadius - 2.dp).coerceAtLeast(8.dp))
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(
-                    start = if (hasGoldRim) 2.5.dp else 0.dp,
-                    end = if (hasGoldRim) 2.5.dp else 0.dp,
-                    top = if (hasGoldRim) 2.dp else 0.dp,
-                    bottom = if (hasGoldRim) 3.5.dp else 3.5.dp
-                )
-                .clip(innerShape)
-                .background(Brush.verticalGradient(listOf(topColor, bottomColor)))
-                .border(
-                    width = 1.dp,
-                    color = if (style == ArcadeButtonStyle.SLATE) GlassBorder else Color.White.copy(alpha = 0.28f),
-                    shape = innerShape
-                )
+            .then(if (testTag != null) Modifier.testTag(testTag) else Modifier)
+            .alpha(if (enabled) 1f else 0.40f)
+            .clip(pillShape)
+            .background(if (enabled) bgBrush else Brush.verticalGradient(listOf(Charcoal, SurfaceDarkCard)))
+            .then(
+                if (borderColor != Color.Transparent) {
+                    Modifier.border(1.2.dp, borderColor, pillShape)
+                } else Modifier
+            )
+            .clickable(
+                interactionSource = interactionSource,
+                indication = androidx.compose.material3.ripple(color = Color.White.copy(alpha = 0.35f)),
+                enabled = enabled,
+                onClick = onClick
+            )
+            .padding(horizontal = 24.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
         ) {
-            // Glossy top specular sheen lens
-            if (style != ArcadeButtonStyle.SLATE) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopCenter)
-                        .fillMaxWidth()
-                        .height(height * 0.42f)
-                        .padding(horizontal = 6.dp, vertical = 2.dp)
-                        .clip(innerShape)
-                        .background(
-                            Brush.verticalGradient(
-                                listOf(
-                                    Color.White.copy(alpha = 0.36f),
-                                    Color.White.copy(alpha = 0.05f),
-                                    Color.Transparent
-                                )
-                            )
-                        )
+            if (icon != null) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = contentColor,
+                    modifier = Modifier.size(19.dp)
                 )
+                Spacer(Modifier.width(8.dp))
             }
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center,
-                modifier = Modifier.padding(horizontal = 14.dp)
-            ) {
-                if (icon != null) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        tint = contentColor,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(Modifier.width(8.dp))
-                }
-                Text(
-                    text = text,
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontFamily = OutfitFontFamily,
-                        fontWeight = FontWeight.ExtraBold,
-                        fontSize = fontSize,
-                        letterSpacing = 0.4.sp,
-                        shadow = if (style != ArcadeButtonStyle.GOLD && style != ArcadeButtonStyle.SLATE) {
-                            Shadow(
-                                color = Color.Black.copy(alpha = 0.35f),
-                                offset = Offset(0f, 2f),
-                                blurRadius = 4f
-                            )
-                        } else null
-                    ),
-                    color = contentColor,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelLarge.copy(
+                    fontFamily = OutfitFontFamily,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = fontSize,
+                    letterSpacing = 0.45.sp
+                ),
+                color = contentColor,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }
 
 /**
- * Midnight-navy crystal panel with elevated top gradient, inner glass sheen, and crisp glass border.
+ * PlayStation Dark Card (per DESIGN.md product-card-dark / game-tile):
+ * - Container: Surface Dark Card (#181818)
+ * - Border: 1px hairline dark divider (rgba(229,229,229,0.2))
+ * - Rounded: 8px (rounded.md)
+ * - Depth: Flat resting canvas (no drop shadow; depth built from surface contrast)
  */
 @Composable
 fun FrostedGlassCard(
     modifier: Modifier = Modifier,
-    cornerRadius: Dp = 18.dp,
-    borderColor: Color = GlassBorder,
+    cornerRadius: Dp = 8.dp, // rounded.md per DESIGN.md
+    borderColor: Color = HairlineDark,
     backgroundBrush: Brush = Brush.verticalGradient(
         colors = listOf(
-            SurfaceCardElevated,
-            SurfaceCard
+            SurfaceDarkCard,
+            SurfaceDarkCard
         )
     ),
     content: @Composable ColumnScope.() -> Unit
@@ -496,16 +374,17 @@ fun FrostedGlassCard(
     val shape = RoundedCornerShape(cornerRadius)
     Column(
         modifier = modifier
-            .shadow(6.dp, shape, clip = false)
             .clip(shape)
             .background(backgroundBrush)
-            .border(1.2.dp, borderColor, shape),
+            .border(1.dp, borderColor, shape),
         content = content
     )
 }
 
 /**
- * Ornate gold-rimmed royal ribbon banner for modal headers & event cards.
+ * PlayStation Plus Tier Callout Banner (per DESIGN.md ps-plus-banner):
+ * Background #121314 with a horizontal gold gradient accent bar (#ffce21 -> #ee8e00) across the top,
+ * and 8px border radius (rounded.md).
  */
 @Composable
 fun GoldMetallicBanner(
@@ -513,41 +392,45 @@ fun GoldMetallicBanner(
     modifier: Modifier = Modifier,
     isPurple: Boolean = false
 ) {
-    val shape = RoundedCornerShape(16.dp)
-    val fillColors = if (isPurple) {
-        listOf(PurpleBtnTop, PurpleBtnBottom)
+    val shape = RoundedCornerShape(8.dp)
+    val accentBrush = if (isPurple) {
+        Brush.horizontalGradient(listOf(Color(0xFF9E4BFF), PsBlue))
     } else {
-        listOf(BlueBtnTop, BlueBtnBottom)
+        Brush.horizontalGradient(listOf(PsGoldStart, PsGoldMid, PsGoldEnd))
     }
-    Box(
-        contentAlignment = Alignment.Center,
+
+    Column(
         modifier = modifier
-            .shadow(6.dp, shape, clip = false)
             .clip(shape)
-            .background(Brush.verticalGradient(listOf(AccentGoldBright, AccentGold, AccentGoldDeep)))
-            .padding(2.5.dp)
-            .clip(RoundedCornerShape(14.dp))
-            .background(Brush.verticalGradient(fillColors))
-            .border(1.dp, Color.White.copy(alpha = 0.35f), RoundedCornerShape(14.dp))
-            .padding(horizontal = 22.dp, vertical = 8.dp)
+            .background(SurfaceDarkElevated)
+            .border(1.dp, HairlineDark, shape)
     ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.titleMedium.copy(
-                fontFamily = OutfitFontFamily,
-                fontWeight = FontWeight.Black,
-                fontSize = 16.sp,
-                letterSpacing = 1.sp,
-                shadow = Shadow(
-                    color = Color.Black.copy(alpha = 0.45f),
-                    offset = Offset(0f, 2f),
-                    blurRadius = 4f
-                )
-            ),
-            color = Color.White,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
+        // Horizontal accent bar
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(3.dp)
+                .background(accentBrush)
         )
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 10.dp)
+        ) {
+            Text(
+                text = text,
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontFamily = OutfitFontFamily,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp,
+                    letterSpacing = 0.5.sp
+                ),
+                color = Color.White,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
     }
 }
 

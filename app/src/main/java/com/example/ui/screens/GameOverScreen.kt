@@ -46,6 +46,7 @@ import com.example.ui.theme.AccentGold
 import com.example.ui.theme.BoardWellBg
 import com.example.ui.theme.GlassBorder
 import com.example.ui.theme.GoldBtnText
+import com.example.ui.theme.HairlineDark
 import com.example.ui.theme.JetBrainsMonoFontFamily
 import com.example.ui.theme.ObsidianBg
 import com.example.ui.theme.OutfitFontFamily
@@ -75,8 +76,8 @@ fun GameOverScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             PremiumCard(
-                cornerRadius = 22.dp,
-                borderColor = AccentGold.copy(alpha = 0.5f),
+                cornerRadius = 8.dp,
+                borderColor = HairlineDark,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(
@@ -84,7 +85,7 @@ fun GameOverScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 22.dp, vertical = 20.dp)
+                        .padding(horizontal = 20.dp, vertical = 20.dp)
                 ) {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
@@ -93,10 +94,10 @@ fun GameOverScreen(
                         Box(
                             contentAlignment = Alignment.Center,
                             modifier = Modifier
-                                .size(58.dp)
-                                .clip(RoundedCornerShape(16.dp))
+                                .size(56.dp)
+                                .clip(RoundedCornerShape(8.dp))
                                 .background(ObsidianBg)
-                                .border(1.5.dp, AccentGold.copy(alpha = 0.65f), RoundedCornerShape(16.dp))
+                                .border(1.dp, HairlineDark, RoundedCornerShape(8.dp))
                         ) {
                             ArcadeBlockEmblem(size = 36.dp)
                         }

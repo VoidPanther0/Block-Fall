@@ -6,74 +6,101 @@ import com.example.game.BlockColor
 import com.example.game.BlockStyle
 import com.example.game.BoardColorPalette
 
-// Midnight Crystal Cavern — Deep Navy, Electric Blue, Violet & Metallic Gold Palette
-val StudioBgTop = Color(0xFF060B21)
-val StudioBgMid = Color(0xFF0B163C)
-val StudioBgBottom = Color(0xFF13255E)
+// PlayStation Design System Tokens (per DESIGN.md)
+val PsBlue = Color(0xFF0070D1)
+val PsBluePressed = Color(0xFF0064B7)
+val PsBlueActive = Color(0xFF004D8D)
+val PsCommerce = Color(0xFFD53B00)
+val PsCommercePressed = Color(0xFFAA2F00)
+val CanvasDark = Color(0xFF000000)
+val SurfaceDarkElevated = Color(0xFF121314)
+val SurfaceDarkCard = Color(0xFF181818)
+val Charcoal = Color(0xFF1F2024)
+val HairlineDark = Color(0x33E5E5E5)
+val HairlineLight = Color(0xFFF3F3F3)
+val CanvasLight = Color(0xFFFFFFFF)
+val SurfaceCardLight = Color(0xFFF5F7FA)
+val SurfaceSoft = Color(0xFFF3F3F3)
+val BodyDark = Color(0xB3FFFFFF) // 70% white
+val MuteDark = Color(0x8CE5E5E5) // 55% white
+val PsGoldStart = Color(0xFFFFCE21)
+val PsGoldMid = Color(0xFFF5A623)
+val PsGoldEnd = Color(0xFFEE8E00)
+val MarathonYellow = Color(0xFFDEFF20)
+val WarningRed = Color(0xFFC81B3A)
+
+// Surfaces mapped to PlayStation Dark Canvas System
+val StudioBgTop = CanvasDark
+val StudioBgMid = Color(0xFF08090A)
+val StudioBgBottom = SurfaceDarkElevated
 
 val RoyalBlueTop = StudioBgTop
 val RoyalBlueMid = StudioBgMid
 val RoyalBlueBottom = StudioBgBottom
 
-val ObsidianBg = Color(0xFF070F2B)
-val ObsidianGlow = Color(0xFF162A64)
-val BoardWellBg = Color(0xFF0C173B)
-val BoardRim = Color(0xFF1D7AFC)
-val EmptySlotFill = Color(0xFF0E1D4B)
-val EmptySlotBorder = Color(0xFF213C7D)
+val ObsidianBg = CanvasDark
+val ObsidianGlow = Color(0xFF0A1E3D)
+val BoardWellBg = Color(0xFF0E0F12)
+val BoardRim = PsBlue
+val EmptySlotFill = Color(0xFF15161A)
+val EmptySlotBorder = Color(0xFF23252C)
 
-val SurfaceCard = Color(0xFF111F4D)
-val SurfaceCardElevated = Color(0xFF172B66)
-val SurfaceElevatedHigh = Color(0xFF1F3880)
-val GlassBorder = Color(0xFF2E52A8)
-val DividerSubtle = Color(0xFF1F3778)
-val GlassTopSheen = Color(0x2EFFFFFF)
+val SurfaceCard = SurfaceDarkCard
+val SurfaceCardElevated = SurfaceDarkElevated
+val SurfaceElevatedHigh = Charcoal
+val GlassBorder = HairlineDark
+val DividerSubtle = Color(0x1FFFFFFF)
+val GlassTopSheen = Color(0x1AFFFFFF)
 
 val TextPrimary = Color(0xFFFFFFFF)
-val TextSecondary = Color(0xFFB5C7EE)
-val TextMuted = Color(0xFF7B93C9)
+val TextSecondary = BodyDark
+val TextMuted = MuteDark
 
-val AccentCyan = Color(0xFF26D0FF)
-val AccentBlue = Color(0xFF2474FF)
-val AccentGold = Color(0xFFFFC125)
-val AccentGoldBright = Color(0xFFFFEA78)
-val AccentGoldDeep = Color(0xFFD97B00)
-val AccentDiamond = Color(0xFF33E1FF)
+val AccentCyan = Color(0xFF53B1FF)
+val AccentBlue = PsBlue
+val AccentGold = PsGoldMid
+val AccentGoldBright = PsGoldStart
+val AccentGoldDeep = PsGoldEnd
+val AccentDiamond = Color(0xFF53B1FF)
 val AccentDiamondViolet = Color(0xFFA855F7)
 val AccentCoral = Color(0xFFFF4D6D)
 val AccentWarning = Color(0xFFFF9F1C)
 val AccentEmerald = Color(0xFF22E584)
-val AccentPurple = Color(0xFF9E4BFF)
-val InvalidTint = Color(0xFFFF4D6D)
+val AccentPurple = Color(0xFF8F52FF)
+val InvalidTint = WarningRed
 
-// Glossy 3D Arcade Buttons & Metallic Lips (matching visual style reference)
-val GoldBtnTop = Color(0xFFFFE15A)
-val GoldBtnBottom = Color(0xFFFF9800)
-val GoldBtnLip = Color(0xFFA85400)
-val GoldBtnText = Color(0xFF241300)
+// PlayStation CTA Buttons (Pills, Flat Depth per DESIGN.md)
+val GoldBtnTop = PsGoldStart
+val GoldBtnBottom = PsGoldMid
+val GoldBtnLip = PsGoldEnd
+val GoldBtnText = Color(0xFF121314)
 
-val BlueBtnTop = Color(0xFF3BC4FF)
-val BlueBtnBottom = Color(0xFF0B5FFF)
-val BlueBtnLip = Color(0xFF06379C)
+val BlueBtnTop = PsBlue
+val BlueBtnBottom = PsBluePressed
+val BlueBtnLip = PsBlueActive
 
-val PurpleBtnTop = Color(0xFFC259FF)
-val PurpleBtnBottom = Color(0xFF6B18E8)
-val PurpleBtnLip = Color(0xFF3E0896)
+val CommerceBtnTop = PsCommerce
+val CommerceBtnBottom = PsCommercePressed
+val CommerceBtnLip = Color(0xFF882400)
 
-val GreenBtnTop = Color(0xFF3DF285)
+val PurpleBtnTop = Color(0xFF8247FF)
+val PurpleBtnBottom = Color(0xFF5B1ED9)
+val PurpleBtnLip = Color(0xFF3E0F9E)
+
+val GreenBtnTop = Color(0xFF2AE67A)
 val GreenBtnBottom = Color(0xFF0CA34A)
 val GreenBtnLip = Color(0xFF06632B)
 
-val RedBtnTop = Color(0xFFFF5972)
+val RedBtnTop = Color(0xFFFF4763)
 val RedBtnBottom = Color(0xFFD9163B)
 val RedBtnLip = Color(0xFF870921)
 
-val SlateBtnTop = Color(0xFF1B2E66)
-val SlateBtnBottom = Color(0xFF101D45)
-val SlateBtnLip = Color(0xFF09122E)
+val SlateBtnTop = Charcoal
+val SlateBtnBottom = SurfaceDarkCard
+val SlateBtnLip = SurfaceDarkElevated
 
-val SwitchTrackOn = Color(0xFF1CD46E)
-val SwitchTrackOff = Color(0xFF25386E)
+val SwitchTrackOn = PsBlue
+val SwitchTrackOff = Charcoal
 
 val LocalBlockStyle = compositionLocalOf { BlockStyle.MODERN }
 val LocalBoardPalette = compositionLocalOf { BoardColorPalette.ROYAL }

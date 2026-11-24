@@ -62,8 +62,11 @@ import com.example.ui.theme.AccentEmerald
 import com.example.ui.theme.AccentGold
 import com.example.ui.theme.BoardWellBg
 import com.example.ui.theme.GlassBorder
+import com.example.ui.theme.HairlineDark
 import com.example.ui.theme.JetBrainsMonoFontFamily
 import com.example.ui.theme.OutfitFontFamily
+import com.example.ui.theme.PsCommerce
+import com.example.ui.theme.SurfaceDarkCard
 import com.example.ui.theme.TextMuted
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
@@ -247,8 +250,8 @@ private fun ShopCatalogCard(
     val accent = if (item.diamondCost > 0) AccentDiamond else AccentGold
 
     FrostedGlassCard(
-        cornerRadius = 18.dp,
-        borderColor = if (isOwned) AccentEmerald.copy(alpha = 0.45f) else GlassBorder,
+        cornerRadius = 8.dp,
+        borderColor = if (isOwned) AccentEmerald.copy(alpha = 0.45f) else HairlineDark,
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
@@ -325,13 +328,13 @@ private fun ShopCatalogCard(
                     val priceLabel = if (item.goldCost > 0) "${item.goldCost} Gold" else "${item.diamondCost} Gems"
                     GlossyArcadeButton(
                         text = priceLabel,
-                        style = if (item.diamondCost > 0) ArcadeButtonStyle.BLUE else ArcadeButtonStyle.GOLD,
+                        style = ArcadeButtonStyle.COMMERCE,
                         enabled = canAfford,
                         onClick = onBuy,
-                        height = 42.dp,
-                        cornerRadius = 12.dp,
+                        height = 38.dp,
+                        cornerRadius = 9999.dp,
                         fontSize = 12.sp,
-                        modifier = Modifier.width(112.dp)
+                        modifier = Modifier.width(116.dp)
                     )
                 }
             }
@@ -342,8 +345,8 @@ private fun ShopCatalogCard(
 @Composable
 private fun ComingSoonPackCard(badge: @Composable () -> Unit, accent: Color, pack: StorePack) {
     FrostedGlassCard(
-        cornerRadius = 18.dp,
-        borderColor = accent.copy(alpha = 0.35f),
+        cornerRadius = 8.dp,
+        borderColor = HairlineDark,
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
@@ -355,9 +358,9 @@ private fun ComingSoonPackCard(badge: @Composable () -> Unit, accent: Color, pac
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
                     .size(46.dp)
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(RoundedCornerShape(8.dp))
                     .background(accent.copy(alpha = 0.14f))
-                    .border(1.dp, accent.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
+                    .border(1.dp, accent.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
             ) {
                 badge()
             }
@@ -387,8 +390,8 @@ private fun ComingSoonPackCard(badge: @Composable () -> Unit, accent: Color, pac
                 style = ArcadeButtonStyle.SLATE,
                 enabled = false,
                 onClick = {},
-                height = 42.dp,
-                cornerRadius = 12.dp,
+                height = 38.dp,
+                cornerRadius = 9999.dp,
                 fontSize = 11.sp,
                 modifier = Modifier.width(116.dp)
             )
@@ -409,8 +412,8 @@ private fun AdRewardCard(
 ) {
     FrostedGlassCard(
         modifier = Modifier.fillMaxWidth(),
-        cornerRadius = 18.dp,
-        borderColor = accent.copy(alpha = 0.42f)
+        cornerRadius = 8.dp,
+        borderColor = HairlineDark
     ) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -418,9 +421,9 @@ private fun AdRewardCard(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
                         .size(46.dp)
-                        .clip(RoundedCornerShape(12.dp))
+                        .clip(RoundedCornerShape(8.dp))
                         .background(accent.copy(alpha = 0.16f))
-                        .border(1.dp, accent.copy(alpha = 0.45f), RoundedCornerShape(12.dp))
+                        .border(1.dp, accent.copy(alpha = 0.45f), RoundedCornerShape(8.dp))
                 ) {
                     badge()
                 }
@@ -439,11 +442,11 @@ private fun AdRewardCard(
             }
             GlossyArcadeButton(
                 text = buttonText,
-                style = ArcadeButtonStyle.GREEN,
+                style = ArcadeButtonStyle.BLUE,
                 enabled = enabled,
                 onClick = onClick,
-                height = 48.dp,
-                cornerRadius = 14.dp,
+                height = 46.dp,
+                cornerRadius = 9999.dp,
                 fontSize = 14.sp,
                 testTag = tag,
                 modifier = Modifier.fillMaxWidth()
@@ -461,15 +464,14 @@ private fun WalletTile(
     tag: String,
     modifier: Modifier = Modifier
 ) {
-    val shape = RoundedCornerShape(18.dp)
+    val shape = RoundedCornerShape(8.dp)
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         modifier = modifier
-            .shadow(4.dp, shape, clip = false)
             .clip(shape)
-            .background(BoardWellBg)
-            .border(1.5.dp, accent.copy(alpha = 0.55f), shape)
+            .background(SurfaceDarkCard)
+            .border(1.dp, HairlineDark, shape)
             .padding(horizontal = 14.dp, vertical = 10.dp)
             .testTag(tag)
     ) {

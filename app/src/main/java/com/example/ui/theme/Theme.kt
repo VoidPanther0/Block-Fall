@@ -32,11 +32,11 @@ private val CascadeColorScheme = darkColorScheme(
 )
 
 val CascadeShapes = Shapes(
-    extraSmall = RoundedCornerShape(8.dp),
-    small = RoundedCornerShape(12.dp),
-    medium = RoundedCornerShape(16.dp),
-    large = RoundedCornerShape(20.dp),
-    extraLarge = RoundedCornerShape(24.dp)
+    extraSmall = RoundedCornerShape(4.dp),  // rounded.sm: inputs, small tags
+    small = RoundedCornerShape(8.dp),       // rounded.md: product-card, game-tile
+    medium = RoundedCornerShape(8.dp),      // rounded.md: standard cards
+    large = RoundedCornerShape(16.dp),      // rounded.lg: modal containers, dialogs
+    extraLarge = RoundedCornerShape(9999.dp)// rounded.full: every CTA pill
 )
 
 @Composable

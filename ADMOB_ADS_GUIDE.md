@@ -1,6 +1,6 @@
-# Block Falls — AdMob Ad Units & Integration Guide
+# Block Fall — AdMob Ad Units & Integration Guide
 
-This document lists **every AdMob ad placement** in **Block Falls** (5 total units), formatted so you can copy each Ad Unit straight into your Google AdMob Console (`Apps → Ad units → Add ad unit`), wire `.env` / AI Studio Secrets for release builds, and verify reward item names & amounts.
+This document lists **every AdMob ad placement** in **Block Fall** (5 total units), formatted with the user's production AdMob IDs.
 
 ---
 
@@ -8,21 +8,21 @@ This document lists **every AdMob ad placement** in **Block Falls** (5 total uni
 
 | Field | Value / Env Key | Notes |
 | --- | --- | --- |
-| **Platform** | Android | Package: `com.aistudio.cascadegrid.vqmxrt` |
+| **Platform** | Android | Package: `com.milo.blockfall` |
 | **Env Key** | `ADMOB_APP_ID` | Mapped into `AndroidManifest.xml` (`com.google.android.gms.ads.APPLICATION_ID`) |
-| **Debug / Test App ID** | `ca-app-pub-3940256099942544~3347511713` | Used automatically in `.env.example` and all `debug` builds |
+| **Production App ID** | `ca-app-pub-3956806922961659~5844639339` | Configured in `.env` and `app/build.gradle.kts` |
 
 ---
 
 ## 2. All 5 Ad Placements Summary
 
-| # | Ad Unit Name | Ad Format | App Area / Screen | `.env` / Secret Key | Google Test Ad Unit ID | Reward Item | Reward Amount |
+| # | Ad Unit Name | Ad Format | App Area / Screen | `.env` / Secret Key | Production Ad Unit ID | Reward Item | Reward Amount |
 | :-: | :--- | :--- | :--- | :--- | :--- | :--- | :-: |
-| **1** | **Gameplay Bottom Banner** | Banner (`320x50`) | Gameplay screen bottom dock (`CascadeGameScreen`) | `ADMOB_BANNER_GAMEPLAY_UNIT_ID` | `ca-app-pub-3940256099942544/6300978111` | None (Banner) | `—` |
-| **2** | **Rewarded Gold +50** | Rewarded | Shop → Free Rewards (`ShopScreen`) | `ADMOB_REWARDED_GOLD_UNIT_ID` | `ca-app-pub-3940256099942544/5224354917` | `Gold` | `50` |
-| **3** | **Rewarded Continue Run** | Rewarded | 5s Continue Countdown before Game Over when `score <= 10,000` (`CascadeGameScreen`) | `ADMOB_REWARDED_CONTINUE_UNIT_ID` | `ca-app-pub-3940256099942544/5224354917` | `Continue` (Board Rescue) | `1` |
-| **4** | **Rewarded Diamonds +5** | Rewarded | Shop → Free Rewards (`ShopScreen`) | `ADMOB_REWARDED_DIAMOND_UNIT_ID` | `ca-app-pub-3940256099942544/5224354917` | `Diamond` | `5` |
-| **5** | **Rewarded Lucky Wheel Spin** | Rewarded | Lucky Wheel screen & Shop → Lucky Wheel (`LuckyWheelScreen`) | `ADMOB_REWARDED_WHEEL_UNIT_ID` | `ca-app-pub-3940256099942544/5224354917` | `WheelPoint` | `1` |
+| **1** | **Gameplay Bottom Banner** | Banner (`320x50`) | Gameplay screen bottom dock (`CascadeGameScreen`) | `ADMOB_BANNER_GAMEPLAY_UNIT_ID` | `ca-app-pub-3956806922961659/2616122603` | None (Banner) | `—` |
+| **2** | **Rewarded Gold +50** | Rewarded | Shop → Free Rewards (`ShopScreen`) | `ADMOB_REWARDED_GOLD_UNIT_ID` | `ca-app-pub-3956806922961659/3967743045` | `Gold` | `50` |
+| **3** | **Rewarded Continue Run** | Rewarded | 5s Continue Countdown before Game Over when `score <= 10,000` (`CascadeGameScreen`) | `ADMOB_REWARDED_CONTINUE_UNIT_ID` | `ca-app-pub-3956806922961659/1692042840` | `Continue` (Board Rescue) | `1` |
+| **4** | **Rewarded Diamonds +5** | Rewarded | Shop → Free Rewards (`ShopScreen`) | `ADMOB_REWARDED_DIAMOND_UNIT_ID` | `ca-app-pub-3956806922961659/6496939128` | `Diamond` | `5` |
+| **5** | **Rewarded Lucky Wheel Spin** | Rewarded | Lucky Wheel screen & Shop → Lucky Wheel (`LuckyWheelScreen`) | `ADMOB_REWARDED_WHEEL_UNIT_ID` | `ca-app-pub-3956806922961659/5922224058` | `WheelPoint` | `1` |
 
 ---
 

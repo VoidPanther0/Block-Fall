@@ -7,7 +7,8 @@ const { google } = require("googleapis");
 admin.initializeApp();
 
 const DATABASE_ID = "ai-studio-android-blockfal-1b3ea5ab-3835-4dbd-8287-42466096ac30";
-const PACKAGE_NAME = "com.aistudio.cascadegrid.vqmxrt";
+const PACKAGE_NAME = "com.milo.blockfall";
+const ALLOWED_PACKAGES = ["com.milo.blockfall", "com.aistudio.cascadegrid.vqmxrt"];
 
 const MAX_GOLD = 50000;
 const MAX_DIAMONDS = 5000;
@@ -499,7 +500,7 @@ exports.verifyPlayIntegrityToken = onCall(
     const accountDetails = verdictPayload.accountDetails || {};
 
     const nonceMatches = reqDetails.requestHash === nonce;
-    const packageMatches = reqDetails.requestPackageName === PACKAGE_NAME;
+    const packageMatches = ALLOWED_PACKAGES.includes(reqDetails.requestPackageName);
     const appRecognized = appIntegrity.appRecognitionVerdict === "PLAY_RECOGNIZED";
     const deviceRecognized =
       Array.isArray(deviceIntegrity.deviceRecognitionVerdict) &&

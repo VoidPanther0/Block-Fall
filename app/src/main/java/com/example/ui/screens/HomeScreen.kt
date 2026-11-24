@@ -389,44 +389,44 @@ private fun HomeHeroSection(
     val boardWellColor = LocalBoardPalette.current.toBoardColors().wellTop
 
     PremiumCard(
-        cornerRadius = 20.dp,
-        borderColor = AccentGold.copy(alpha = 0.45f),
+        cornerRadius = 8.dp,
+        borderColor = com.example.ui.theme.HairlineDark,
         modifier = modifier.fillMaxWidth()
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 14.dp)
+                .padding(horizontal = 16.dp, vertical = 16.dp)
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(14.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 HeroCascadeCluster(
                     modifier = Modifier
                         .size(64.dp)
-                        .clip(RoundedCornerShape(14.dp))
+                        .clip(RoundedCornerShape(8.dp))
                         .background(boardWellColor)
-                        .border(1.2.dp, AccentCyan.copy(alpha = 0.45f), RoundedCornerShape(14.dp))
-                        .padding(7.dp)
+                        .border(1.dp, com.example.ui.theme.HairlineDark, RoundedCornerShape(8.dp))
+                        .padding(6.dp)
                 )
 
                 Column(
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                     modifier = Modifier.weight(1f)
                 ) {
-                    ArcadeTitleLogo(fontSize = 26.sp)
+                    ArcadeTitleLogo(fontSize = 24.sp)
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                         modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(BoardWellBg)
-                            .border(1.dp, AccentGold.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
-                            .padding(horizontal = 10.dp, vertical = 3.dp)
+                            .clip(RoundedCornerShape(9999.dp))
+                            .background(com.example.ui.theme.SurfaceDarkElevated)
+                            .border(1.dp, com.example.ui.theme.HairlineDark, RoundedCornerShape(9999.dp))
+                            .padding(horizontal = 12.dp, vertical = 4.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Filled.EmojiEvents,
@@ -436,7 +436,7 @@ private fun HomeHeroSection(
                         )
                         Text(
                             text = "Best: $bestScore",
-                            style = MaterialTheme.typography.labelLarge.copy(
+                            style = MaterialTheme.typography.labelMedium.copy(
                                 fontFamily = JetBrainsMonoFontFamily,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 12.sp
@@ -448,26 +448,28 @@ private fun HomeHeroSection(
                 }
             }
 
+            // Universal primary CTA pill in PlayStation Blue per DESIGN.md button-primary
             PremiumPrimaryButton(
                 text = stringResource(R.string.nav_play),
                 icon = Icons.Filled.PlayArrow,
-                style = ArcadeButtonStyle.GOLD_BLUE,
+                style = ArcadeButtonStyle.BLUE,
                 onClick = onPlayNewClassic,
-                height = 54.dp,
-                cornerRadius = 27.dp,
-                fontSize = 18.sp,
+                height = 50.dp,
+                cornerRadius = 9999.dp,
+                fontSize = 16.sp,
                 testTag = "home_play_button",
                 modifier = Modifier.fillMaxWidth()
             )
 
             if (canContinue) {
+                // Secondary dark outline pill per DESIGN.md button-secondary-dark
                 PremiumPrimaryButton(
                     text = "Continue · ${savedScore ?: 0} pts (${savedMoves ?: 0} moves)",
                     icon = Icons.Filled.Replay,
-                    style = ArcadeButtonStyle.GOLD_PURPLE,
+                    style = ArcadeButtonStyle.SLATE,
                     onClick = onContinueClassic,
-                    height = 48.dp,
-                    cornerRadius = 24.dp,
+                    height = 46.dp,
+                    cornerRadius = 9999.dp,
                     fontSize = 13.5.sp,
                     testTag = "home_continue_button",
                     modifier = Modifier.fillMaxWidth()
@@ -517,61 +519,72 @@ private fun DailyRewardStrip(
     targetScore: Int,
     onClick: () -> Unit
 ) {
-    val shape = RoundedCornerShape(16.dp)
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    val shape = RoundedCornerShape(8.dp)
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(4.dp, shape, clip = false)
             .clip(shape)
-            .background(Brush.verticalGradient(listOf(SurfaceCardElevated, SurfaceCard)))
-            .border(1.2.dp, AccentPurple.copy(alpha = 0.65f), shape)
+            .background(com.example.ui.theme.SurfaceDarkElevated)
+            .border(1.dp, com.example.ui.theme.HairlineDark, shape)
             .clickable(onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 12.dp)
             .testTag("home_daily_button")
     ) {
+        // PS Plus gold accent bar across the top
         Box(
-            contentAlignment = Alignment.Center,
             modifier = Modifier
-                .size(40.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(AccentPurple.copy(alpha = 0.20f))
-                .border(1.dp, AccentPurple.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
-        ) {
-            Icon(
-                imageVector = Icons.Filled.CalendarToday,
-                contentDescription = null,
-                tint = AccentPurple,
-                modifier = Modifier.size(20.dp)
-            )
-        }
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = "Daily Gravity Puzzle",
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontFamily = OutfitFontFamily,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 15.sp
-                ),
-                color = TextPrimary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                text = "$dailyTitle · Target $targetScore · Win Gold & Gems",
-                style = MaterialTheme.typography.bodySmall,
-                color = TextSecondary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-        Icon(
-            imageVector = Icons.Filled.PlayArrow,
-            contentDescription = "Play Daily Puzzle",
-            tint = AccentGold,
-            modifier = Modifier.size(22.dp)
+                .fillMaxWidth()
+                .height(3.dp)
+                .background(Brush.horizontalGradient(listOf(com.example.ui.theme.PsGoldStart, com.example.ui.theme.PsGoldMid, com.example.ui.theme.PsGoldEnd)))
         )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 12.dp)
+        ) {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(com.example.ui.theme.PsGoldStart.copy(alpha = 0.14f))
+                    .border(1.dp, com.example.ui.theme.PsGoldStart.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.CalendarToday,
+                    contentDescription = null,
+                    tint = AccentGold,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Daily Gravity Puzzle",
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontFamily = OutfitFontFamily,
+                        fontWeight = FontWeight.Medium,
+                        fontSize = 15.sp
+                    ),
+                    color = TextPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = "$dailyTitle · Target $targetScore · Win Gold & Gems",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            Icon(
+                imageVector = Icons.Filled.PlayArrow,
+                contentDescription = "Play Daily Puzzle",
+                tint = AccentGold,
+                modifier = Modifier.size(22.dp)
+            )
+        }
     }
 }
 
@@ -713,31 +726,30 @@ private fun HomeHubTile(
     modifier: Modifier = Modifier,
     badgeCount: Int = 0
 ) {
-    val shape = RoundedCornerShape(16.dp)
+    val shape = RoundedCornerShape(8.dp) // rounded.md per DESIGN.md
     Box(modifier = modifier) {
         Column(
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier
                 .fillMaxWidth()
-                .shadow(4.dp, shape, clip = false)
                 .clip(shape)
-                .background(Brush.verticalGradient(listOf(SurfaceCardElevated, SurfaceCard)))
-                .border(1.1.dp, GlassBorder, shape)
+                .background(com.example.ui.theme.SurfaceDarkCard)
+                .border(1.dp, com.example.ui.theme.HairlineDark, shape)
                 .clickable(onClick = onClick)
-                .padding(13.dp)
+                .padding(14.dp)
                 .testTag(testTag)
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(9.dp)
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
-                        .size(34.dp)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(accent.copy(alpha = 0.16f))
-                        .border(1.dp, accent.copy(alpha = 0.42f), RoundedCornerShape(10.dp))
+                        .size(36.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(accent.copy(alpha = 0.12f))
+                        .border(1.dp, accent.copy(alpha = 0.35f), RoundedCornerShape(8.dp))
                 ) {
                     Icon(
                         imageVector = icon,
@@ -750,8 +762,8 @@ private fun HomeHubTile(
                     text = title,
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontFamily = OutfitFontFamily,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.5.sp
+                        fontWeight = FontWeight.Medium,
+                        fontSize = 15.sp
                     ),
                     color = TextPrimary,
                     maxLines = 1,
@@ -775,14 +787,13 @@ private fun HomeHubTile(
                     .padding(6.dp)
                     .size(20.dp)
                     .clip(CircleShape)
-                    .background(AccentCoral)
-                    .border(1.5.dp, Color.White, CircleShape)
+                    .background(com.example.ui.theme.WarningRed)
             ) {
                 Text(
                     text = "$badgeCount",
                     color = Color.White,
                     fontSize = 10.sp,
-                    fontWeight = FontWeight.ExtraBold
+                    fontWeight = FontWeight.Bold
                 )
             }
         }

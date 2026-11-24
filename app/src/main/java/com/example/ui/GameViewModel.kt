@@ -178,14 +178,14 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         RewardedAdManager(
             context = getApplication<Application>(),
             adUnitId = AdConfig.rewardedGoldUnitId,
-            debugFallbackAdUnitId = AdConfig.TEST_REWARDED_GOLD_UNIT_ID
+            debugFallbackAdUnitId = null
         )
     }
     private val continueAdManager by lazy {
         RewardedAdManager(
             context = getApplication<Application>(),
             adUnitId = AdConfig.rewardedContinueUnitId,
-            debugFallbackAdUnitId = AdConfig.TEST_REWARDED_CONTINUE_UNIT_ID
+            debugFallbackAdUnitId = null
         )
     }
 
@@ -193,14 +193,14 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         RewardedAdManager(
             context = getApplication<Application>(),
             adUnitId = AdConfig.rewardedDiamondUnitId,
-            debugFallbackAdUnitId = AdConfig.TEST_REWARDED_DIAMOND_UNIT_ID
+            debugFallbackAdUnitId = null
         )
     }
     private val wheelAdManager by lazy {
         RewardedAdManager(
             context = getApplication<Application>(),
             adUnitId = AdConfig.rewardedWheelUnitId,
-            debugFallbackAdUnitId = AdConfig.TEST_REWARDED_WHEEL_UNIT_ID
+            debugFallbackAdUnitId = null
         )
     }
     private val serverEconomy by lazy { com.example.data.cloud.ServerEconomyClient() }

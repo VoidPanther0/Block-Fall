@@ -25,6 +25,13 @@ import kotlinx.coroutines.flow.asStateFlow
  */
 object AdConfig {
 
+    const val REAL_APP_ID = "ca-app-pub-3956806922961659~5844639339"
+    const val REAL_REWARDED_GOLD_UNIT_ID = "ca-app-pub-3956806922961659/3967743045"
+    const val REAL_BANNER_GAMEPLAY_UNIT_ID = "ca-app-pub-3956806922961659/2616122603"
+    const val REAL_REWARDED_CONTINUE_UNIT_ID = "ca-app-pub-3956806922961659/1692042840"
+    const val REAL_REWARDED_DIAMOND_UNIT_ID = "ca-app-pub-3956806922961659/6496939128"
+    const val REAL_REWARDED_WHEEL_UNIT_ID = "ca-app-pub-3956806922961659/5922224058"
+
     const val TEST_APP_ID = "ca-app-pub-3940256099942544~3347511713"
     const val TEST_REWARDED_GOLD_UNIT_ID = "ca-app-pub-3940256099942544/5224354917"
     const val TEST_BANNER_GAMEPLAY_UNIT_ID = "ca-app-pub-3940256099942544/6300978111"
@@ -42,9 +49,9 @@ object AdConfig {
         _sdkInitialized.value = true
     }
 
-    val configuredAppId: String = BuildConfig.ADMOB_APP_ID
+    val configuredAppId: String = BuildConfig.ADMOB_APP_ID.ifBlank { REAL_APP_ID }
 
-    /** True when a release build has no real production IDs and is serving Google test ads. */
+    /** True when a build has no real production IDs and is serving Google test ads. */
     val isUsingTestIds: Boolean get() = configuredAppId == TEST_APP_ID
 
     val isAppIdValid: Boolean = APP_ID_PATTERN.matches(configuredAppId)
@@ -58,25 +65,25 @@ object AdConfig {
     val rewardedGoldUnitId: String =
         configuredRewardedGoldUnitId
             .takeIf { AD_UNIT_PATTERN.matches(it) }
-            ?: TEST_REWARDED_GOLD_UNIT_ID
+            ?: REAL_REWARDED_GOLD_UNIT_ID
 
     val bannerGameplayUnitId: String =
         configuredBannerGameplayUnitId
             .takeIf { AD_UNIT_PATTERN.matches(it) }
-            ?: TEST_BANNER_GAMEPLAY_UNIT_ID
+            ?: REAL_BANNER_GAMEPLAY_UNIT_ID
 
     val rewardedContinueUnitId: String =
         configuredRewardedContinueUnitId
             .takeIf { AD_UNIT_PATTERN.matches(it) }
-            ?: TEST_REWARDED_CONTINUE_UNIT_ID
+            ?: REAL_REWARDED_CONTINUE_UNIT_ID
 
     val rewardedDiamondUnitId: String =
         configuredRewardedDiamondUnitId
             .takeIf { AD_UNIT_PATTERN.matches(it) }
-            ?: TEST_REWARDED_DIAMOND_UNIT_ID
+            ?: REAL_REWARDED_DIAMOND_UNIT_ID
 
     val rewardedWheelUnitId: String =
         configuredRewardedWheelUnitId
             .takeIf { AD_UNIT_PATTERN.matches(it) }
-            ?: TEST_REWARDED_WHEEL_UNIT_ID
+            ?: REAL_REWARDED_WHEEL_UNIT_ID
 }

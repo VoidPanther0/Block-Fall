@@ -69,6 +69,6 @@ class StartupAndCascadeBenchmark {
     }
 
     companion object {
-        private const val PACKAGE_NAME = "com.aistudio.cascadegrid.vqmxrt"
+        private const val PACKAGE_NAME = "com.milo.blockfall"
     }
 }

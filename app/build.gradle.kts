@@ -9,7 +9,7 @@ plugins {
   alias(libs.plugins.google.services)
 }
 
-val TEST_ADMOB_APP_ID = "ca-app-pub-3940256099942544~3347511713"
+val REAL_ADMOB_APP_ID = "ca-app-pub-3956806922961659~5844639339"
 fun envOrDotEnv(name: String): String? {
   System.getenv(name)?.takeIf { it.isNotBlank() }?.let { return it.trim() }
   for (fileName in listOf(".env", ".env.example")) {
@@ -24,27 +24,25 @@ fun envOrDotEnv(name: String): String? {
 val admobAppIdPattern = Regex("^ca-app-pub-[0-9]{16}~[0-9]{10}$")
 val admobUnitPattern = Regex("^ca-app-pub-[0-9]{16}/[0-9]{10}$")
 val realAdmobAppId: String? = envOrDotEnv("ADMOB_APP_ID")
-  ?.takeIf { admobAppIdPattern.matches(it) && it != TEST_ADMOB_APP_ID }
+  ?.takeIf { admobAppIdPattern.matches(it) }
 val realAdmobRewardedUnit: String? = envOrDotEnv("ADMOB_REWARDED_GOLD_UNIT_ID")
-  ?.takeIf { admobUnitPattern.matches(it) && !it.startsWith("ca-app-pub-3940256099942544/") }
+  ?.takeIf { admobUnitPattern.matches(it) }
 val realAdmobBannerGameplayUnit: String? = envOrDotEnv("ADMOB_BANNER_GAMEPLAY_UNIT_ID")
-  ?.takeIf { admobUnitPattern.matches(it) && !it.startsWith("ca-app-pub-3940256099942544/") }
+  ?.takeIf { admobUnitPattern.matches(it) }
 val realAdmobRewardedContinueUnit: String? = envOrDotEnv("ADMOB_REWARDED_CONTINUE_UNIT_ID")
-  ?.takeIf { admobUnitPattern.matches(it) && !it.startsWith("ca-app-pub-3940256099942544/") }
+  ?.takeIf { admobUnitPattern.matches(it) }
 val realAdmobRewardedDiamondUnit: String? = envOrDotEnv("ADMOB_REWARDED_DIAMOND_UNIT_ID")
-  ?.takeIf { admobUnitPattern.matches(it) && !it.startsWith("ca-app-pub-3940256099942544/") }
+  ?.takeIf { admobUnitPattern.matches(it) }
 val realAdmobRewardedWheelUnit: String? = envOrDotEnv("ADMOB_REWARDED_WHEEL_UNIT_ID")
-  ?.takeIf { admobUnitPattern.matches(it) && !it.startsWith("ca-app-pub-3940256099942544/") }
-// Release builds fall back to the test App ID only so the project still configures; the
-// verifyReleaseAdConfig task below blocks packaging unless real IDs are supplied.
-val prodAdmobAppId: String = realAdmobAppId ?: TEST_ADMOB_APP_ID
+  ?.takeIf { admobUnitPattern.matches(it) }
+val prodAdmobAppId: String = realAdmobAppId ?: REAL_ADMOB_APP_ID
 
 android {
   namespace = "com.example"
   compileSdk { version = release(36) { minorApiLevel = 1 } }
 
   defaultConfig {
-    applicationId = "com.aistudio.cascadegrid.vqmxrt"
+    applicationId = "com.milo.blockfall"
     minSdk = 24
     targetSdk = 36
     versionCode = 1
@@ -52,14 +50,14 @@ android {
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-    fun adField(name: String, real: String?, test: String) =
-      buildConfigField("String", name, "\"${real ?: test}\"")
-    adField("ADMOB_APP_ID", realAdmobAppId, TEST_ADMOB_APP_ID)
-    adField("ADMOB_REWARDED_GOLD_UNIT_ID", realAdmobRewardedUnit, "ca-app-pub-3940256099942544/5224354917")
-    adField("ADMOB_BANNER_GAMEPLAY_UNIT_ID", realAdmobBannerGameplayUnit, "ca-app-pub-3940256099942544/6300978111")
-    adField("ADMOB_REWARDED_CONTINUE_UNIT_ID", realAdmobRewardedContinueUnit, "ca-app-pub-3940256099942544/5224354917")
-    adField("ADMOB_REWARDED_DIAMOND_UNIT_ID", realAdmobRewardedDiamondUnit, "ca-app-pub-3940256099942544/5224354917")
-    adField("ADMOB_REWARDED_WHEEL_UNIT_ID", realAdmobRewardedWheelUnit, "ca-app-pub-3940256099942544/5224354917")
+    fun adField(name: String, real: String?, fallback: String) =
+      buildConfigField("String", name, "\"${real ?: fallback}\"")
+    adField("ADMOB_APP_ID", realAdmobAppId, REAL_ADMOB_APP_ID)
+    adField("ADMOB_REWARDED_GOLD_UNIT_ID", realAdmobRewardedUnit, "ca-app-pub-3956806922961659/3967743045")
+    adField("ADMOB_BANNER_GAMEPLAY_UNIT_ID", realAdmobBannerGameplayUnit, "ca-app-pub-3956806922961659/2616122603")
+    adField("ADMOB_REWARDED_CONTINUE_UNIT_ID", realAdmobRewardedContinueUnit, "ca-app-pub-3956806922961659/1692042840")
+    adField("ADMOB_REWARDED_DIAMOND_UNIT_ID", realAdmobRewardedDiamondUnit, "ca-app-pub-3956806922961659/6496939128")
+    adField("ADMOB_REWARDED_WHEEL_UNIT_ID", realAdmobRewardedWheelUnit, "ca-app-pub-3956806922961659/5922224058")
   }
 
   // Do not remove or modify these signingConfigs. They are necessary for building, installing,
@@ -144,12 +142,12 @@ val defaultEnvFile = rootProject.file(".env.example")
 if (!defaultEnvFile.exists()) {
   defaultEnvFile.writeText(
     listOf(
-      "ADMOB_APP_ID=ca-app-pub-3940256099942544~3347511713",
-      "ADMOB_REWARDED_GOLD_UNIT_ID=ca-app-pub-3940256099942544/5224354917",
-      "ADMOB_BANNER_GAMEPLAY_UNIT_ID=ca-app-pub-3940256099942544/6300978111",
-      "ADMOB_REWARDED_CONTINUE_UNIT_ID=ca-app-pub-3940256099942544/5224354917",
-      "ADMOB_REWARDED_DIAMOND_UNIT_ID=ca-app-pub-3940256099942544/5224354917",
-      "ADMOB_REWARDED_WHEEL_UNIT_ID=ca-app-pub-3940256099942544/5224354917"
+      "ADMOB_APP_ID=ca-app-pub-3956806922961659~5844639339",
+      "ADMOB_REWARDED_GOLD_UNIT_ID=ca-app-pub-3956806922961659/3967743045",
+      "ADMOB_BANNER_GAMEPLAY_UNIT_ID=ca-app-pub-3956806922961659/2616122603",
+      "ADMOB_REWARDED_CONTINUE_UNIT_ID=ca-app-pub-3956806922961659/1692042840",
+      "ADMOB_REWARDED_DIAMOND_UNIT_ID=ca-app-pub-3956806922961659/6496939128",
+      "ADMOB_REWARDED_WHEEL_UNIT_ID=ca-app-pub-3956806922961659/5922224058"
     ).joinToString(separator = System.lineSeparator(), postfix = System.lineSeparator())
   )
 }

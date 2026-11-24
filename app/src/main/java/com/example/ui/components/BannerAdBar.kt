@@ -85,7 +85,7 @@ fun BannerAdBar(
                         container = container,
                         holder = holder,
                         unitId = AdConfig.bannerGameplayUnitId,
-                        allowDebugFallback = true
+                        allowDebugFallback = false
                     )
                 },
                 onRelease = { container ->
