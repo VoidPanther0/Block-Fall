@@ -18,6 +18,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
@@ -58,7 +59,7 @@ fun GameBoard(
     board: Board,
     visualPhase: BoardVisualPhase,
     dragState: DragState?,
-    @Suppress("UNUSED_PARAMETER") floatingBanner: FloatingBanner?,
+    floatingBanner: FloatingBanner?,
     particleTriggerId: Long,
     latestParticles: List<ParticleBurst>,
     hasSelectedSlot: Boolean,
@@ -496,5 +497,14 @@ fun GameBoard(
                 style = Stroke(width = 1f)
             )
         }
+
+        // Layout-inert overlay sibling of the Canvas: it neither resizes nor repositions the
+        // board, and it has no pointerInput/clickable so taps and drags still reach the Canvas.
+        CascadeCalloutOverlay(
+            floatingBanner = floatingBanner,
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 8.dp)
+        )
     }
 }

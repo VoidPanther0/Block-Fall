@@ -2,10 +2,8 @@ package com.example
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -23,7 +21,6 @@ import com.example.game.Board
 import com.example.ui.BoardVisualPhase
 import com.example.ui.FloatingBanner
 import com.example.ui.GameUiState
-import com.example.ui.components.CascadeCalloutBar
 import com.example.ui.components.GameBoard
 import com.example.ui.components.ScorePanel
 import com.example.ui.components.TopGameBar
@@ -65,32 +62,27 @@ class BoardStabilityRobolectricTest {
                             .weight(1f)
                             .fillMaxWidth()
                     ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            CascadeCalloutBar(floatingBanner = uiState.floatingBanner)
-                            Spacer(Modifier.height(4.dp))
-                            GameBoard(
-                                board = Board.empty(),
-                                visualPhase = BoardVisualPhase.Idle,
-                                dragState = null,
-                                floatingBanner = uiState.floatingBanner,
-                                particleTriggerId = 0L,
-                                latestParticles = emptyList(),
-                                hasSelectedSlot = false,
-                                onCellTapped = { _, _ -> },
-                                onBoardBoundsChanged = { _: Rect -> },
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        }
+                        GameBoard(
+                            board = Board.empty(),
+                            visualPhase = BoardVisualPhase.Idle,
+                            dragState = null,
+                            floatingBanner = uiState.floatingBanner,
+                            particleTriggerId = 0L,
+                            latestParticles = emptyList(),
+                            hasSelectedSlot = false,
+                            onCellTapped = { _, _ -> },
+                            onBoardBoundsChanged = { _: Rect -> },
+                            modifier = Modifier.fillMaxWidth()
+                        )
                     }
                 }
             }
         }
 
         composeRule.waitForIdle()
-        val boardTopBefore = composeRule.onNodeWithTag("game_board")
+        val boardBoundsBefore = composeRule.onNodeWithTag("game_board")
             .fetchSemanticsNode()
             .boundsInRoot
-            .top
         assertEquals(0, composeRule.onAllNodesWithTag("cascade_banner").fetchSemanticsNodes().size)
 
         // Trigger active line-clear & cascade wave state
@@ -107,14 +99,27 @@ class BoardStabilityRobolectricTest {
         )
         composeRule.waitForIdle()
 
-        // Only one callout pill exists and the board vertical origin never moved
+        // Exactly one callout pill exists, it is drawn inside the board, and the board's
+        // origin and size are unchanged by its presence.
         assertEquals(1, composeRule.onAllNodesWithTag("cascade_banner").fetchSemanticsNodes().size)
-        composeRule.onNodeWithTag("cascade_banner").assertIsDisplayed()
-        val boardTopDuringClear = composeRule.onNodeWithTag("game_board")
+        val bannerBounds = composeRule.onNodeWithTag("cascade_banner")
+            .assertIsDisplayed()
             .fetchSemanticsNode()
             .boundsInRoot
-            .top
-        assertEquals(boardTopBefore, boardTopDuringClear, 0.5f)
+        val boardBoundsDuringClear = composeRule.onNodeWithTag("game_board")
+            .fetchSemanticsNode()
+            .boundsInRoot
+
+        org.junit.Assert.assertTrue(
+            "Callout pill must be rendered inside the game board bounds",
+            bannerBounds.left >= boardBoundsDuringClear.left &&
+                bannerBounds.top >= boardBoundsDuringClear.top &&
+                bannerBounds.right <= boardBoundsDuringClear.right &&
+                bannerBounds.bottom <= boardBoundsDuringClear.bottom
+        )
+        assertEquals(boardBoundsBefore.top, boardBoundsDuringClear.top, 0.5f)
+        assertEquals(boardBoundsBefore.width, boardBoundsDuringClear.width, 0.5f)
+        assertEquals(boardBoundsBefore.height, boardBoundsDuringClear.height, 0.5f)
     }
 
     @Test

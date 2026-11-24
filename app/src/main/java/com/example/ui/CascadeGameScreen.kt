@@ -64,7 +64,6 @@ import com.example.game.Board
 import com.example.game.GameStatus
 import com.example.ui.components.ArcadeButtonStyle
 import com.example.ui.components.BannerAdBar
-import com.example.ui.components.CascadeCalloutBar
 import com.example.ui.components.GameBoard
 import com.example.ui.components.PieceTray
 import com.example.ui.components.PremiumCard
@@ -115,16 +114,15 @@ fun CascadeGameScreen(
         viewModel.declineContinueOffer()
     }
 
-    BackHandler(enabled = state.status == GameStatus.PLAYING && !state.showContinueOffer) {
+    BackHandler(
+        enabled = (state.status == GameStatus.PLAYING || state.status == GameStatus.RESOLVING_CASCADE) &&
+            !state.showContinueOffer
+    ) {
         viewModel.pauseGame()
         onOpenPause()
     }
 
-    LaunchedEffect(state.currentCascadeWave) {
-        if (state.settings.hapticsEnabled && state.currentCascadeWave >= 2) {
-            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-        }
-    }
+    // Combo/clear haptics are issued once per turn by GameViewModel via HapticsManager (no second system here).
 
     LaunchedEffect(state.status, state.showContinueOffer) {
         if (state.showContinueOffer) return@LaunchedEffect
@@ -153,7 +151,7 @@ fun CascadeGameScreen(
             // so they use the two-pane layout with a height-clamped board instead.
             val isShortLandscape = maxHeight < 480.dp && maxWidth >= 480.dp
             val isWideLayout = (maxWidth >= 660.dp && maxWidth > maxHeight) || isShortLandscape
-            val wideBoardMax = (maxHeight - 56.dp).coerceAtLeast(120.dp).coerceAtMost(500.dp)
+            val wideBoardMax = maxHeight.coerceAtLeast(120.dp).coerceAtMost(500.dp)
 
             if (isWideLayout) {
                 Row(
@@ -170,11 +168,6 @@ fun CascadeGameScreen(
                             .weight(1.1f)
                             .fillMaxHeight()
                     ) {
-                        CascadeCalloutBar(
-                            floatingBanner = state.floatingBanner,
-                            cascadeWave = state.currentCascadeWave
-                        )
-                        Spacer(Modifier.height(4.dp))
                         GameBoard(
                             board = state.board,
                             visualPhase = visualPhase,
@@ -251,6 +244,7 @@ fun CascadeGameScreen(
                         ShuffleBoosterButton(
                             count = state.wallet.shuffleCount,
                             enabled = state.status == GameStatus.PLAYING &&
+                                state.dragState == null &&
                                 state.wallet.shuffleCount > 0 &&
                                 state.traySlots.any { it.piece != null },
                             onClick = viewModel::useShuffleBooster
@@ -295,51 +289,42 @@ fun CascadeGameScreen(
                     ) {
                         // The board is a square: size it from the space actually left between the
                         // HUD and the dock (extra HUD rows such as the Daily progress bar would
-                        // otherwise push the board underneath the piece tray).
-                        val fitSide = minOf(maxWidth, maxHeight - 44.dp, boardMaxWidth).coerceAtLeast(120.dp)
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
-                        ) {
-                            CascadeCalloutBar(
+                        // otherwise push the board underneath the piece tray). The callout is now
+                        // an overlay inside the board, so no vertical space is reserved for it.
+                        val fitSide = minOf(maxWidth, maxHeight, boardMaxWidth).coerceAtLeast(120.dp)
+                        GameBoard(
+                            board = state.board,
+                            visualPhase = visualPhase,
+                            dragState = state.dragState,
                             floatingBanner = state.floatingBanner,
-                            cascadeWave = state.currentCascadeWave
+                            particleTriggerId = state.particleTriggerId,
+                            latestParticles = state.latestParticles,
+                            hasSelectedSlot = state.selectedSlotIndex != null,
+                            visualEffectsEnabled = state.settings.visualEffectsEnabled,
+                            placementPreviewEnabled = state.settings.placementPreviewEnabled,
+                            onCellTapped = { r, c ->
+                                if (state.settings.hapticsEnabled) {
+                                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                }
+                                viewModel.onBoardCellTapped(r, c)
+                            },
+                            onBoardTouchStart = { localOffset ->
+                                if (state.settings.hapticsEnabled) {
+                                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                }
+                                viewModel.startBoardTouch(localOffset)
+                            },
+                            onBoardTouchMove = viewModel::updateBoardTouch,
+                            onBoardTouchEnd = viewModel::endDrag,
+                            onBoardTouchCancel = viewModel::cancelDrag,
+                            onBoardBoundsChanged = { rect ->
+                                boardBoundsInRoot = rect
+                                viewModel.updateBoardBounds(rect, dragLiftPx)
+                            },
+                            modifier = Modifier
+                                .widthIn(max = fitSide)
+                                .fillMaxWidth()
                         )
-                            Spacer(Modifier.height(4.dp))
-                            GameBoard(
-                                board = state.board,
-                                visualPhase = visualPhase,
-                                dragState = state.dragState,
-                                floatingBanner = state.floatingBanner,
-                                particleTriggerId = state.particleTriggerId,
-                                latestParticles = state.latestParticles,
-                                hasSelectedSlot = state.selectedSlotIndex != null,
-                                visualEffectsEnabled = state.settings.visualEffectsEnabled,
-                                placementPreviewEnabled = state.settings.placementPreviewEnabled,
-                                onCellTapped = { r, c ->
-                                    if (state.settings.hapticsEnabled) {
-                                        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                    }
-                                    viewModel.onBoardCellTapped(r, c)
-                                },
-                                onBoardTouchStart = { localOffset ->
-                                    if (state.settings.hapticsEnabled) {
-                                        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                    }
-                                    viewModel.startBoardTouch(localOffset)
-                                },
-                                onBoardTouchMove = viewModel::updateBoardTouch,
-                                onBoardTouchEnd = viewModel::endDrag,
-                                onBoardTouchCancel = viewModel::cancelDrag,
-                                onBoardBoundsChanged = { rect ->
-                                    boardBoundsInRoot = rect
-                                    viewModel.updateBoardBounds(rect, dragLiftPx)
-                                },
-                                modifier = Modifier
-                                    .widthIn(max = fitSide)
-                                    .fillMaxWidth()
-                            )
-                        }
                     }
 
                     // Fixed-height Bottom Dock
@@ -373,6 +358,7 @@ fun CascadeGameScreen(
                         ShuffleBoosterButton(
                             count = state.wallet.shuffleCount,
                             enabled = state.status == GameStatus.PLAYING &&
+                                state.dragState == null &&
                                 state.wallet.shuffleCount > 0 &&
                                 state.traySlots.any { it.piece != null },
                             onClick = viewModel::useShuffleBooster

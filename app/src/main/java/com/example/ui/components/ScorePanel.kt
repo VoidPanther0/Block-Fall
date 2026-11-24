@@ -1,6 +1,8 @@
 package com.example.ui.components
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -38,6 +40,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -47,6 +50,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -269,110 +275,126 @@ fun ScorePanel(
 }
 
 /**
- * Fixed-height callout slot placed above the game board so line-clear / combo callouts
- * never push or shift the 8x8 board vertically and never overlap board cells.
+ * Combo / tier badge color and text derived purely from the banner's engine-provided fields
+ * ([FloatingBanner.depth], [FloatingBanner.isFullClear], [FloatingBanner.linesCount]).
+ * A full clear always wins over the combo depth.
  */
+internal fun calloutBadgeFor(banner: FloatingBanner): Pair<String?, Color> = when {
+    banner.isFullClear -> "👑 PERFECT CLEAR!" to AccentGold
+    banner.depth >= 5 -> "⚡ UNSTOPPABLE ×5" to AccentGold
+    banner.depth == 4 -> "🔥 INCREDIBLE ×4" to AccentGold
+    banner.depth == 3 -> "✨ SUPER COMBO ×3" to AccentCoral
+    banner.depth == 2 -> "💫 COMBO ×2" to AccentPurple
+    banner.linesCount >= 3 -> null to AccentGold
+    else -> null to AccentCyan
+}
+
 /**
- * UI-only feedback labels. The score and the core headline still come from the game engine;
- * this only maps the current cascade wave / clear count to a readable tier badge.
+ * Combo / line-clear callout drawn INSIDE the game board (see GameBoard). It is a sibling of the
+ * board Canvas, never changes the board's size or position, and carries no pointerInput/clickable
+ * modifiers so drags and taps pass through to the Canvas underneath.
+ *
+ * The last banner is remembered so the exit animation still has content to animate once
+ * [floatingBanner] becomes null, and [AnimatedContent] keyed by banner id animates wave-to-wave changes.
  */
-private fun feedbackTierFor(headline: String, wave: Int): Pair<String, Color> {
-    // The engine resets currentCascadeWave when the turn finalizes while the banner lingers.
-    // The banner headline ("GRAVITY CHAIN x2!", "MEGA CASCADE x3!") keeps the authoritative
-    // depth, so derive the combo tier from both sources instead of the transient wave alone.
-    val comboFromHeadline = Regex("x(\\d+)", RegexOption.IGNORE_CASE)
-        .find(headline)
-        ?.groupValues
-        ?.getOrNull(1)
-        ?.toIntOrNull()
-        ?: 0
-    val depth = maxOf(wave, comboFromHeadline)
-    val (tierLabel, tierColor) = when {
-        depth >= 5 -> "⚡ UNSTOPPABLE 5x" to AccentGold
-        depth == 4 -> "🔥 INCREDIBLE 4x" to AccentGold
-        depth == 3 -> "✨ SUPER COMBO 3x" to AccentCoral
-        depth == 2 -> "💫 COMBO 2x" to AccentPurple
-        headline.contains("BOARD", ignoreCase = true) || headline.contains("PERFECT", ignoreCase = true) ->
-            "👑 PERFECT CLEAR!" to AccentGold
-        headline.contains("TRIPLE", ignoreCase = true) -> "💥 TRIPLE CLEAR!" to AccentGold
-        headline.contains("DOUBLE", ignoreCase = true) -> "⚡ DOUBLE CLEAR!" to AccentCyan
-        else -> "CLEAR!" to AccentCyan
+@Composable
+fun CascadeCalloutOverlay(
+    floatingBanner: FloatingBanner?,
+    modifier: Modifier = Modifier
+) {
+    val lastBanner = remember { arrayOfNulls<FloatingBanner>(1) }
+    if (floatingBanner != null) lastBanner[0] = floatingBanner
+    val shown = lastBanner[0]
+
+    AnimatedVisibility(
+        visible = floatingBanner != null,
+        enter = fadeIn(tween(140)) + scaleIn(initialScale = 0.86f, animationSpec = tween(160)),
+        exit = fadeOut(tween(180)) + scaleOut(targetScale = 0.92f, animationSpec = tween(180)),
+        modifier = modifier
+    ) {
+        if (shown != null) {
+            AnimatedContent(
+                targetState = shown,
+                contentKey = { it.id },
+                transitionSpec = {
+                    (fadeIn(tween(120)) + scaleIn(initialScale = 0.9f, animationSpec = tween(140)))
+                        .togetherWith(fadeOut(tween(90)))
+                },
+                label = "callout_content"
+            ) { banner ->
+                CalloutPill(banner)
+            }
+        }
     }
-    return tierLabel to tierColor
 }
 
 @Composable
-fun CascadeCalloutBar(
-    floatingBanner: FloatingBanner?,
-    modifier: Modifier = Modifier,
-    cascadeWave: Int = 0
-) {
-    Box(
-        contentAlignment = Alignment.Center,
-        modifier = modifier
-            .fillMaxWidth()
-            .height(34.dp)
+private fun CalloutPill(banner: FloatingBanner) {
+    val (badge, tierColor) = calloutBadgeFor(banner)
+    val accent = if (banner.isChain) AccentGold else tierColor
+    val secondary = listOfNotNull(badge, banner.subline).joinToString(" · ").ifEmpty { null }
+    val pillShape = RoundedCornerShape(16.dp)
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        modifier = Modifier
+            .padding(horizontal = 6.dp)
+            .shadow(3.dp, pillShape, clip = false)
+            .clip(pillShape)
+            .background(SurfaceCard.copy(alpha = 0.94f))
+            .border(1.5.dp, accent.copy(alpha = 0.85f), pillShape)
+            .padding(horizontal = 12.dp, vertical = 6.dp)
+            .testTag("cascade_banner")
+            .semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite }
     ) {
-        AnimatedVisibility(
-            visible = floatingBanner != null,
-            enter = fadeIn(tween(140)) + scaleIn(initialScale = 0.86f, animationSpec = tween(160)),
-            exit = fadeOut(tween(180)) + scaleOut(targetScale = 0.92f, animationSpec = tween(180))
-        ) {
-            floatingBanner?.let { banner ->
-                val (tierLabel, tierColor) = feedbackTierFor(banner.headline, cascadeWave)
-                val accent = if (banner.isChain) AccentGold else tierColor
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(7.dp),
-                    modifier = Modifier
-                        .shadow(2.dp, CircleShape, clip = false)
-                        .clip(CircleShape)
-                        .background(SurfaceCard)
-                        .border(1.25.dp, accent.copy(alpha = 0.8f), CircleShape)
-                        .padding(horizontal = 12.dp, vertical = 4.dp)
-                        .testTag("cascade_banner")
-                ) {
-                    Text(
-                        text = tierLabel,
-                        style = MaterialTheme.typography.labelLarge.copy(
-                            fontFamily = OutfitFontFamily,
-                            fontWeight = FontWeight.ExtraBold,
-                            fontSize = 11.sp,
-                            letterSpacing = 0.5.sp
-                        ),
-                        color = tierColor,
-                        maxLines = 1
-                    )
-                    Box(
-                        modifier = Modifier
-                            .size(3.dp)
-                            .clip(CircleShape)
-                            .background(GlassBorder)
-                    )
-                    Text(
-                        text = banner.headline,
-                        style = MaterialTheme.typography.labelLarge.copy(
-                            fontFamily = OutfitFontFamily,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 11.sp,
-                            letterSpacing = 0.3.sp
-                        ),
-                        color = TextPrimary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, fill = false)
-                    )
-                    Text(
-                        text = banner.pointsText,
-                        style = MaterialTheme.typography.labelLarge.copy(
-                            fontFamily = JetBrainsMonoFontFamily,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 11.sp
-                        ),
-                        color = accent,
-                        maxLines = 1
-                    )
-                }
+        Column(modifier = Modifier.weight(1f, fill = false)) {
+            Text(
+                text = banner.headline,
+                style = MaterialTheme.typography.labelLarge.copy(
+                    fontFamily = OutfitFontFamily,
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = 16.sp,
+                    letterSpacing = 0.3.sp
+                ),
+                color = tierColor,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            if (secondary != null) {
+                Text(
+                    text = secondary,
+                    style = MaterialTheme.typography.labelMedium.copy(
+                        fontFamily = OutfitFontFamily,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 11.sp
+                    ),
+                    color = TextPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+        Column(horizontalAlignment = Alignment.End) {
+            Text(
+                text = banner.pointsText,
+                style = MaterialTheme.typography.labelLarge.copy(
+                    fontFamily = JetBrainsMonoFontFamily,
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = 16.sp
+                ),
+                color = accent,
+                maxLines = 1
+            )
+            banner.turnTotalPoints?.let { total ->
+                Text(
+                    text = "Total +$total",
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        fontFamily = JetBrainsMonoFontFamily,
+                        fontSize = 10.sp
+                    ),
+                    color = TextSecondary,
+                    maxLines = 1
+                )
             }
         }
     }

@@ -36,11 +36,13 @@ class CascadeAnimationRunner(
                 soundManager.playLineClear(linesCleared = waveLines)
             }
 
+            val isLastWave = wave === resolution.waves.last()
             val banner = buildBannerForWave(
                 waveIndex = wave.waveIndex,
                 linesCount = waveLines,
                 points = wave.scoreBreakdown.totalPoints,
-                isFullClear = wave.isFullClear
+                isFullClear = wave.isFullClear,
+                turnTotalPoints = if (isLastWave && resolution.waves.size > 1) resolution.totalWavePoints else null
             )
 
             val clearParticles = if (visualEffectsEnabled) {
@@ -116,6 +118,7 @@ class CascadeAnimationRunner(
                     if (dustParticles.isNotEmpty()) particleCounter++ else null,
                     dustParticles
                 )
+                // Softer, lower "landing thud" for gravity; distinct from the placement drop played in the ViewModel.
                 soundManager.playBlockDrop(volume = 0.5f, rate = 0.88f)
 
                 animateStep(durationMs = 95L) { progress ->
@@ -133,11 +136,8 @@ class CascadeAnimationRunner(
             }
         }
 
+        // The combo sound already plays once per wave >= 2 above; no second end-of-cascade cue.
         onVisualPhase(BoardVisualPhase.Idle)
-
-        if (resolution.maxCascadeDepth >= 2) {
-            soundManager.playComboComplete(comboDepth = resolution.maxCascadeDepth)
-        }
     }
 
     suspend fun scheduleBannerDismiss(bannerId: Long, onDismiss: (Long) -> Unit) {
@@ -159,7 +159,8 @@ class CascadeAnimationRunner(
         waveIndex: Int,
         linesCount: Int,
         points: Int,
-        isFullClear: Boolean
+        isFullClear: Boolean,
+        turnTotalPoints: Int? = null
     ): FloatingBanner {
         val headline = when {
             isFullClear -> "BOARD CLEARED!"
@@ -179,7 +180,11 @@ class CascadeAnimationRunner(
             headline = headline,
             subline = subline,
             pointsText = "+$points",
-            isChain = waveIndex >= 2 || isFullClear
+            isChain = waveIndex >= 2 || isFullClear,
+            depth = waveIndex,
+            linesCount = linesCount,
+            isFullClear = isFullClear,
+            turnTotalPoints = turnTotalPoints
         )
     }
 }

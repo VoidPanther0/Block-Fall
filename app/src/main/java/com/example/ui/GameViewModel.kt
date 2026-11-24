@@ -87,7 +87,13 @@ data class FloatingBanner(
     val headline: String,
     val subline: String?,
     val pointsText: String,
-    val isChain: Boolean
+    val isChain: Boolean,
+    /** Cascade wave (1 = initial clear, 2+ = gravity chain). Single source of truth for combo tier. */
+    val depth: Int = 1,
+    val linesCount: Int = 1,
+    val isFullClear: Boolean = false,
+    /** Whole-turn points, set on the final wave only. */
+    val turnTotalPoints: Int? = null
 )
 
 data class DragState(
@@ -207,6 +213,12 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     private var activeDailyKey: String? = null
     private var comboStreak: Int = 0
     private var continueCountdownJob: Job? = null
+    private var cascadeJob: Job? = null
+    private var bannerDismissJob: Job? = null
+    private var inFlightTurn: TurnExecutionResult? = null
+    private var inFlightBlocksPlaced: Int = 0
+    private var pendingPause: Boolean = false
+    private var shuffleInFlight: Boolean = false
     private var isContinueAdShowing: Boolean = false
     private var adsPreloadJob: Job? = null
 
@@ -346,6 +358,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     fun startNewClassicGame(countAsNewGame: Boolean = true) {
         cancelContinueCountdown()
+        cancelCascade()
         pieceGenerator.reseed(null)
         activeDailyKey = null
         comboStreak = 0
@@ -392,6 +405,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     fun continueSavedClassicGame(): Boolean {
         cancelContinueCountdown()
+        cancelCascade()
         val snapshot = _uiState.value.savedClassicSummary
         if (snapshot != null && !GameSessionEngine.isClassicGameOver(snapshot.board, snapshot.trayPieces)) {
             nextIdCounter = snapshot.nextIdCounter.coerceAtLeast(nextIdCounter)
@@ -447,6 +461,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         keepSeed: Boolean = false
     ) {
         cancelContinueCountdown()
+        cancelCascade()
         if (!keepSeed) {
             pieceGenerator.reseed(null)
             activeDailyKey = null
@@ -546,6 +561,11 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun pauseGame() {
+        if (_uiState.value.status == GameStatus.RESOLVING_CASCADE) {
+            // Queue the pause: it is applied as soon as the in-flight cascade finalizes.
+            pendingPause = true
+            return
+        }
         _uiState.update {
             if (it.status == GameStatus.PLAYING && !it.showContinueOffer) {
                 it.copy(status = GameStatus.PAUSED, dragState = null)
@@ -561,6 +581,15 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun exitToHome() {
+        // Never snapshot a half-resolved board: finish the in-flight turn deterministically first.
+        val turn = inFlightTurn
+        if (_uiState.value.status == GameStatus.RESOLVING_CASCADE && turn != null) {
+            val blocks = inFlightBlocksPlaced
+            cancelCascade()
+            applyTurnFinalization(turn, blocks)
+        } else {
+            cancelCascade()
+        }
         cancelContinueCountdown()
         val state = _uiState.value
         if (state.mode == GameMode.CLASSIC && state.status != GameStatus.GAME_OVER && !state.showContinueOffer) {
@@ -620,6 +649,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     fun resetAllProgress() {
         cancelContinueCountdown()
+        cancelCascade()
         viewModelScope.launch {
             repository.resetAllProgress()
             val emptyBoard = Board.empty()
@@ -726,27 +756,41 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     /** Shuffle booster: spends one charge and rerolls the remaining tray pieces. */
     fun useShuffleBooster() {
         val state = _uiState.value
-        if (state.status != GameStatus.PLAYING || state.wallet.shuffleCount <= 0) return
+        if (!canShuffle(state) || shuffleInFlight) return
         val remaining = state.traySlots.count { it.piece != null }
         if (remaining == 0) return
+        shuffleInFlight = true
         viewModelScope.launch {
-            val result = EconomyEngine.consumeBooster(
-                wallet = _uiState.value.wallet,
-                type = BoosterType.SHUFFLE,
-                transactionId = UUID.randomUUID().toString()
-            )
-            if (result !is EconomyMutationResult.Success) return@launch
-            val (fresh, updatedId) = pieceGenerator.generateTray(_uiState.value.board, nextIdCounter)
-            nextIdCounter = updatedId
-            var i = 0
-            _uiState.update { st ->
-                st.copy(traySlots = st.traySlots.map { slot ->
-                    if (slot.piece != null) slot.copy(piece = fresh[i++ % fresh.size]) else slot
-                })
+            try {
+                // Re-validate after any suspension point: a turn may have started meanwhile.
+                if (!canShuffle(_uiState.value)) return@launch
+                val result = EconomyEngine.consumeBooster(
+                    wallet = _uiState.value.wallet,
+                    type = BoosterType.SHUFFLE,
+                    transactionId = UUID.randomUUID().toString()
+                )
+                if (result !is EconomyMutationResult.Success) return@launch
+                if (!canShuffle(_uiState.value)) return@launch
+                val (fresh, updatedId) = pieceGenerator.generateTray(_uiState.value.board, nextIdCounter)
+                nextIdCounter = updatedId
+                var i = 0
+                _uiState.update { st ->
+                    st.copy(
+                        selectedSlotIndex = null,
+                        traySlots = st.traySlots.map { slot ->
+                            if (slot.piece != null) slot.copy(piece = fresh[i++ % fresh.size]) else slot
+                        }
+                    )
+                }
+                applyWalletMutation(result.updatedWallet)
+            } finally {
+                shuffleInFlight = false
             }
-            applyWalletMutation(result.updatedWallet)
         }
     }
+
+    private fun canShuffle(s: GameUiState): Boolean =
+        s.status == GameStatus.PLAYING && s.dragState == null && !s.showContinueOffer && s.wallet.shuffleCount > 0
 
     fun claimAdReward(goldAmount: Int, transactionId: String) {
         viewModelScope.launch {
@@ -1136,6 +1180,27 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    /** Cancels any in-flight cascade/banner coroutines so they cannot leak into another game. */
+    private fun cancelCascade() {
+        cascadeJob?.cancel()
+        cascadeJob = null
+        bannerDismissJob?.cancel()
+        bannerDismissJob = null
+        inFlightTurn = null
+        pendingPause = false
+        _visualPhase.value = BoardVisualPhase.Idle
+        _uiState.update {
+            if (it.status == GameStatus.RESOLVING_CASCADE || it.floatingBanner != null || it.currentCascadeWave != 0) {
+                it.copy(
+                    floatingBanner = null,
+                    currentCascadeWave = 0,
+                    latestParticles = emptyList(),
+                    visualPhase = BoardVisualPhase.Idle
+                )
+            } else it
+        }
+    }
+
     private fun cancelContinueCountdown() {
         continueCountdownJob?.cancel()
         continueCountdownJob = null
@@ -1216,15 +1281,17 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         val state = _uiState.value
         val activeDrag = state.dragState ?: return
         val anchor = activeDrag.hoverAnchor
-        _uiState.update { it.copy(dragState = null) }
+        val willPlace = state.status == GameStatus.PLAYING && anchor != null && activeDrag.isHoverValid
+        // A failed drop must not leave a stale highlighted slot behind.
+        _uiState.update { it.copy(dragState = null, selectedSlotIndex = if (willPlace) it.selectedSlotIndex else null) }
 
-        if (state.status == GameStatus.PLAYING && anchor != null && activeDrag.isHoverValid) {
+        if (willPlace && anchor != null) {
             placePiece(activeDrag.slotIndex, anchor.row, anchor.col)
         }
     }
 
     fun cancelDrag() {
-        _uiState.update { it.copy(dragState = null) }
+        _uiState.update { it.copy(dragState = null, selectedSlotIndex = null) }
     }
 
     fun placePiece(slotIndex: Int, anchorRow: Int, anchorCol: Int) {
@@ -1289,7 +1356,10 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         if (!turn.resolution.hasClears) {
             applyTurnFinalization(turn, blocksPlaced)
         } else {
-            viewModelScope.launch {
+            inFlightTurn = turn
+            inFlightBlocksPlaced = blocksPlaced
+            cascadeJob?.cancel()
+            cascadeJob = viewModelScope.launch {
                 animationRunner.runCascade(
                     resolution = turn.resolution,
                     startingScore = initialScore,
@@ -1334,12 +1404,19 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 )
 
                 val lastBannerId = _uiState.value.floatingBanner?.id
+                inFlightTurn = null
                 applyTurnFinalization(turn, blocksPlaced)
+                if (pendingPause) {
+                    pendingPause = false
+                    pauseGame()
+                }
 
                 if (lastBannerId != null) {
-                    animationRunner.scheduleBannerDismiss(lastBannerId) { id ->
-                        _uiState.update { cur ->
-                            if (cur.floatingBanner?.id == id) cur.copy(floatingBanner = null) else cur
+                    bannerDismissJob = launch {
+                        animationRunner.scheduleBannerDismiss(lastBannerId) { id ->
+                            _uiState.update { cur ->
+                                if (cur.floatingBanner?.id == id) cur.copy(floatingBanner = null) else cur
+                            }
                         }
                     }
                 }
@@ -1433,6 +1510,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             it.copy(
                 board = turn.resolution.finalBoard,
                 traySlots = turn.nextTraySlots,
+                score = turn.finalScore,
                 status = resolvedStatus,
                 visualPhase = BoardVisualPhase.Idle,
                 currentCascadeWave = 0,
