@@ -27,11 +27,13 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -97,7 +99,26 @@ fun LuckyWheelScreen(
         label = "glow"
     )
 
+    val labelPaint = remember {
+        android.graphics.Paint().apply {
+            color = android.graphics.Color.WHITE
+            isFakeBoldText = true
+            textAlign = android.graphics.Paint.Align.CENTER
+            isAntiAlias = true
+            setShadowLayer(4f, 0f, 2f, android.graphics.Color.argb(160, 0, 0, 0))
+        }
+    }
+    val currentSpinning by rememberUpdatedState(isSpinning)
+    val currentOnFinishSpin by rememberUpdatedState(onFinishSpin)
+
     LaunchedEffect(Unit) { onRefresh() }
+    DisposableEffect(Unit) {
+        onDispose {
+            if (currentSpinning) {
+                currentOnFinishSpin()
+            }
+        }
+    }
 
     val hasSpin = spinPoints > 0
 
@@ -195,18 +216,11 @@ fun LuckyWheelScreen(
                                 size = arcSize,
                                 style = Stroke(width = 2.5f)
                             )
-                            val paint = android.graphics.Paint().apply {
-                                color = android.graphics.Color.WHITE
-                                textSize = radius * 0.098f
-                                isFakeBoldText = true
-                                textAlign = android.graphics.Paint.Align.CENTER
-                                isAntiAlias = true
-                                setShadowLayer(4f, 0f, 2f, android.graphics.Color.argb(160, 0, 0, 0))
-                            }
+                            labelPaint.textSize = radius * 0.098f
                             val mid = start + sweep / 2f
                             rotate(mid, pivot = center) {
                                 drawContext.canvas.nativeCanvas.drawText(
-                                    label, center.x + radius * 0.60f, center.y + paint.textSize / 3f, paint
+                                    label, center.x + radius * 0.60f, center.y + labelPaint.textSize / 3f, labelPaint
                                 )
                             }
                         }

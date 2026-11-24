@@ -40,8 +40,10 @@ class RewardedAdManager(
 
     companion object {
         private const val TAG = "RewardedAdManager"
-        private const val INITIAL_RETRY_MS = 350L
-        private const val MAX_RETRY_MS = 5_000L
+        private const val INITIAL_RETRY_MS = 500L
+        private const val MAX_RETRY_MS = 8_000L
+        private const val MAX_RETRY_ATTEMPTS = 4
+        private const val DEBUG_FALLBACK_DELAY_MS = 1_200L
     }
 
     private val _adState = MutableStateFlow<AdState>(AdState.Idle)
@@ -57,7 +59,10 @@ class RewardedAdManager(
     private var isNextAdLoading = false
     private var isRewardGranted = false
     private var retryAttempt = 0
+    private var appInForeground = true
+    private var isReleased = false
     private var pendingRetryRunnable: Runnable? = null
+    private var pendingDebugFallbackRunnable: Runnable? = null
 
     private val appContext = context.applicationContext
 
@@ -78,14 +83,36 @@ class RewardedAdManager(
         pendingRetryRunnable = null
     }
 
+    private fun cancelPendingDebugFallback() {
+        pendingDebugFallbackRunnable?.let { mainHandler.removeCallbacks(it) }
+        pendingDebugFallbackRunnable = null
+    }
+
+    private fun scheduleDebugFallback() {
+        if (isReleased || !BuildConfig.DEBUG) return
+        val fallbackId = debugFallbackAdUnitId?.takeIf { it.isNotBlank() && it != adUnitId } ?: return
+        if (fallbackAd != null || isFallbackLoading || hasAnyReadyAd()) return
+        cancelPendingDebugFallback()
+        val runnable = Runnable {
+            pendingDebugFallbackRunnable = null
+            if (!isReleased && appInForeground && !hasAnyReadyAd() && AdConfig.sdkInitialized.value) {
+                loadDebugStandbyUnit(fallbackId)
+            }
+        }
+        pendingDebugFallbackRunnable = runnable
+        mainHandler.postDelayed(runnable, DEBUG_FALLBACK_DELAY_MS)
+    }
+
     private fun scheduleRetry() {
         cancelPendingRetry()
+        if (isReleased || !appInForeground || !AdConfig.sdkInitialized.value) return
+        if (retryAttempt >= MAX_RETRY_ATTEMPTS) return
         retryAttempt += 1
         val delayMs = (INITIAL_RETRY_MS * (1L shl (retryAttempt - 1).coerceAtMost(4)))
             .coerceAtMost(MAX_RETRY_MS)
         val runnable = Runnable {
             pendingRetryRunnable = null
-            if (!hasAnyReadyAd() && _adState.value !is AdState.Showing) {
+            if (!isReleased && appInForeground && !hasAnyReadyAd() && _adState.value !is AdState.Showing) {
                 loadAd()
             }
         }
@@ -93,30 +120,56 @@ class RewardedAdManager(
         mainHandler.postDelayed(runnable, delayMs)
     }
 
+    fun setAppForeground(inForeground: Boolean) {
+        runOnMain {
+            appInForeground = inForeground
+            if (!inForeground) {
+                cancelPendingRetry()
+                cancelPendingDebugFallback()
+            } else if (!isReleased && AdConfig.sdkInitialized.value && !hasAnyReadyAd() && _adState.value is AdState.Error) {
+                retryAttempt = 0
+                loadAd()
+            }
+        }
+    }
+
+    fun release() {
+        runOnMain {
+            isReleased = true
+            cancelPendingRetry()
+            cancelPendingDebugFallback()
+            primaryAd = null
+            fallbackAd = null
+            nextAd = null
+        }
+    }
+
     fun reloadIfNeeded() {
+        if (isReleased) return
         if (hasAnyReadyAd()) {
             if (_adState.value !is AdState.Showing) {
                 _adState.value = AdState.Ready
             }
             return
         }
+        if (!AdConfig.sdkInitialized.value) return
         val current = _adState.value
         if (current is AdState.Idle || current is AdState.Error) {
+            retryAttempt = 0
             loadAd()
         }
     }
 
-    /** Called once MobileAds.initialize finishes so any pre-init stalled load restarts immediately. */
+    /** Called once MobileAds.initialize finishes so initial preload starts cleanly without duplicate requests. */
     fun reloadAfterSdkInit() {
+        if (isReleased || !AdConfig.sdkInitialized.value) return
         if (hasAnyReadyAd()) {
             if (_adState.value !is AdState.Showing) {
                 _adState.value = AdState.Ready
             }
             return
         }
-        if (_adState.value is AdState.Showing) return
-        isPrimaryLoading = false
-        isFallbackLoading = false
+        if (_adState.value is AdState.Showing || isPrimaryLoading || isFallbackLoading) return
         retryAttempt = 0
         loadAd()
     }
@@ -124,9 +177,16 @@ class RewardedAdManager(
     fun isReady(): Boolean = hasAnyReadyAd()
 
     fun loadAd() {
+        if (isReleased) return
         if (!AdConfig.isAppIdValid) {
             _adState.value = AdState.Error("AdMob App ID is missing or invalid")
             Log.w(TAG, "Ad load skipped: ADMOB_APP_ID is not a complete AdMob App ID")
+            return
+        }
+        if (!AdConfig.sdkInitialized.value) {
+            if (_adState.value !is AdState.Showing) {
+                _adState.value = AdState.Loading
+            }
             return
         }
         cancelPendingRetry()
@@ -144,16 +204,18 @@ class RewardedAdManager(
             _adState.value = AdState.Loading
         }
         loadPrimaryUnit()
-        if (BuildConfig.DEBUG && !debugFallbackAdUnitId.isNullOrBlank() && debugFallbackAdUnitId != adUnitId) {
-            loadDebugStandbyUnit(debugFallbackAdUnitId)
-        }
+        scheduleDebugFallback()
     }
 
     private fun loadPrimaryUnit() {
-        if (primaryAd != null || isPrimaryLoading) return
+        if (isReleased || primaryAd != null || isPrimaryLoading || !AdConfig.sdkInitialized.value) return
         isPrimaryLoading = true
         val adRequest = AdRequest.Builder().build()
         runOnMain {
+            if (isReleased) {
+                isPrimaryLoading = false
+                return@runOnMain
+            }
             try {
                 RewardedAd.load(
                     appContext,
@@ -163,6 +225,8 @@ class RewardedAdManager(
                         override fun onAdLoaded(ad: RewardedAd) {
                             isPrimaryLoading = false
                             retryAttempt = 0
+                            cancelPendingDebugFallback()
+                            if (isReleased) return
                             if (_adState.value is AdState.Showing) {
                                 nextAd = ad
                             } else {
@@ -175,6 +239,12 @@ class RewardedAdManager(
                         override fun onAdFailedToLoad(error: LoadAdError) {
                             isPrimaryLoading = false
                             Log.w(TAG, "Primary ad failed ($adUnitId, code=${error.code}): ${error.message}")
+                            if (isReleased) return
+                            if (BuildConfig.DEBUG && !debugFallbackAdUnitId.isNullOrBlank() && debugFallbackAdUnitId != adUnitId) {
+                                cancelPendingDebugFallback()
+                                loadDebugStandbyUnit(debugFallbackAdUnitId)
+                                return
+                            }
                             if (!hasAnyReadyAd() && !isFallbackLoading && _adState.value !is AdState.Showing) {
                                 _adState.value = AdState.Error(error.message)
                                 scheduleRetry()
@@ -184,7 +254,7 @@ class RewardedAdManager(
                 )
             } catch (t: Throwable) {
                 isPrimaryLoading = false
-                if (!hasAnyReadyAd() && !isFallbackLoading && _adState.value !is AdState.Showing) {
+                if (!isReleased && !hasAnyReadyAd() && !isFallbackLoading && _adState.value !is AdState.Showing) {
                     _adState.value = AdState.Error(t.message ?: "Unable to load ad")
                     scheduleRetry()
                 }
@@ -193,10 +263,14 @@ class RewardedAdManager(
     }
 
     private fun loadDebugStandbyUnit(fallbackId: String) {
-        if (fallbackAd != null || isFallbackLoading) return
+        if (isReleased || fallbackAd != null || isFallbackLoading || !AdConfig.sdkInitialized.value) return
         isFallbackLoading = true
         val adRequest = AdRequest.Builder().build()
         runOnMain {
+            if (isReleased) {
+                isFallbackLoading = false
+                return@runOnMain
+            }
             try {
                 RewardedAd.load(
                     appContext,
@@ -206,6 +280,7 @@ class RewardedAdManager(
                         override fun onAdLoaded(ad: RewardedAd) {
                             isFallbackLoading = false
                             retryAttempt = 0
+                            if (isReleased) return
                             if (_adState.value is AdState.Showing) {
                                 if (nextAd == null) nextAd = ad
                             } else {
@@ -217,7 +292,7 @@ class RewardedAdManager(
 
                         override fun onAdFailedToLoad(error: LoadAdError) {
                             isFallbackLoading = false
-                            if (!hasAnyReadyAd() && !isPrimaryLoading && _adState.value !is AdState.Showing) {
+                            if (!isReleased && !hasAnyReadyAd() && !isPrimaryLoading && _adState.value !is AdState.Showing) {
                                 _adState.value = AdState.Error(error.message)
                                 scheduleRetry()
                             }
@@ -231,10 +306,14 @@ class RewardedAdManager(
     }
 
     private fun preloadNextAd() {
-        if (!AdConfig.isAppIdValid || nextAd != null || isNextAdLoading) return
+        if (isReleased || !AdConfig.isAppIdValid || !AdConfig.sdkInitialized.value || nextAd != null || isNextAdLoading) return
         isNextAdLoading = true
         val adRequest = AdRequest.Builder().build()
         runOnMain {
+            if (isReleased) {
+                isNextAdLoading = false
+                return@runOnMain
+            }
             try {
                 RewardedAd.load(
                     appContext,
@@ -243,6 +322,7 @@ class RewardedAdManager(
                     object : RewardedAdLoadCallback() {
                         override fun onAdLoaded(ad: RewardedAd) {
                             isNextAdLoading = false
+                            if (isReleased) return
                             if (_adState.value is AdState.Showing) {
                                 nextAd = ad
                             } else if (primaryAd == null) {
@@ -255,7 +335,7 @@ class RewardedAdManager(
 
                         override fun onAdFailedToLoad(error: LoadAdError) {
                             isNextAdLoading = false
-                            if (BuildConfig.DEBUG && !debugFallbackAdUnitId.isNullOrBlank() && debugFallbackAdUnitId != adUnitId) {
+                            if (!isReleased && BuildConfig.DEBUG && !debugFallbackAdUnitId.isNullOrBlank() && debugFallbackAdUnitId != adUnitId) {
                                 loadDebugStandbyUnit(debugFallbackAdUnitId)
                             }
                         }
@@ -274,6 +354,13 @@ class RewardedAdManager(
         onFailed: () -> Unit
     ) {
         runOnMain {
+            if (isReleased || activity.isFinishing || activity.isDestroyed) {
+                onFailed()
+                return@runOnMain
+            }
+            if (_adState.value is AdState.Showing) {
+                return@runOnMain
+            }
             val ad = when {
                 primaryAd != null -> primaryAd.also { primaryAd = null }
                 fallbackAd != null -> fallbackAd.also { fallbackAd = null }
@@ -285,9 +372,11 @@ class RewardedAdManager(
                 reloadIfNeeded()
                 return@runOnMain
             }
+            cancelPendingDebugFallback()
+            cancelPendingRetry()
             isRewardGranted = false
             _adState.value = AdState.Showing
-            // Immediately preload next ad while this impression is active.
+            // Preload next ad while this impression is active.
             preloadNextAd()
 
             ad.fullScreenContentCallback = object : FullScreenContentCallback() {

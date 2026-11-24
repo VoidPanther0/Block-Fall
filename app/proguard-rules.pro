@@ -80,3 +80,10 @@
 -keep class com.example.ads.AdState { *; }
 -keep class com.example.ads.AdState$* { *; }
 
+# Keep ViewModel / AndroidViewModel reflective constructors used by ViewModelProvider
+-keepclassmembers class * extends androidx.lifecycle.AndroidViewModel {
+    <init>(android.app.Application);
+}
+-keepclassmembers class * extends androidx.lifecycle.ViewModel {
+    <init>();
+}

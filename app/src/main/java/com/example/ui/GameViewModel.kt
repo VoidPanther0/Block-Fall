@@ -208,6 +208,42 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     private var comboStreak: Int = 0
     private var continueCountdownJob: Job? = null
     private var isContinueAdShowing: Boolean = false
+    private var adsPreloadJob: Job? = null
+
+    private val wheelPrefs: android.content.SharedPreferences? by lazy {
+        runCatching {
+            application.getSharedPreferences("lucky_wheel_local", android.content.Context.MODE_PRIVATE)
+        }.getOrNull()
+    }
+    private var serverSpinPoints = 0
+    private var pendingServerSpinPoints: Int? = null
+    var lastSpinLabel: String = ""
+        private set
+
+    /** Same 10 segments / weights as `WHEEL_SEGMENTS` in functions/index.js. */
+    private data class LocalPrize(
+        val label: String,
+        val gold: Int = 0,
+        val diamonds: Int = 0,
+        val hammer: Int = 0,
+        val shuffle: Int = 0,
+        val refresh: Int = 0,
+        val weight: Int
+    )
+
+    private val localPrizes = listOf(
+        LocalPrize("100 Diamonds", diamonds = 100, weight = 1),
+        LocalPrize("50 Diamonds", diamonds = 50, weight = 3),
+        LocalPrize("10 Diamonds", diamonds = 10, weight = 10),
+        LocalPrize("1,000 Gold", gold = 1000, weight = 2),
+        LocalPrize("500 Gold", gold = 500, weight = 5),
+        LocalPrize("100 Gold", gold = 100, weight = 20),
+        LocalPrize("20 Gold", gold = 20, weight = 30),
+        LocalPrize("Hammer +1", hammer = 1, weight = 8),
+        LocalPrize("Shuffle +1", shuffle = 1, weight = 8),
+        LocalPrize("Refresh +1", refresh = 1, weight = 8)
+    )
+    private var pendingLocalPrize: LocalPrize? = null
 
     private val _uiState = MutableStateFlow(GameUiState())
     val uiState: StateFlow<GameUiState> = _uiState.asStateFlow()
@@ -217,9 +253,12 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     init {
         publishSpinPoints()
-        ensureAdsLoaded()
+        if (AdConfig.sdkInitialized.value) {
+            onAdsSdkReady()
+        }
         viewModelScope.launch {
-            val saved = repository.loadInitialProgress()
+            val saved = runCatching { repository.loadInitialProgress() }
+                .getOrElse { com.example.data.PersistedProgress() }
             soundManager.soundEnabled = saved.settings.soundEnabled
             soundManager.musicEnabled = saved.settings.musicEnabled
             haptics.enabled = saved.settings.hapticsEnabled
@@ -290,6 +329,10 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setAppForeground(inForeground: Boolean) {
         soundManager.setAppForeground(inForeground)
+        adManager.setAppForeground(inForeground)
+        continueAdManager.setAppForeground(inForeground)
+        diamondAdManager.setAppForeground(inForeground)
+        wheelAdManager.setAppForeground(inForeground)
     }
 
     fun playUiClick() {
@@ -633,17 +676,24 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun ensureAdsLoaded() {
+        if (!AdConfig.sdkInitialized.value) return
         adManager.reloadIfNeeded()
-        continueAdManager.reloadIfNeeded()
         diamondAdManager.reloadIfNeeded()
         wheelAdManager.reloadIfNeeded()
+        continueAdManager.reloadIfNeeded()
     }
 
     fun onAdsSdkReady() {
-        adManager.reloadAfterSdkInit()
-        continueAdManager.reloadAfterSdkInit()
-        diamondAdManager.reloadAfterSdkInit()
-        wheelAdManager.reloadAfterSdkInit()
+        if (!AdConfig.sdkInitialized.value) return
+        if (adsPreloadJob?.isActive == true) return
+        adsPreloadJob = viewModelScope.launch {
+            wheelAdManager.reloadAfterSdkInit()
+            adManager.reloadAfterSdkInit()
+            delay(250L)
+            diamondAdManager.reloadAfterSdkInit()
+            delay(250L)
+            continueAdManager.reloadAfterSdkInit()
+        }
     }
 
     fun purchaseShopItem(itemId: String) {
@@ -859,10 +909,6 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    private var pendingServerSpinPoints: Int? = null
-    var lastSpinLabel: String = ""
-        private set
-
     /** Called by the wheel UI once the spin animation stops, so the balance updates after the reveal. */
     fun finishWheelSpin() {
         pendingLocalPrize?.let { prize ->
@@ -900,41 +946,18 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     // ---- Guest (not signed in) wheel: points + prizes are handled on-device. ----
-    private val wheelPrefs by lazy {
-        getApplication<Application>().getSharedPreferences("lucky_wheel_local", android.content.Context.MODE_PRIVATE)
-    }
-
-    private fun localSpinPoints(): Int = wheelPrefs.getInt("points", 0)
+    private fun localSpinPoints(): Int =
+        runCatching { wheelPrefs?.getInt("points", 0) ?: 0 }.getOrDefault(0)
 
     private fun setLocalSpinPoints(value: Int) {
         val v = value.coerceIn(0, 99)
-        wheelPrefs.edit().putInt("points", v).apply()
+        runCatching { wheelPrefs?.edit()?.putInt("points", v)?.apply() }
         publishSpinPoints()
     }
-
-    /** Spin points shown in the UI = server-held points (signed in) + on-device points. */
-    private var serverSpinPoints = 0
 
     private fun publishSpinPoints() {
         _wheelSpinPoints.value = serverSpinPoints + localSpinPoints()
     }
-
-    /** Same 10 segments / weights as `WHEEL_SEGMENTS` in functions/index.js. */
-    private data class LocalPrize(val label: String, val gold: Int = 0, val diamonds: Int = 0, val hammer: Int = 0, val shuffle: Int = 0, val refresh: Int = 0, val weight: Int)
-
-    private val localPrizes = listOf(
-        LocalPrize("100 Diamonds", diamonds = 100, weight = 1),
-        LocalPrize("50 Diamonds", diamonds = 50, weight = 3),
-        LocalPrize("10 Diamonds", diamonds = 10, weight = 10),
-        LocalPrize("1,000 Gold", gold = 1000, weight = 2),
-        LocalPrize("500 Gold", gold = 500, weight = 5),
-        LocalPrize("100 Gold", gold = 100, weight = 20),
-        LocalPrize("20 Gold", gold = 20, weight = 30),
-        LocalPrize("Hammer +1", hammer = 1, weight = 8),
-        LocalPrize("Shuffle +1", shuffle = 1, weight = 8),
-        LocalPrize("Refresh +1", refresh = 1, weight = 8)
-    )
-    private var pendingLocalPrize: LocalPrize? = null
 
     private fun rollLocalPrizeIndex(): Int {
         var roll = kotlin.random.Random.nextInt(localPrizes.sumOf { it.weight })
@@ -1527,7 +1550,12 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     override fun onCleared() {
         super.onCleared()
+        adsPreloadJob?.cancel()
         cancelContinueCountdown()
+        adManager.release()
+        continueAdManager.release()
+        diamondAdManager.release()
+        wheelAdManager.release()
         soundManager.release()
         haptics.cancel()
     }

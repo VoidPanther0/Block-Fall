@@ -1,5 +1,8 @@
 package com.example.ui.components
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import android.view.Gravity
 import android.widget.FrameLayout
 import androidx.compose.foundation.background
@@ -11,6 +14,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -20,6 +24,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.BuildConfig
 import com.example.ads.AdConfig
 import com.example.ui.theme.GlassBorder
@@ -31,11 +36,18 @@ import com.google.android.gms.ads.AdSize
 import com.google.android.gms.ads.AdView
 import com.google.android.gms.ads.LoadAdError
 
+private tailrec fun Context.findBannerActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findBannerActivity()
+    else -> null
+}
+
 @Composable
 fun BannerAdBar(
     modifier: Modifier = Modifier
 ) {
     val isPreview = LocalInspectionMode.current
+    val sdkReady by AdConfig.sdkInitialized.collectAsStateWithLifecycle()
     val shape = RoundedCornerShape(10.dp)
 
     Box(
@@ -48,9 +60,9 @@ fun BannerAdBar(
             .border(1.dp, GlassBorder, shape)
             .testTag("gameplay_banner_ad")
     ) {
-        if (isPreview) {
+        if (isPreview || !sdkReady || !AdConfig.isAppIdValid) {
             Text(
-                text = "Banner Ad",
+                text = if (isPreview) "Banner Ad" else "Block Fall",
                 style = MaterialTheme.typography.labelSmall.copy(
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 11.sp
@@ -61,42 +73,99 @@ fun BannerAdBar(
             AndroidView(
                 factory = { ctx ->
                     val container = FrameLayout(ctx)
-                    fun attachBanner(unitId: String, allowDebugFallback: Boolean) {
-                        container.removeAllViews()
-                        val banner = AdView(ctx).apply {
-                            setAdSize(AdSize.BANNER)
-                            adUnitId = unitId
-                            adListener = object : AdListener() {
-                                override fun onAdFailedToLoad(error: LoadAdError) {
-                                    if (allowDebugFallback && BuildConfig.DEBUG && unitId != AdConfig.TEST_BANNER_GAMEPLAY_UNIT_ID) {
-                                        attachBanner(AdConfig.TEST_BANNER_GAMEPLAY_UNIT_ID, allowDebugFallback = false)
-                                    }
-                                }
-                            }
-                            loadAd(AdRequest.Builder().build())
-                        }
-                        val lp = FrameLayout.LayoutParams(
-                            FrameLayout.LayoutParams.MATCH_PARENT,
-                            FrameLayout.LayoutParams.WRAP_CONTENT,
-                            Gravity.CENTER
-                        )
-                        container.addView(banner, lp)
-                    }
-                    try {
-                        attachBanner(AdConfig.bannerGameplayUnitId, allowDebugFallback = true)
-                    } catch (_: Throwable) {
-                        container.addView(
-                            android.widget.TextView(ctx).apply {
-                                text = "Block Fall"
-                                textSize = 11f
-                                gravity = Gravity.CENTER
-                            }
-                        )
-                    }
+                    container.tag = BannerHolder()
                     container
+                },
+                update = { container ->
+                    val holder = container.tag as? BannerHolder ?: return@AndroidView
+                    if (holder.released || holder.loaded) return@AndroidView
+                    holder.loaded = true
+                    attachBannerSafely(
+                        container = container,
+                        holder = holder,
+                        unitId = AdConfig.bannerGameplayUnitId,
+                        allowDebugFallback = true
+                    )
+                },
+                onRelease = { container ->
+                    val holder = container.tag as? BannerHolder
+                    holder?.released = true
+                    holder?.destroyActiveAdView()
+                    container.removeAllViews()
                 },
                 modifier = Modifier.fillMaxWidth()
             )
         }
+    }
+}
+
+private class BannerHolder {
+    var released: Boolean = false
+    var loaded: Boolean = false
+    var activeAdView: AdView? = null
+
+    fun destroyActiveAdView() {
+        runCatching {
+            activeAdView?.adListener = object : AdListener() {}
+            activeAdView?.destroy()
+        }
+        activeAdView = null
+    }
+}
+
+private fun attachBannerSafely(
+    container: FrameLayout,
+    holder: BannerHolder,
+    unitId: String,
+    allowDebugFallback: Boolean
+) {
+    if (holder.released) return
+    val ctx = container.context
+    val activity = ctx.findBannerActivity()
+    if (activity != null && (activity.isFinishing || activity.isDestroyed)) return
+
+    holder.destroyActiveAdView()
+    container.removeAllViews()
+
+    try {
+        val banner = AdView(ctx).apply {
+            setAdSize(AdSize.BANNER)
+            adUnitId = unitId
+            adListener = object : AdListener() {
+                override fun onAdFailedToLoad(error: LoadAdError) {
+                    if (
+                        !holder.released &&
+                        container.isAttachedToWindow &&
+                        allowDebugFallback &&
+                        BuildConfig.DEBUG &&
+                        unitId != AdConfig.TEST_BANNER_GAMEPLAY_UNIT_ID
+                    ) {
+                        attachBannerSafely(
+                            container = container,
+                            holder = holder,
+                            unitId = AdConfig.TEST_BANNER_GAMEPLAY_UNIT_ID,
+                            allowDebugFallback = false
+                        )
+                    }
+                }
+            }
+            loadAd(AdRequest.Builder().build())
+        }
+        holder.activeAdView = banner
+        val lp = FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT,
+            FrameLayout.LayoutParams.WRAP_CONTENT,
+            Gravity.CENTER
+        )
+        container.addView(banner, lp)
+    } catch (_: Throwable) {
+        container.removeAllViews()
+        container.addView(
+            android.widget.TextView(ctx).apply {
+                text = "Block Fall"
+                textSize = 11f
+                gravity = Gravity.CENTER
+            }
+        )
     }
 }

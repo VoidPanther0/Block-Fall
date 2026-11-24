@@ -105,9 +105,10 @@ fun CascadeApp(
 
     LaunchedEffect(auth) {
         if (auth != null && auth.currentUser == null) {
+            val credentialManager = runCatching { CredentialManager.create(context) }.getOrNull()
             attemptAutoSignIn(
                 context = context,
-                credentialManager = CredentialManager.create(context),
+                credentialManager = credentialManager,
                 onAuthSuccess = {},
                 onUnauthenticated = {},
                 scope = scope
@@ -116,38 +117,46 @@ fun CascadeApp(
     }
 
     val signedInUser = currentUser
-    if (signedInUser == null) {
-        CascadeNavHost(
-            viewModel = viewModel,
-            currentUser = null,
-            cloudViewModel = null
-        )
-    } else {
+    val cloudViewModel: CloudSyncViewModel? = if (signedInUser != null) {
         key(signedInUser.uid) {
-            AuthenticatedCloudSession(
+            rememberAuthenticatedCloudViewModel(
                 currentUser = signedInUser,
                 gameViewModel = viewModel
             )
         }
+    } else {
+        null
     }
+
+    CascadeNavHost(
+        viewModel = viewModel,
+        currentUser = signedInUser,
+        cloudViewModel = cloudViewModel
+    )
 }
 
 @Composable
-private fun AuthenticatedCloudSession(
+private fun rememberAuthenticatedCloudViewModel(
     currentUser: FirebaseUser,
     gameViewModel: GameViewModel
-) {
+): CloudSyncViewModel? {
     val uid = currentUser.uid
     val displayName = currentUser.displayName?.takeIf { it.isNotBlank() } ?: "Player"
+    val context = LocalContext.current
+    val db = remember(uid) {
+        runCatching {
+            val databaseId = context.getString(R.string.firestore_database_id)
+            FirebaseFirestore.getInstance(databaseId)
+        }.getOrNull()
+    } ?: return null
+
     val cloudViewModel: CloudSyncViewModel = viewModel(
-        key = uid,
+        key = "cloud_$uid",
         factory = viewModelFactory {
             initializer {
                 val app = checkNotNull(this[APPLICATION_KEY]) {
                     "APPLICATION_KEY missing from CreationExtras"
                 }
-                val databaseId = app.getString(R.string.firestore_database_id)
-                val db = FirebaseFirestore.getInstance(databaseId)
                 CloudSyncViewModel(
                     repository = CloudSyncRepository(db),
                     currentUserId = uid,
@@ -158,44 +167,42 @@ private fun AuthenticatedCloudSession(
         }
     )
 
-    val gameState by gameViewModel.uiState.collectAsStateWithLifecycle()
-    val cloudProfile by cloudViewModel.profileState.collectAsStateWithLifecycle()
+    if (cloudViewModel != null) {
+        val gameState by gameViewModel.uiState.collectAsStateWithLifecycle()
+        val cloudProfile by cloudViewModel.profileState.collectAsStateWithLifecycle()
 
-    // First cloud snapshot decides ownership of local progress:
-    //  - account already has data -> its own data replaces the guest data (guest score is not pushed up)
-    //  - brand new account -> guest progress is uploaded to it
-    var initialRestoreDone by remember(uid) { mutableStateOf(false) }
+        // First cloud snapshot decides ownership of local progress:
+        //  - account already has data -> its own data replaces the guest data (guest score is not pushed up)
+        //  - brand new account -> guest progress is uploaded to it
+        var initialRestoreDone by remember(uid) { mutableStateOf(false) }
 
-    LaunchedEffect(cloudProfile) {
-        val success = cloudProfile as? CloudStreamState.Success ?: return@LaunchedEffect
-        val profileData = success.data
-        if (profileData != null) {
-            gameViewModel.applyCloudMerge(profileData, replaceLocal = !initialRestoreDone)
+        LaunchedEffect(cloudProfile) {
+            val success = cloudProfile as? CloudStreamState.Success ?: return@LaunchedEffect
+            val profileData = success.data
+            if (profileData != null) {
+                gameViewModel.applyCloudMerge(profileData, replaceLocal = !initialRestoreDone)
+            }
+            initialRestoreDone = true
         }
-        initialRestoreDone = true
+
+        LaunchedEffect(
+            initialRestoreDone,
+            uid,
+            gameState.classicBestScore,
+            gameState.statistics.totalGamesPlayed,
+            gameState.playerDisplayName,
+            gameState.profileAvatarId
+        ) {
+            if (initialRestoreDone) {
+                cloudViewModel.syncLocalStateToCloud(
+                    uiState = gameState,
+                    photoUrl = currentUser.photoUrl?.toString()
+                )
+            }
+        }
     }
 
-    LaunchedEffect(
-        initialRestoreDone,
-        uid,
-        gameState.classicBestScore,
-        gameState.statistics.totalGamesPlayed,
-        gameState.playerDisplayName,
-        gameState.profileAvatarId
-    ) {
-        if (initialRestoreDone) {
-            cloudViewModel.syncLocalStateToCloud(
-                uiState = gameState,
-                photoUrl = currentUser.photoUrl?.toString()
-            )
-        }
-    }
-
-    CascadeNavHost(
-        viewModel = gameViewModel,
-        currentUser = currentUser,
-        cloudViewModel = cloudViewModel
-    )
+    return cloudViewModel
 }
 
 private tailrec fun Context.findActivity(): Activity? = when (this) {
@@ -218,19 +225,51 @@ private fun CascadeNavHost(
     val activity = remember(context) { context.findActivity() }
     val lifecycleOwner = LocalLifecycleOwner.current
     val onboardingPrefs = remember(context) { com.example.data.OnboardingPrefs(context) }
-    val onboardingComplete = remember(currentUser != null) {
-        onboardingPrefs.signInOnboardingSeen || currentUser != null
+    val startDestination: Any = remember {
+        if (onboardingPrefs.signInOnboardingSeen || currentUser != null) SplashRoute else OnboardingRoute
     }
-    val startDestination: Any = if (onboardingComplete) SplashRoute else OnboardingRoute
 
-    val completeOnboarding: () -> Unit = {
-        onboardingPrefs.signInOnboardingSeen = true
-        navController.navigate(HomeRoute) {
-            popUpTo<OnboardingRoute> { inclusive = true }
-            launchSingleTop = true
+    val safePopBackStack: () -> Unit = {
+        val currentEntry = navController.currentBackStackEntry
+        val canPop = currentEntry?.lifecycle?.currentState?.isAtLeast(Lifecycle.State.STARTED) == true &&
+            navController.previousBackStackEntry != null
+        if (canPop) {
+            navController.popBackStack()
         }
     }
 
+    val safePopToHome: () -> Unit = {
+        runCatching {
+            navController.popBackStack<HomeRoute>(inclusive = false)
+        }
+    }
+
+    var onboardingCompleted by remember { mutableStateOf(false) }
+    val completeOnboarding: () -> Unit = {
+        if (!onboardingCompleted) {
+            onboardingCompleted = true
+            onboardingPrefs.signInOnboardingSeen = true
+            runCatching {
+                navController.navigate(HomeRoute) {
+                    popUpTo<OnboardingRoute> { inclusive = true }
+                    launchSingleTop = true
+                }
+            }
+        }
+    }
+
+    var splashCompleted by remember { mutableStateOf(false) }
+    val completeSplash: () -> Unit = {
+        if (!splashCompleted) {
+            splashCompleted = true
+            runCatching {
+                navController.navigate(HomeRoute) {
+                    popUpTo<SplashRoute> { inclusive = true }
+                    launchSingleTop = true
+                }
+            }
+        }
+    }
 
     val adsSdkReady by AdConfig.sdkInitialized.collectAsStateWithLifecycle()
     LaunchedEffect(adsSdkReady) {
@@ -271,14 +310,7 @@ private fun CascadeNavHost(
             }
 
             composable<SplashRoute> {
-                SplashScreen(
-                    onFinished = {
-                        navController.navigate(HomeRoute) {
-                            popUpTo<SplashRoute> { inclusive = true }
-                            launchSingleTop = true
-                        }
-                    }
-                )
+                SplashScreen(onFinished = completeSplash)
             }
 
             composable<HomeRoute> {
@@ -291,7 +323,7 @@ private fun CascadeNavHost(
                     spinPoints = homeSpinPoints,
                     onOpenWheel = {
                         viewModel.playUiClick()
-                        navController.navigate(LuckyWheelRoute)
+                        navController.navigate(LuckyWheelRoute) { launchSingleTop = true }
                     },
                     isCloudSignedIn = currentUser != null,
                     playerName = effectiveName,
@@ -299,65 +331,67 @@ private fun CascadeNavHost(
                     onPlayNewClassic = {
                         viewModel.playUiClick()
                         viewModel.startNewClassicGame()
-                        navController.navigate(GameplayRoute)
+                        navController.navigate(GameplayRoute) { launchSingleTop = true }
                     },
                     onContinueClassic = {
                         viewModel.playUiClick()
                         if (viewModel.continueSavedClassicGame()) {
-                            navController.navigate(GameplayRoute)
+                            navController.navigate(GameplayRoute) { launchSingleTop = true }
                         }
                     },
                     onPlayDaily = {
                         viewModel.playUiClick()
                         viewModel.startDailyChallenge()
-                        navController.navigate(GameplayRoute)
+                        navController.navigate(GameplayRoute) { launchSingleTop = true }
                     },
                     onOpenModes = {
                         viewModel.playUiClick()
-                        navController.navigate(ModeSelectionRoute)
+                        navController.navigate(ModeSelectionRoute) { launchSingleTop = true }
                     },
                     onOpenChallenges = {
                         viewModel.playUiClick()
-                        navController.navigate(ChallengeSelectionRoute)
+                        navController.navigate(ChallengeSelectionRoute) { launchSingleTop = true }
                     },
                     onOpenShop = {
                         viewModel.playUiClick()
-                        navController.navigate(ShopRoute)
+                        navController.navigate(ShopRoute) { launchSingleTop = true }
                     },
                     onOpenLeaderboard = {
                         viewModel.playUiClick()
-                        navController.navigate(LeaderboardRoute)
+                        navController.navigate(LeaderboardRoute) { launchSingleTop = true }
                     },
                     onOpenStatistics = {
                         viewModel.playUiClick()
-                        navController.navigate(StatisticsRoute)
+                        navController.navigate(StatisticsRoute) { launchSingleTop = true }
                     },
                     onOpenSettings = {
                         viewModel.playUiClick()
-                        navController.navigate(SettingsRoute)
+                        navController.navigate(SettingsRoute) { launchSingleTop = true }
                     }
                 )
             }
 
             composable<ModeSelectionRoute> {
                 ModeSelectionScreen(
-                    onBack = { navController.popBackStack() },
+                    onBack = safePopBackStack,
                     onPlayNewClassic = {
                         viewModel.playUiClick()
                         viewModel.startNewClassicGame()
                         navController.navigate(GameplayRoute) {
                             popUpTo<HomeRoute>()
+                            launchSingleTop = true
                         }
                     },
                     onSelectChallengeLevels = {
                         viewModel.playUiClick()
-                        navController.navigate(ChallengeSelectionRoute)
+                        navController.navigate(ChallengeSelectionRoute) { launchSingleTop = true }
                     },
                     onPlayDaily = {
                         viewModel.playUiClick()
                         viewModel.startDailyChallenge()
                         navController.navigate(GameplayRoute) {
                             popUpTo<HomeRoute>()
+                            launchSingleTop = true
                         }
                     },
                     state = state
@@ -385,9 +419,7 @@ private fun CascadeNavHost(
                             launchSingleTop = true
                         }
                     },
-                    onExitToHome = {
-                        navController.popBackStack<HomeRoute>(inclusive = false)
-                    }
+                    onExitToHome = safePopToHome
                 )
             }
 
@@ -397,17 +429,17 @@ private fun CascadeNavHost(
                     onResume = {
                         viewModel.playUiClick()
                         viewModel.resumeGame()
-                        navController.popBackStack()
+                        safePopBackStack()
                     },
                     onRestartConfirmed = {
                         viewModel.playUiClick()
                         viewModel.restartCurrentGame()
-                        navController.popBackStack()
+                        safePopBackStack()
                     },
                     onExitToHomeConfirmed = {
                         viewModel.playUiClick()
                         viewModel.exitToHome()
-                        navController.popBackStack<HomeRoute>(inclusive = false)
+                        safePopToHome()
                     }
                 )
             }
@@ -415,12 +447,13 @@ private fun CascadeNavHost(
             composable<ChallengeSelectionRoute> {
                 ChallengeSelectionScreen(
                     state = state,
-                    onBack = { navController.popBackStack() },
+                    onBack = safePopBackStack,
                     onPlayLevel = { levelNumber ->
                         viewModel.playUiClick()
                         viewModel.startChallengeLevel(levelNumber)
                         navController.navigate(GameplayRoute) {
                             popUpTo<HomeRoute>()
+                            launchSingleTop = true
                         }
                     }
                 )
@@ -434,6 +467,7 @@ private fun CascadeNavHost(
                         viewModel.startChallengeLevel(state.currentChallengeLevel.levelNumber + 1)
                         navController.navigate(GameplayRoute) {
                             popUpTo<HomeRoute>()
+                            launchSingleTop = true
                         }
                     },
                     onReplay = {
@@ -443,11 +477,12 @@ private fun CascadeNavHost(
                         viewModel.restartCurrentGame()
                         navController.navigate(GameplayRoute) {
                             popUpTo<HomeRoute>()
+                            launchSingleTop = true
                         }
                     },
                     onHome = {
                         viewModel.playUiClick()
-                        navController.popBackStack<HomeRoute>(inclusive = false)
+                        safePopToHome()
                     }
                 )
             }
@@ -460,11 +495,12 @@ private fun CascadeNavHost(
                         viewModel.restartCurrentGame()
                         navController.navigate(GameplayRoute) {
                             popUpTo<HomeRoute>()
+                            launchSingleTop = true
                         }
                     },
                     onHome = {
                         viewModel.playUiClick()
-                        navController.popBackStack<HomeRoute>(inclusive = false)
+                        safePopToHome()
                     }
                 )
             }
@@ -474,7 +510,7 @@ private fun CascadeNavHost(
                     ?: currentUser?.displayName?.takeIf { it.isNotBlank() }
                 StatisticsScreen(
                     state = state,
-                    onBack = { navController.popBackStack() },
+                    onBack = safePopBackStack,
                     onResetProgressConfirmed = {
                         viewModel.playUiClick()
                         viewModel.resetAllProgress()
@@ -509,7 +545,7 @@ private fun CascadeNavHost(
             composable<SettingsRoute> {
                 SettingsScreen(
                     state = state,
-                    onBack = { navController.popBackStack() },
+                    onBack = safePopBackStack,
                     onToggleSound = viewModel::toggleSound,
                     onToggleMusic = viewModel::toggleMusic,
                     onToggleHaptics = viewModel::toggleHaptics,
@@ -527,7 +563,7 @@ private fun CascadeNavHost(
                 val economyMessage by viewModel.economyMessage.collectAsStateWithLifecycle()
                 ShopScreen(
                     state = state,
-                    onBack = { navController.popBackStack() },
+                    onBack = safePopBackStack,
                     diamondAdReady = diamondAdState is AdState.Ready && activity != null,
                     goldAdReady = adState is AdState.Ready && activity != null,
                     message = economyMessage,
@@ -549,7 +585,7 @@ private fun CascadeNavHost(
                     wheelAdState = wheelAdState,
                     message = economyMessage,
                     lastPrize = { viewModel.lastSpinLabel },
-                    onBack = { navController.popBackStack() },
+                    onBack = safePopBackStack,
                     onSpin = { cb -> viewModel.spinLuckyWheel(cb) },
                     onFinishSpin = viewModel::finishWheelSpin,
                     onWatchAd = { activity?.let { viewModel.watchWheelAd(it) } },
@@ -568,7 +604,7 @@ private fun CascadeNavHost(
                         currentUserAvatarId = state.profileAvatarId,
                         currentUserPhotoUrl = null,
                         leaderboardState = CloudStreamState.Success(emptyList<LeaderboardEntry>()),
-                        onBack = { navController.popBackStack() }
+                        onBack = safePopBackStack
                     )
                 } else {
                     val leaderboardState by cloudViewModel.leaderboardState.collectAsStateWithLifecycle()
@@ -578,14 +614,14 @@ private fun CascadeNavHost(
                         currentUserAvatarId = state.profileAvatarId,
                         currentUserPhotoUrl = currentUser.photoUrl?.toString(),
                         leaderboardState = leaderboardState,
-                        onBack = { navController.popBackStack() }
+                        onBack = safePopBackStack
                     )
                 }
             }
 
             composable<RulesRoute> {
                 RulesScreen(
-                    onBack = { navController.popBackStack() }
+                    onBack = safePopBackStack
                 )
             }
         }

@@ -35,7 +35,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -70,6 +72,13 @@ fun SplashScreen(
     val emblemScale = remember { Animatable(0.76f) }
     val emblemAlpha = remember { Animatable(0f) }
     val progress = remember { Animatable(0f) }
+    var hasFinished by remember { mutableStateOf(false) }
+    val finishOnce: () -> Unit = {
+        if (!hasFinished) {
+            hasFinished = true
+            onFinished()
+        }
+    }
     val haloPulse by rememberInfiniteTransition(label = "splashHalo").animateFloat(
         initialValue = 0.88f,
         targetValue = 1.06f,
@@ -89,7 +98,7 @@ fun SplashScreen(
             animationSpec = tween(durationMillis = 900, easing = FastOutSlowInEasing)
         )
         delay(100L)
-        onFinished()
+        finishOnce()
     }
 
     Box(
@@ -99,7 +108,7 @@ fun SplashScreen(
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
-                onClick = onFinished
+                onClick = finishOnce
             )
             .testTag("splash_screen")
     ) {

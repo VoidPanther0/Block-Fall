@@ -32,8 +32,11 @@ enum class AdRewardType(val serverKey: String) {
  * ability consumption are decided on the server; the client only displays the result.
  */
 class ServerEconomyClient(
-    private val functions: FirebaseFunctions = FirebaseFunctions.getInstance("us-central1")
+    private val functionsProvider: () -> FirebaseFunctions? = {
+        runCatching { FirebaseFunctions.getInstance("us-central1") }.getOrNull()
+    }
 ) {
+    private val functions: FirebaseFunctions? by lazy { functionsProvider() }
 
     suspend fun claimAdReward(type: AdRewardType): Result<ServerWallet> = call(
         "claimRewardedAd",
@@ -52,12 +55,15 @@ class ServerEconomyClient(
     suspend fun fetchWallet(): Result<ServerWallet> = call("initializeServerWallet", emptyMap<String, Any>())
         .map { parseWallet(it["wallet"]) }
 
-    private suspend fun call(name: String, data: Map<String, Any>): Result<Map<*, *>> = try {
-        val result = functions.getHttpsCallable(name).call(data).await()
-        Result.success(result.getData() as? Map<*, *> ?: emptyMap<Any, Any>())
-    } catch (t: Throwable) {
-        Log.w(TAG, "Callable $name failed: ${t.message}")
-        Result.failure(t)
+    private suspend fun call(name: String, data: Map<String, Any>): Result<Map<*, *>> {
+        val instance = functions ?: return Result.failure(IllegalStateException("Firebase Functions unavailable"))
+        return try {
+            val result = instance.getHttpsCallable(name).call(data).await()
+            Result.success(result.getData() as? Map<*, *> ?: emptyMap<Any, Any>())
+        } catch (t: Throwable) {
+            Log.w(TAG, "Callable $name failed: ${t.message}")
+            Result.failure(t)
+        }
     }
 
     private fun parseWallet(raw: Any?): ServerWallet {

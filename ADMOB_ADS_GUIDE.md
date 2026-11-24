@@ -156,3 +156,26 @@ Triggered from **Lucky Wheel → Watch Ad (+1 Spin Point)** (`LuckyWheelScreen`)
 
 3. **Debug builds** always force Google's official Test IDs in `AdConfig.kt` to protect your AdMob account from invalid-traffic strikes during development.
 4. **Release builds** automatically read `BuildConfig.ADMOB_*` injected by the Secrets Gradle Plugin (`.env` / Secrets) and run `verifyReleaseAdConfig` so accidental test IDs cannot ship to Google Play.
+
+---
+
+## 5. `app-ads.txt` Publisher Verification
+
+Authorized Sellers for Apps (`app-ads.txt`) prevents unauthorized ad inventory spoofing and maximizes bidder fill/revenue.
+
+- **Required Entry** (already added in `/app-ads.txt` and `/hosting/app-ads.txt`):
+
+  ```text
+  google.com, pub-3956806922961659, DIRECT, f08c47fec0942fa0
+  ```
+
+- **Publish via Firebase Hosting**:
+  1. Deploy the `hosting/` directory (configured in `firebase.json`):
+     ```sh
+     firebase deploy --only hosting
+     ```
+  2. Verify the live URL responds with the exact line above:
+     `https://gen-lang-client-0120665296.web.app/app-ads.txt`
+  3. Set `https://gen-lang-client-0120665296.web.app` as the **Developer Website** in **Google Play Console → Store listing** (or upload `app-ads.txt` to your custom domain root matching your Play listing).
+  4. Wait at least **24 hours** for AdMob to crawl and verify the file, then check **AdMob Console → Apps → View all apps → app-ads.txt**.
+
