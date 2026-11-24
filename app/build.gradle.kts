@@ -15,7 +15,7 @@ fun envOrDotEnv(name: String): String? {
   val envFile = rootProject.file(".env")
   if (!envFile.exists()) return null
   return envFile.readLines().firstOrNull { it.trim().startsWith("$name=") }
-    ?.substringAfter("=")?.trim()?.trim('"', ''')?.takeIf { it.isNotBlank() }
+    ?.substringAfter("=")?.trim()?.trim('"')?.trim(Char(39))?.takeIf { it.isNotBlank() }
 }
 val admobAppIdPattern = Regex("^ca-app-pub-[0-9]{16}~[0-9]{10}$")
 val admobUnitPattern = Regex("^ca-app-pub-[0-9]{16}/[0-9]{10}$")
