@@ -85,4 +85,32 @@ class AdSafetyTest {
         assertEquals(3, wallet.hammerCount)
         assertEquals(start, wallet)
     }
+
+    @Test
+    fun `diamond_ad_reward_credits_5_diamonds_once`() {
+        val start = PlayerWallet(diamonds = 20)
+        val transactionId = "ad-diamond-001"
+
+        val first = EconomyEngine.creditReward(
+            wallet = start,
+            goldDelta = 0,
+            diamondDelta = 5,
+            transactionId = transactionId,
+            reason = "Rewarded ad"
+        )
+        assertTrue(first is EconomyMutationResult.Success)
+        val updated = applyResult(start, first)
+        assertEquals(25, updated.diamonds)
+        assertEquals(start.goldCoins, updated.goldCoins)
+
+        val replay = EconomyEngine.creditReward(
+            wallet = updated,
+            goldDelta = 0,
+            diamondDelta = 5,
+            transactionId = transactionId,
+            reason = "Rewarded ad"
+        )
+        assertTrue(replay is EconomyMutationResult.Rejected)
+        assertEquals(25, applyResult(updated, replay).diamonds)
+    }
 }

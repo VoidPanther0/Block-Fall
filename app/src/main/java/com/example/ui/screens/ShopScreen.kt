@@ -26,6 +26,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -78,8 +79,11 @@ fun ShopScreen(
     goldAdReady: Boolean,
     message: String?,
     onWatchDiamondAd: () -> Unit,
-    onWatchGoldAd: () -> Unit
+    onWatchGoldAd: () -> Unit,
+    onEnsureAdsLoaded: () -> Unit = {}
 ) {
+    LaunchedEffect(Unit) { onEnsureAdsLoaded() }
+
     CascadeScreenContainer(
         maxContentWidth = 820.dp,
         modifier = Modifier.testTag("shop_screen")
@@ -108,6 +112,25 @@ fun ShopScreen(
                 tag = "shop_diamond_balance",
                 modifier = Modifier.weight(1f)
             )
+        }
+
+        if (message != null) {
+            Spacer(Modifier.height(10.dp))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(AccentEmerald.copy(alpha = 0.16f))
+                    .border(1.dp, AccentEmerald.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                    .padding(horizontal = 14.dp, vertical = 10.dp)
+                    .testTag("shop_message")
+            ) {
+                Text(
+                    text = message,
+                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                    color = TextPrimary
+                )
+            }
         }
 
         Spacer(Modifier.height(12.dp))
@@ -151,14 +174,6 @@ fun ShopScreen(
                 tag = "shop_watch_ad_button"
             )
 
-            if (message != null) {
-                Text(
-                    text = message,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = TextSecondary,
-                    modifier = Modifier.testTag("shop_message")
-                )
-            }
             Spacer(Modifier.height(8.dp))
         }
     }

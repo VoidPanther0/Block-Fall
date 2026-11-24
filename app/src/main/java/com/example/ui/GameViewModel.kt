@@ -158,17 +158,33 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     val haptics = com.example.audio.HapticsManager(application.applicationContext)
     private val animationRunner = CascadeAnimationRunner(soundManager)
     private val adManager by lazy {
-        RewardedAdManager(getApplication<Application>(), AdConfig.rewardedGoldUnitId)
+        RewardedAdManager(
+            context = getApplication<Application>(),
+            adUnitId = AdConfig.rewardedGoldUnitId,
+            debugFallbackAdUnitId = AdConfig.TEST_REWARDED_GOLD_UNIT_ID
+        )
     }
     private val continueAdManager by lazy {
-        RewardedAdManager(getApplication<Application>(), AdConfig.rewardedContinueUnitId)
+        RewardedAdManager(
+            context = getApplication<Application>(),
+            adUnitId = AdConfig.rewardedContinueUnitId,
+            debugFallbackAdUnitId = AdConfig.TEST_REWARDED_CONTINUE_UNIT_ID
+        )
     }
 
     private val diamondAdManager by lazy {
-        RewardedAdManager(getApplication<Application>(), AdConfig.rewardedDiamondUnitId)
+        RewardedAdManager(
+            context = getApplication<Application>(),
+            adUnitId = AdConfig.rewardedDiamondUnitId,
+            debugFallbackAdUnitId = AdConfig.TEST_REWARDED_DIAMOND_UNIT_ID
+        )
     }
     private val wheelAdManager by lazy {
-        RewardedAdManager(getApplication<Application>(), AdConfig.rewardedWheelUnitId)
+        RewardedAdManager(
+            context = getApplication<Application>(),
+            adUnitId = AdConfig.rewardedWheelUnitId,
+            debugFallbackAdUnitId = AdConfig.TEST_REWARDED_WHEEL_UNIT_ID
+        )
     }
     private val serverEconomy by lazy { com.example.data.cloud.ServerEconomyClient() }
 
@@ -200,10 +216,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     val visualPhase: StateFlow<BoardVisualPhase> = _visualPhase.asStateFlow()
 
     init {
-        adManager.loadAd()
-        continueAdManager.loadAd()
-        diamondAdManager.loadAd()
-        wheelAdManager.loadAd()
+        ensureAdsLoaded()
         viewModelScope.launch {
             val saved = repository.loadInitialProgress()
             soundManager.soundEnabled = saved.settings.soundEnabled
@@ -608,6 +621,23 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun onCloudSignedOut() {
+        serverSpinPoints = 0
+        pendingServerSpinPoints = null
+        pendingLocalPrize = null
+        _isSpinning.value = false
+        _economyMessage.value = null
+        publishSpinPoints()
+        resetAllProgress()
+    }
+
+    fun ensureAdsLoaded() {
+        adManager.reloadIfNeeded()
+        continueAdManager.reloadIfNeeded()
+        diamondAdManager.reloadIfNeeded()
+        wheelAdManager.reloadIfNeeded()
+    }
+
     fun purchaseShopItem(itemId: String) {
         viewModelScope.launch {
             val result = EconomyEngine.purchaseShopItem(
@@ -676,29 +706,32 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun watchRewardedAd(activity: Activity) {
+        _economyMessage.value = null
         adManager.showAd(
             activity = activity,
             onRewarded = { claimAdRewardOnServer(com.example.data.cloud.AdRewardType.GOLD_50) },
             onDismissed = { },
-            onFailed = { _economyMessage.value = "Ad unavailable, try again shortly." }
+            onFailed = { _economyMessage.value = "Ad unavailable, retrying automatically..." }
         )
     }
 
     fun watchDiamondAd(activity: Activity) {
+        _economyMessage.value = null
         diamondAdManager.showAd(
             activity = activity,
             onRewarded = { claimAdRewardOnServer(com.example.data.cloud.AdRewardType.DIAMOND_5) },
             onDismissed = { },
-            onFailed = { _economyMessage.value = "Ad unavailable, try again shortly." }
+            onFailed = { _economyMessage.value = "Ad unavailable, retrying automatically..." }
         )
     }
 
     fun watchWheelAd(activity: Activity) {
+        _economyMessage.value = null
         wheelAdManager.showAd(
             activity = activity,
             onRewarded = { claimAdRewardOnServer(com.example.data.cloud.AdRewardType.WHEEL_POINT) },
             onDismissed = { },
-            onFailed = { _economyMessage.value = "Ad unavailable, try again shortly." }
+            onFailed = { _economyMessage.value = "Ad unavailable, retrying automatically..." }
         )
     }
 
@@ -706,13 +739,22 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         _economyMessage.value = null
     }
 
-    /** Signed-in players are paid by the server; guests get the same reward locally. */
+    /**
+     * Always grants the earned ad reward locally upon impression reward verification so players
+     * never lose Gold, Diamonds, or Spin Points due to backend unavailability or App Check lag.
+     * Signed-in sessions also mirror the claim to the server ledger in the background.
+     */
     private fun claimAdRewardOnServer(type: com.example.data.cloud.AdRewardType) {
-        if (!isSignedIn()) {
-            when (type) {
-                com.example.data.cloud.AdRewardType.GOLD_50 ->
-                    claimAdReward(AD_REWARD_GOLD, UUID.randomUUID().toString())
-                com.example.data.cloud.AdRewardType.DIAMOND_5 -> viewModelScope.launch {
+        when (type) {
+            com.example.data.cloud.AdRewardType.GOLD_50 -> {
+                claimAdReward(AD_REWARD_GOLD, UUID.randomUUID().toString())
+                _economyMessage.value = "+$AD_REWARD_GOLD Gold earned!"
+                if (isSignedIn()) {
+                    viewModelScope.launch { serverEconomy.claimAdReward(type) }
+                }
+            }
+            com.example.data.cloud.AdRewardType.DIAMOND_5 -> {
+                viewModelScope.launch {
                     val result = EconomyEngine.creditReward(
                         wallet = _uiState.value.wallet,
                         goldDelta = 0,
@@ -720,61 +762,75 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                         transactionId = UUID.randomUUID().toString(),
                         reason = "Rewarded ad"
                     )
-                    if (result is EconomyMutationResult.Success) applyWalletMutation(result.updatedWallet)
+                    if (result is EconomyMutationResult.Success) {
+                        applyWalletMutation(result.updatedWallet)
+                    }
+                    _economyMessage.value = "+$AD_REWARD_DIAMONDS Diamonds earned!"
                 }
-                com.example.data.cloud.AdRewardType.WHEEL_POINT -> {
-                    setLocalSpinPoints(localSpinPoints() + 1)
-                    _economyMessage.value = "+1 Spin Point earned!"
+                if (isSignedIn()) {
+                    viewModelScope.launch { serverEconomy.claimAdReward(type) }
                 }
             }
-            return
-        }
-        viewModelScope.launch {
-            serverEconomy.claimAdReward(type)
-                .onSuccess {
-                    applyServerWallet(it)
-                    if (type == com.example.data.cloud.AdRewardType.WHEEL_POINT) {
-                        _economyMessage.value = "+1 Spin Point earned!"
-                    }
+            com.example.data.cloud.AdRewardType.WHEEL_POINT -> {
+                if (!isSignedIn()) {
+                    setLocalSpinPoints(localSpinPoints() + 1)
+                    _economyMessage.value = "+1 Spin Point earned!"
+                    return
                 }
-                .onFailure {
-                    if (type == com.example.data.cloud.AdRewardType.WHEEL_POINT) {
-                        // Server unreachable / not verified: still give the spin on-device.
-                        setLocalSpinPoints(localSpinPoints() + 1)
-                        _economyMessage.value = "+1 Spin Point earned!"
-                    } else {
-                        _economyMessage.value = "Reward could not be verified. Please try again."
-                    }
+                viewModelScope.launch {
+                    serverEconomy.claimAdReward(type)
+                        .onSuccess { wallet ->
+                            serverSpinPoints = wallet.wheelSpinPoints.coerceAtLeast(serverSpinPoints + 1)
+                            publishSpinPoints()
+                            _economyMessage.value = "+1 Spin Point earned!"
+                        }
+                        .onFailure {
+                            setLocalSpinPoints(localSpinPoints() + 1)
+                            _economyMessage.value = "+1 Spin Point earned!"
+                        }
                 }
+            }
         }
     }
 
     /** Spins the server-side wheel; [onResult] receives the winning segment index. */
     fun spinLuckyWheel(onResult: (Int?) -> Unit) {
         if (_isSpinning.value) return
-        // On-device points (guests, or ads whose server claim failed) are spent first.
+        // On-device points (guests, or ads whose server claim fell back to device) are spent first.
         if (!isSignedIn() || localSpinPoints() > 0) {
             spinLocalWheel(onResult)
+            return
+        }
+        if (serverSpinPoints <= 0) {
+            _economyMessage.value = "No spin points. Watch an ad to get 1 spin."
+            onResult(null)
             return
         }
         _isSpinning.value = true
         viewModelScope.launch {
             serverEconomy.spinLuckyWheel()
                 .onSuccess { spin ->
-                    pendingSpinWallet = spin.wallet
+                    val matchedPrize = localPrizes.getOrNull(spin.segmentIndex)
+                    pendingLocalPrize = matchedPrize
+                    pendingServerSpinPoints = spin.wallet.wheelSpinPoints
                     _economyMessage.value = null
-                    lastSpinLabel = spin.prizeLabel
+                    lastSpinLabel = spin.prizeLabel.ifBlank { matchedPrize?.label.orEmpty() }
                     onResult(spin.segmentIndex)
                 }
                 .onFailure {
-                    _isSpinning.value = false
-                    _economyMessage.value = "Spin failed. Watch an ad for a spin point and try again."
-                    onResult(null)
+                    // Server unreachable: spend one server-held point gracefully via local wheel roll.
+                    serverSpinPoints = (serverSpinPoints - 1).coerceAtLeast(0)
+                    publishSpinPoints()
+                    val index = rollLocalPrizeIndex()
+                    pendingLocalPrize = localPrizes[index]
+                    lastSpinLabel = localPrizes[index].label
+                    _economyMessage.value = null
+                    onResult(index)
                 }
         }
     }
 
-    private var pendingSpinWallet: com.example.data.cloud.ServerWallet? = null
+    private var pendingServerSpinPoints: Int? = null
     var lastSpinLabel: String = ""
         private set
 
@@ -783,22 +839,34 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         pendingLocalPrize?.let { prize ->
             val w = _uiState.value.wallet
             viewModelScope.launch {
+                val txId = UUID.randomUUID().toString()
+                val base = if (prize.gold > 0 || prize.diamonds > 0) {
+                    val currencyResult = EconomyEngine.creditReward(
+                        wallet = w,
+                        goldDelta = prize.gold,
+                        diamondDelta = prize.diamonds,
+                        transactionId = txId,
+                        reason = "Lucky Wheel"
+                    )
+                    if (currencyResult is EconomyMutationResult.Success) currencyResult.updatedWallet else w
+                } else {
+                    w
+                }
                 applyWalletMutation(
-                    w.copy(
-                        goldCoins = (w.goldCoins + prize.gold).coerceAtMost(PlayerWallet.MAX_GOLD),
-                        diamonds = (w.diamonds + prize.diamonds).coerceAtMost(PlayerWallet.MAX_DIAMONDS),
-                        hammerCount = w.hammerCount + prize.hammer,
-                        shuffleCount = w.shuffleCount + prize.shuffle,
-                        refreshCount = w.refreshCount + prize.refresh
+                    base.copy(
+                        hammerCount = (base.hammerCount + prize.hammer).coerceAtMost(PlayerWallet.MAX_BOOSTER_STACK),
+                        shuffleCount = (base.shuffleCount + prize.shuffle).coerceAtMost(PlayerWallet.MAX_BOOSTER_STACK),
+                        refreshCount = (base.refreshCount + prize.refresh).coerceAtMost(PlayerWallet.MAX_BOOSTER_STACK)
                     )
                 )
             }
         }
         pendingLocalPrize = null
-        pendingSpinWallet?.let { wallet ->
-            viewModelScope.launch { applyServerWallet(wallet) }
+        pendingServerSpinPoints?.let { pts ->
+            serverSpinPoints = pts
+            publishSpinPoints()
         }
-        pendingSpinWallet = null
+        pendingServerSpinPoints = null
         _isSpinning.value = false
     }
 
@@ -839,6 +907,15 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     )
     private var pendingLocalPrize: LocalPrize? = null
 
+    private fun rollLocalPrizeIndex(): Int {
+        var roll = kotlin.random.Random.nextInt(localPrizes.sumOf { it.weight })
+        for ((i, p) in localPrizes.withIndex()) {
+            if (roll < p.weight) return i
+            roll -= p.weight
+        }
+        return localPrizes.lastIndex
+    }
+
     private fun spinLocalWheel(onResult: (Int?) -> Unit) {
         val points = localSpinPoints()
         if (points <= 0) {
@@ -847,12 +924,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             return
         }
         setLocalSpinPoints(points - 1)
-        var roll = kotlin.random.Random.nextInt(localPrizes.sumOf { it.weight })
-        var index = localPrizes.lastIndex
-        for ((i, p) in localPrizes.withIndex()) {
-            if (roll < p.weight) { index = i; break }
-            roll -= p.weight
-        }
+        val index = rollLocalPrizeIndex()
         pendingLocalPrize = localPrizes[index]
         lastSpinLabel = localPrizes[index].label
         _economyMessage.value = null
@@ -871,39 +943,29 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    private suspend fun applyServerWallet(w: com.example.data.cloud.ServerWallet) {
-        serverSpinPoints = w.wheelSpinPoints
-        publishSpinPoints()
-        applyWalletMutation(
-            _uiState.value.wallet.copy(
-                goldCoins = w.goldCoins,
-                diamonds = w.diamonds,
-                hammerCount = w.hammerCount,
-                shuffleCount = w.shuffleCount,
-                refreshCount = w.refreshCount
-            )
-        )
-    }
-
     fun watchContinueRewardedAd(activity: Activity) {
         val state = _uiState.value
         if (!state.showContinueOffer) return
+        var rewardDelivered = false
         isContinueAdShowing = true
         continueAdManager.showAd(
             activity = activity,
             onRewarded = {
+                rewardDelivered = true
                 isContinueAdShowing = false
                 grantContinueRescue()
             },
             onDismissed = {
                 isContinueAdShowing = false
-                if (_uiState.value.showContinueOffer) {
+                if (!rewardDelivered && _uiState.value.showContinueOffer) {
                     declineContinueOffer()
                 }
             },
             onFailed = {
                 isContinueAdShowing = false
-                declineContinueOffer()
+                if (!rewardDelivered && _uiState.value.showContinueOffer) {
+                    declineContinueOffer()
+                }
             }
         )
     }
@@ -1331,7 +1393,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         if (triggerContinueOffer) {
-            continueAdManager.loadAd()
+            continueAdManager.reloadIfNeeded()
             startContinueCountdown()
         }
 

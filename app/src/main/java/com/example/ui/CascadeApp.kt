@@ -33,6 +33,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.R
+import com.example.ads.AdConfig
 import com.example.ads.AdState
 import com.example.data.cloud.CloudSyncRepository
 import com.example.data.cloud.LeaderboardEntry
@@ -219,6 +220,13 @@ private fun CascadeNavHost(
         }
     }
 
+
+    val adsSdkReady by AdConfig.sdkInitialized.collectAsStateWithLifecycle()
+    LaunchedEffect(adsSdkReady) {
+        if (adsSdkReady) {
+            viewModel.ensureAdsLoaded()
+        }
+    }
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -474,7 +482,8 @@ private fun CascadeNavHost(
                                 email = currentUser.email,
                                 sessionStatus = sessionStatus,
                                 onSyncNow = { cloudViewModel.syncLocalStateToCloud(state) },
-                                onVerifyIntegrity = { cloudViewModel.verifyAppIntegrity() }
+                                onVerifyIntegrity = { cloudViewModel.verifyAppIntegrity() },
+                                onSignedOut = viewModel::onCloudSignedOut
                             )
                         }
                     }
@@ -507,7 +516,8 @@ private fun CascadeNavHost(
                     goldAdReady = adState is AdState.Ready && activity != null,
                     message = economyMessage,
                     onWatchDiamondAd = { activity?.let { viewModel.watchDiamondAd(it) } },
-                    onWatchGoldAd = { activity?.let { viewModel.watchRewardedAd(it) } }
+                    onWatchGoldAd = { activity?.let { viewModel.watchRewardedAd(it) } },
+                    onEnsureAdsLoaded = viewModel::ensureAdsLoaded
                 )
             }
 
@@ -527,7 +537,10 @@ private fun CascadeNavHost(
                     onSpin = { cb -> viewModel.spinLuckyWheel(cb) },
                     onFinishSpin = viewModel::finishWheelSpin,
                     onWatchAd = { activity?.let { viewModel.watchWheelAd(it) } },
-                    onRefresh = viewModel::refreshServerWallet
+                    onRefresh = {
+                        viewModel.refreshServerWallet()
+                        viewModel.ensureAdsLoaded()
+                    }
                 )
             }
 

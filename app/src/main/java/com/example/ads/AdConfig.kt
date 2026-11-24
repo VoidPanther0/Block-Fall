@@ -1,6 +1,9 @@
 package com.example.ads
 
 import com.example.BuildConfig
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 /**
  * Central AdMob configuration.
@@ -31,6 +34,13 @@ object AdConfig {
 
     private val APP_ID_PATTERN = Regex("^ca-app-pub-\\d{16}~\\d{10}$")
     private val AD_UNIT_PATTERN = Regex("^ca-app-pub-\\d{16}/\\d{10}$")
+
+    private val _sdkInitialized = MutableStateFlow(false)
+    val sdkInitialized: StateFlow<Boolean> = _sdkInitialized.asStateFlow()
+
+    fun markSdkInitialized() {
+        _sdkInitialized.value = true
+    }
 
     val configuredAppId: String = BuildConfig.ADMOB_APP_ID
 

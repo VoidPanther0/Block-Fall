@@ -22,7 +22,7 @@ dependencyResolutionManagement {
   }
 }
 
-rootProject.name = "Block Falls"
+rootProject.name = "Block Fall"
 
 include(":app")
 include(":benchmark")

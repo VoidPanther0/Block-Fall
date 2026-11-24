@@ -38,8 +38,11 @@ class MainActivity : ComponentActivity() {
             Log.w("MainActivity", "AdMob skipped: ADMOB_APP_ID is missing or not a complete ID")
             return
         }
-        runCatching { MobileAds.initialize(this) { } }
-            .onFailure { Log.w("MainActivity", "AdMob initialization failed: ${it.message}") }
+        runCatching {
+            MobileAds.initialize(this) {
+                AdConfig.markSdkInitialized()
+            }
+        }.onFailure { Log.w("MainActivity", "AdMob initialization failed: ${it.message}") }
     }
 
     private fun configureFirebaseAppCheck() {

@@ -109,7 +109,7 @@ fun GameBoard(
             .padding(8.dp)
             .testTag("game_board")
             .semantics {
-                contentDescription = "8 by 8 Block Falls puzzle board"
+                contentDescription = "8 by 8 Block Fall puzzle board"
             }
     ) {
         val currentHasSelectedSlot by rememberUpdatedState(hasSelectedSlot)

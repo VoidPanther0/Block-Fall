@@ -1,5 +1,5 @@
 {
-  "name": "Block Falls",
+  "name": "Block Fall",
   "description": "Gravity-driven 8x8 block puzzle game with cascading line clears, vertical gravity drops, and chain combos.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
