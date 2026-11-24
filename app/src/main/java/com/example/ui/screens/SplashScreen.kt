@@ -9,6 +9,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -53,12 +54,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
+import com.example.game.BlockColor
 import com.example.ui.components.ArcadeTitleLogo
 import com.example.ui.components.RoyalSkyBackdrop
+import com.example.ui.components.drawBevelBlock
 import com.example.ui.theme.AccentCyan
 import com.example.ui.theme.AccentGold
+import com.example.ui.theme.AccentGoldBright
 import com.example.ui.theme.BoardWellBg
 import com.example.ui.theme.GlassBorder
+import com.example.ui.theme.LocalBlockStyle
+import com.example.ui.theme.LocalBoardPalette
 import com.example.ui.theme.OutfitFontFamily
 import com.example.ui.theme.SurfaceCard
 import com.example.ui.theme.TextSecondary
@@ -79,20 +85,25 @@ fun SplashScreen(
             onFinished()
         }
     }
-    val haloPulse by rememberInfiniteTransition(label = "splashHalo").animateFloat(
-        initialValue = 0.88f,
-        targetValue = 1.06f,
+    val infiniteTransition = rememberInfiniteTransition(label = "splashAnim")
+    val haloPulse by infiniteTransition.animateFloat(
+        initialValue = 0.90f,
+        targetValue = 1.08f,
         animationSpec = infiniteRepeatable(tween(1100, easing = LinearEasing), RepeatMode.Reverse),
         label = "halo"
     )
+    val fallOffset by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(3400, easing = LinearEasing), RepeatMode.Restart),
+        label = "fallingBlocks"
+    )
+    val blockStyle = LocalBlockStyle.current
+    val boardPalette = LocalBoardPalette.current
 
     LaunchedEffect(Unit) {
-        launch {
-            emblemAlpha.animateTo(1f, tween(300))
-        }
-        launch {
-            emblemScale.animateTo(1f, spring(dampingRatio = 0.65f, stiffness = 360f))
-        }
+        launch { emblemAlpha.animateTo(1f, tween(280)) }
+        launch { emblemScale.animateTo(1f, spring(dampingRatio = 0.65f, stiffness = 360f)) }
         progress.animateTo(
             targetValue = 1f,
             animationSpec = tween(durationMillis = 900, easing = FastOutSlowInEasing)
@@ -114,6 +125,37 @@ fun SplashScreen(
     ) {
         RoyalSkyBackdrop()
 
+        // Glowing falling crystal blocks in background
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val w = size.width
+            val h = size.height
+            val blockSize = (w * 0.085f).coerceIn(24f, 44f)
+            val lanes = listOf(
+                Triple(0.11f, 0.15f, BlockColor.CYAN),
+                Triple(0.24f, 0.52f, BlockColor.VIOLET),
+                Triple(0.77f, 0.25f, BlockColor.AMBER),
+                Triple(0.88f, 0.65f, BlockColor.EMERALD),
+                Triple(0.16f, 0.80f, BlockColor.CORAL),
+                Triple(0.82f, 0.88f, BlockColor.COBALT)
+            )
+            lanes.forEachIndexed { idx, (xFrac, phase, color) ->
+                val p = (fallOffset + phase + idx * 0.13f) % 1f
+                val bx = w * xFrac - blockSize / 2f
+                val by = -blockSize + p * (h + blockSize * 2f)
+                val alpha = kotlin.math.sin(p * kotlin.math.PI).toFloat().coerceIn(0.10f, 0.55f)
+                drawBevelBlock(
+                    left = bx,
+                    top = by,
+                    cellSize = blockSize,
+                    color = color,
+                    alpha = alpha,
+                    glowBoost = 0.45f,
+                    blockStyle = blockStyle,
+                    boardPalette = boardPalette
+                )
+            }
+        }
+
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceBetween,
@@ -122,7 +164,7 @@ fun SplashScreen(
                 .windowInsetsPadding(WindowInsets.safeDrawing)
                 .padding(horizontal = 24.dp, vertical = 34.dp)
         ) {
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(12.dp))
 
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -135,7 +177,7 @@ fun SplashScreen(
                 Box(contentAlignment = Alignment.Center) {
                     Box(
                         modifier = Modifier
-                            .size(180.dp)
+                            .size(190.dp)
                             .graphicsLayer {
                                 scaleX = haloPulse
                                 scaleY = haloPulse
@@ -144,8 +186,8 @@ fun SplashScreen(
                             .background(
                                 Brush.radialGradient(
                                     listOf(
-                                        AccentGold.copy(alpha = 0.34f),
-                                        AccentCyan.copy(alpha = 0.16f),
+                                        AccentGold.copy(alpha = 0.36f),
+                                        AccentCyan.copy(alpha = 0.20f),
                                         Color.Transparent
                                     )
                                 )
@@ -154,18 +196,14 @@ fun SplashScreen(
                     Box(
                         contentAlignment = Alignment.Center,
                         modifier = Modifier
-                            .size(144.dp)
-                            .shadow(14.dp, RoundedCornerShape(34.dp), clip = false)
+                            .size(148.dp)
+                            .shadow(16.dp, RoundedCornerShape(34.dp), clip = false)
                             .clip(RoundedCornerShape(34.dp))
-                            .background(Color(0xFF16204A))
+                            .background(Color(0xFF101C47))
                             .border(
                                 width = 3.dp,
                                 brush = Brush.linearGradient(
-                                    listOf(
-                                        Color(0xFFFFE57F),
-                                        AccentGold,
-                                        AccentCyan
-                                    )
+                                    listOf(AccentGoldBright, AccentGold, AccentCyan)
                                 ),
                                 shape = RoundedCornerShape(34.dp)
                             )
@@ -189,7 +227,7 @@ fun SplashScreen(
                     modifier = Modifier
                         .clip(CircleShape)
                         .background(SurfaceCard)
-                        .border(1.dp, AccentGold.copy(alpha = 0.45f), CircleShape)
+                        .border(1.dp, AccentGold.copy(alpha = 0.55f), CircleShape)
                         .padding(horizontal = 16.dp, vertical = 7.dp)
                 ) {
                     Text(
@@ -197,7 +235,7 @@ fun SplashScreen(
                         style = MaterialTheme.typography.labelMedium.copy(
                             fontFamily = OutfitFontFamily,
                             fontWeight = FontWeight.Bold,
-                            letterSpacing = 1.5.sp,
+                            letterSpacing = 1.6.sp,
                             fontSize = 11.sp
                         ),
                         color = TextSecondary
@@ -211,21 +249,21 @@ fun SplashScreen(
             ) {
                 Box(
                     modifier = Modifier
-                        .width(220.dp)
-                        .height(10.dp)
+                        .width(236.dp)
+                        .height(12.dp)
                         .clip(CircleShape)
                         .background(BoardWellBg)
-                        .border(1.dp, GlassBorder, CircleShape)
+                        .border(1.2.dp, GlassBorder, CircleShape)
                         .padding(2.dp)
                 ) {
                     Box(
                         modifier = Modifier
                             .fillMaxHeight()
-                            .fillMaxWidth(progress.value.coerceIn(0.06f, 1f))
+                            .fillMaxWidth(progress.value.coerceIn(0.08f, 1f))
                             .clip(CircleShape)
                             .background(
                                 Brush.horizontalGradient(
-                                    listOf(AccentCyan, AccentGold)
+                                    listOf(AccentCyan, AccentGoldBright, AccentGold)
                                 )
                             )
                     )

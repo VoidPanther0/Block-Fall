@@ -15,6 +15,9 @@ import com.example.game.BlockStyle
 import com.example.game.Board
 import com.example.game.BoardColorPalette
 import com.example.game.ChallengeLevelProgress
+import com.example.game.DailyMissionSnapshot
+import com.example.game.DailyProgress
+import com.example.game.DailyRewardProgress
 import com.example.game.GamePiece
 import com.example.game.GameSettings
 import com.example.game.GameStatistics
@@ -27,6 +30,8 @@ import com.example.security.EncryptedEntitlementCache
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.serialization.builtins.SetSerializer
+import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
 import org.json.JSONArray
 import org.json.JSONObject
@@ -44,7 +49,12 @@ data class PersistedProgress(
     val wallet: PlayerWallet = PlayerWallet(),
     val playerDisplayName: String? = null,
     val profileAvatarId: String = ProfileAvatar.CLASSIC_BLOCK.id,
-    val localIntegrityTampered: Boolean = false
+    val localIntegrityTampered: Boolean = false,
+    val dailyRewardProgress: DailyRewardProgress = DailyRewardProgress(),
+    val dailyMissionSnapshot: DailyMissionSnapshot = DailyMissionSnapshot(),
+    val claimedAchievementIds: Set<String> = emptySet(),
+    val selectedLanguage: String = "English",
+    val dailyProgress: DailyProgress = DailyProgress()
 )
 
 private data class WalletState(
@@ -94,6 +104,10 @@ class GameRepository(
         val DAILY_PROGRESS = stringPreferencesKey("daily_gravity_progress_v1")
         val PLAYER_DISPLAY_NAME = stringPreferencesKey("player_display_name_v1")
         val PROFILE_AVATAR_ID = stringPreferencesKey("profile_avatar_id_v1")
+        val DAILY_REWARDS_JSON = stringPreferencesKey("daily_rewards_json_v1")
+        val DAILY_MISSIONS_JSON = stringPreferencesKey("daily_missions_json_v1")
+        val CLAIMED_ACHIEVEMENTS_JSON = stringPreferencesKey("claimed_achievements_json_v1")
+        val SELECTED_LANGUAGE = stringPreferencesKey("selected_language_v1")
     }
 
     val progressFlow: Flow<PersistedProgress> = context.cascadeDataStore.data.map { prefs ->
@@ -111,6 +125,16 @@ class GameRepository(
         val protectedState = readProtectedProgressState(prefs)
         val savedClassic = readSavedClassicGame(prefs)
         val walletState = readWalletState(prefs)
+        val dailyRewards = prefs[Keys.DAILY_REWARDS_JSON]?.let {
+            runCatching { Json.decodeFromString(DailyRewardProgress.serializer(), it) }.getOrNull()
+        } ?: DailyRewardProgress()
+        val dailyMissions = prefs[Keys.DAILY_MISSIONS_JSON]?.let {
+            runCatching { Json.decodeFromString(DailyMissionSnapshot.serializer(), it) }.getOrNull()
+        } ?: DailyMissionSnapshot()
+        val claimedAchievements = prefs[Keys.CLAIMED_ACHIEVEMENTS_JSON]?.let {
+            runCatching { Json.decodeFromString(SetSerializer(String.serializer()), it) }.getOrNull()
+        } ?: emptySet()
+        val dailyProg = DailyProgress.fromJson(prefs[Keys.DAILY_PROGRESS])
 
         PersistedProgress(
             classicBestScore = protectedState.classicBestScore,
@@ -123,7 +147,12 @@ class GameRepository(
             wallet = walletState.wallet,
             playerDisplayName = prefs[Keys.PLAYER_DISPLAY_NAME]?.trim()?.takeIf { it.isNotEmpty() },
             profileAvatarId = ProfileAvatar.fromId(prefs[Keys.PROFILE_AVATAR_ID]).id,
-            localIntegrityTampered = protectedState.tampered || walletState.tampered
+            localIntegrityTampered = protectedState.tampered || walletState.tampered,
+            dailyRewardProgress = dailyRewards,
+            dailyMissionSnapshot = dailyMissions,
+            claimedAchievementIds = claimedAchievements,
+            selectedLanguage = prefs[Keys.SELECTED_LANGUAGE] ?: "English",
+            dailyProgress = dailyProg
         )
     }
 
@@ -235,7 +264,8 @@ class GameRepository(
         linesCleared: Int,
         cascadesTriggered: Int,
         maxDepthInTurn: Int,
-        fullClearAdded: Int = 0
+        fullClearAdded: Int = 0,
+        dailyWonAdded: Int = 0
     ) {
         context.cascadeDataStore.edit { prefs ->
             val current = readProtectedProgressState(prefs)
@@ -246,11 +276,36 @@ class GameRepository(
                     totalLinesCleared = s.totalLinesCleared + linesCleared,
                     totalCascadesTriggered = s.totalCascadesTriggered + cascadesTriggered,
                     maxCascadeDepth = maxOf(s.maxCascadeDepth, maxDepthInTurn),
-                    fullBoardClears = s.fullBoardClears + fullClearAdded
+                    fullBoardClears = s.fullBoardClears + fullClearAdded,
+                    dailyCompletedCount = s.dailyCompletedCount + dailyWonAdded
                 ),
                 tampered = false
             )
             writeProtectedProgressState(prefs, updated)
+        }
+    }
+
+    suspend fun updateDailyRewardProgress(progress: DailyRewardProgress) {
+        context.cascadeDataStore.edit { prefs ->
+            prefs[Keys.DAILY_REWARDS_JSON] = Json.encodeToString(DailyRewardProgress.serializer(), progress)
+        }
+    }
+
+    suspend fun updateDailyMissionSnapshot(snapshot: DailyMissionSnapshot) {
+        context.cascadeDataStore.edit { prefs ->
+            prefs[Keys.DAILY_MISSIONS_JSON] = Json.encodeToString(DailyMissionSnapshot.serializer(), snapshot)
+        }
+    }
+
+    suspend fun updateClaimedAchievements(ids: Set<String>) {
+        context.cascadeDataStore.edit { prefs ->
+            prefs[Keys.CLAIMED_ACHIEVEMENTS_JSON] = Json.encodeToString(SetSerializer(String.serializer()), ids)
+        }
+    }
+
+    suspend fun updateSelectedLanguage(language: String) {
+        context.cascadeDataStore.edit { prefs ->
+            prefs[Keys.SELECTED_LANGUAGE] = language
         }
     }
 
@@ -366,6 +421,10 @@ class GameRepository(
             prefs.remove(Keys.WALLET_ENVELOPE)
             prefs.remove(Keys.PLAYER_DISPLAY_NAME)
             prefs.remove(Keys.PROFILE_AVATAR_ID)
+            prefs.remove(Keys.DAILY_PROGRESS)
+            prefs.remove(Keys.DAILY_REWARDS_JSON)
+            prefs.remove(Keys.DAILY_MISSIONS_JSON)
+            prefs.remove(Keys.CLAIMED_ACHIEVEMENTS_JSON)
         }
     }
 
@@ -499,6 +558,7 @@ class GameRepository(
             statsObj.put("totalBlocksPlaced", state.statistics.totalBlocksPlaced)
             statsObj.put("classicBestScore", state.classicBestScore)
             statsObj.put("fullBoardClears", state.statistics.fullBoardClears)
+            statsObj.put("dailyCompletedCount", state.statistics.dailyCompletedCount)
             root.put("statistics", statsObj)
 
             root.put("challengeProgress", JSONArray(serializeChallengeProgress(state.challengeProgress)))
@@ -518,7 +578,8 @@ class GameRepository(
                     maxCascadeDepth = (statsObj?.optInt("maxCascadeDepth", 0) ?: 0).coerceAtLeast(0),
                     totalBlocksPlaced = (statsObj?.optInt("totalBlocksPlaced", 0) ?: 0).coerceAtLeast(0),
                     classicBestScore = best,
-                    fullBoardClears = (statsObj?.optInt("fullBoardClears", 0) ?: 0).coerceAtLeast(0)
+                    fullBoardClears = (statsObj?.optInt("fullBoardClears", 0) ?: 0).coerceAtLeast(0),
+                    dailyCompletedCount = (statsObj?.optInt("dailyCompletedCount", 0) ?: 0).coerceAtLeast(0)
                 )
                 val challengeArr = root.optJSONArray("challengeProgress")?.toString() ?: "[]"
                 ProtectedProgressState(

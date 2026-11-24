@@ -54,6 +54,7 @@ fun CascadeScreenContainer(
     maxContentWidth: Dp = 760.dp,
     backdrop: @Composable () -> Unit = { RoyalSkyBackdrop() },
     bottomBar: (@Composable () -> Unit)? = null,
+    footerBar: (@Composable () -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
     Box(
@@ -70,7 +71,6 @@ fun CascadeScreenContainer(
                 .padding(horizontal = 16.dp, vertical = 10.dp)
                 .widthIn(max = maxContentWidth)
         ) {
-            // The former bottom navigation slot now hosts the compact top quick-nav.
             if (bottomBar != null) {
                 bottomBar()
                 Spacer(Modifier.height(10.dp))
@@ -82,6 +82,11 @@ fun CascadeScreenContainer(
                     .fillMaxWidth(),
                 content = content
             )
+
+            if (footerBar != null) {
+                Spacer(Modifier.height(8.dp))
+                footerBar()
+            }
         }
     }
 }
@@ -93,8 +98,6 @@ fun ScreenTopBar(
     backTestTag: String = "screen_back_button",
     actions: @Composable RowScope.() -> Unit = {}
 ) {
-    // Three-slot Row keeps the title inside the space between back button and actions,
-    // so trailing chips can never overlap it on 320dp screens.
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -107,17 +110,24 @@ fun ScreenTopBar(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
                     .size(48.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(SurfaceCard)
-                    .border(1.dp, GlassBorder, RoundedCornerShape(12.dp))
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                com.example.ui.theme.PurpleBtnTop,
+                                com.example.ui.theme.PurpleBtnBottom
+                            )
+                        )
+                    )
+                    .border(1.2.dp, Color.White.copy(alpha = 0.28f), RoundedCornerShape(14.dp))
                     .clickable(onClick = onBack)
                     .testTag(backTestTag)
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
                     contentDescription = stringResource(R.string.back_label),
-                    tint = TextPrimary,
-                    modifier = Modifier.size(26.dp)
+                    tint = Color.White,
+                    modifier = Modifier.size(28.dp)
                 )
             }
         } else {
@@ -130,7 +140,7 @@ fun ScreenTopBar(
                 fontFamily = OutfitFontFamily,
                 fontWeight = FontWeight.ExtraBold,
                 fontSize = 19.sp,
-                letterSpacing = 0.1.sp
+                letterSpacing = 0.2.sp
             ),
             color = TextPrimary,
             maxLines = 1,

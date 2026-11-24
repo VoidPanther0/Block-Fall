@@ -57,15 +57,16 @@ fun BannerAdBar(
             .height(52.dp)
             .clip(shape)
             .background(SurfaceCard)
-            .border(1.dp, GlassBorder, shape)
+            .border(1.dp, GlassBorder.copy(alpha = 0.65f), shape)
             .testTag("gameplay_banner_ad")
     ) {
         if (isPreview || !sdkReady || !AdConfig.isAppIdValid) {
             Text(
-                text = if (isPreview) "Banner Ad" else "Block Fall",
+                text = if (isPreview) "Banner Ad" else "BLOCK FALL",
                 style = MaterialTheme.typography.labelSmall.copy(
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 11.sp
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 11.sp,
+                    letterSpacing = 1.sp
                 ),
                 color = TextMuted
             )

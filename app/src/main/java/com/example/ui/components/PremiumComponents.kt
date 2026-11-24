@@ -167,7 +167,7 @@ fun IconActionButton(
         animationSpec = spring(dampingRatio = 0.72f, stiffness = 500f),
         label = "icon_action_scale"
     )
-    val shape = RoundedCornerShape(12.dp)
+    val shape = RoundedCornerShape(14.dp)
     Box(
         contentAlignment = Alignment.Center,
         modifier = modifier
@@ -176,13 +176,13 @@ fun IconActionButton(
                 scaleX = scale
                 scaleY = scale
             }
-            .shadow(2.dp, shape, clip = false)
+            .shadow(4.dp, shape, clip = false)
             .clip(shape)
-            .background(SurfaceCard)
-            .border(1.dp, borderColor, shape)
+            .background(Brush.verticalGradient(listOf(SurfaceCardElevated, SurfaceCard)))
+            .border(1.2.dp, borderColor, shape)
             .clickable(
                 interactionSource = interactionSource,
-                indication = ripple(color = TextPrimary),
+                indication = ripple(color = AccentCyan),
                 role = Role.Button,
                 onClick = onClick
             )
@@ -225,9 +225,8 @@ fun GoldBalance(
         label = "gold_balance_anim"
     )
     CurrencyPill(
-        icon = Icons.Filled.MonetizationOn,
-        tint = AccentGold,
-        label = "Gold",
+        badge = { CrystalCoinBadge(size = if (compact) 16.dp else 20.dp) },
+        borderAccent = AccentGold.copy(alpha = 0.55f),
         amountText = formatCompactNumber(animatedAmount),
         compact = compact,
         modifier = modifier
@@ -249,9 +248,8 @@ fun DiamondBalance(
         label = "diamond_balance_anim"
     )
     CurrencyPill(
-        icon = Icons.Filled.Diamond,
-        tint = AccentDiamond,
-        label = "Diamonds",
+        badge = { CrystalDiamondBadge(size = if (compact) 16.dp else 20.dp) },
+        borderAccent = AccentDiamond.copy(alpha = 0.55f),
         amountText = formatCompactNumber(animatedAmount),
         compact = compact,
         modifier = modifier
@@ -262,33 +260,27 @@ fun DiamondBalance(
 
 @Composable
 private fun CurrencyPill(
-    icon: ImageVector,
-    tint: Color,
-    label: String,
+    badge: @Composable () -> Unit,
+    borderAccent: Color,
     amountText: String,
     compact: Boolean,
     modifier: Modifier = Modifier
 ) {
-    val shape = RoundedCornerShape(12.dp)
+    val shape = RoundedCornerShape(14.dp)
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(if (compact) 5.dp else 7.dp),
         modifier = modifier
             .defaultMinSize(minHeight = if (compact) 32.dp else 36.dp)
             .clip(shape)
-            .background(SurfaceCard)
-            .border(1.dp, GlassBorder, shape)
+            .background(Brush.verticalGradient(listOf(SurfaceCardElevated, SurfaceCard)))
+            .border(1.2.dp, borderAccent, shape)
             .padding(
                 horizontal = if (compact) 9.dp else 12.dp,
                 vertical = if (compact) 4.dp else 6.dp
             )
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = label,
-            tint = tint,
-            modifier = Modifier.size(if (compact) 15.dp else 18.dp)
-        )
+        badge()
         Text(
             text = amountText,
             style = CascadeTextStyles.NumericBalance.copy(

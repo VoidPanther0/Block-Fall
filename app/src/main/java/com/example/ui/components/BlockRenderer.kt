@@ -58,19 +58,19 @@ private fun DrawScope.drawModernBevelBlock(
     alpha: Float,
     glowBoost: Float
 ) {
-    val radius = (minOf(w, h) * 0.18f).coerceAtLeast(2.5f)
-    val bevel = (minOf(w, h) * 0.13f).coerceAtLeast(2f)
+    val radius = (minOf(w, h) * 0.20f).coerceAtLeast(2.5f)
+    val bevel = (minOf(w, h) * 0.14f).coerceAtLeast(2f)
 
     if (glowBoost > 0f) {
         drawRoundRect(
-            color = palette.glow.copy(alpha = (0.35f * glowBoost * alpha).coerceIn(0f, 1f)),
-            topLeft = Offset(x - bevel * 0.5f, y - bevel * 0.5f),
-            size = Size(w + bevel, h + bevel),
+            color = palette.glow.copy(alpha = (0.42f * glowBoost * alpha).coerceIn(0f, 1f)),
+            topLeft = Offset(x - bevel * 0.55f, y - bevel * 0.55f),
+            size = Size(w + bevel * 1.1f, h + bevel * 1.1f),
             cornerRadius = CornerRadius(radius * 1.25f, radius * 1.25f)
         )
     }
 
-    // Crisp bottom lip for tactile classic puzzle depth
+    // Crisp outer shadow lip for 3D jewel depth
     drawRoundRect(
         color = palette.shadow.copy(alpha = 0.98f * alpha),
         topLeft = Offset(x, y),
@@ -78,11 +78,12 @@ private fun DrawScope.drawModernBevelBlock(
         cornerRadius = CornerRadius(radius, radius)
     )
 
-    val faceHeight = (h - bevel * 0.52f).coerceAtLeast(1f)
+    val faceHeight = (h - bevel * 0.50f).coerceAtLeast(1f)
+    // Main crystal gem body gradient
     drawRoundRect(
         brush = Brush.verticalGradient(
             colors = listOf(
-                palette.highlight.copy(alpha = 0.92f * alpha),
+                palette.highlight.copy(alpha = 0.94f * alpha),
                 palette.fill.copy(alpha = alpha),
                 palette.shadow.copy(alpha = 0.94f * alpha)
             ),
@@ -94,26 +95,45 @@ private fun DrawScope.drawModernBevelBlock(
         cornerRadius = CornerRadius(radius, radius)
     )
 
-    // Inner jewel sheen reflection lens
+    // Faceted inner crystal prism table
+    val inset = (minOf(w, h) * 0.17f).coerceAtLeast(1.8f)
+    if (w > inset * 2.5f && faceHeight > inset * 2.5f) {
+        drawRoundRect(
+            brush = Brush.verticalGradient(
+                colors = listOf(
+                    palette.fill.copy(alpha = 0.96f * alpha),
+                    palette.highlight.copy(alpha = 0.42f * alpha),
+                    palette.fill.copy(alpha = 0.92f * alpha)
+                ),
+                startY = y + inset,
+                endY = y + faceHeight - inset
+            ),
+            topLeft = Offset(x + inset, y + inset * 0.85f),
+            size = Size(w - inset * 2f, (faceHeight - inset * 1.8f).coerceAtLeast(1f)),
+            cornerRadius = CornerRadius(radius * 0.58f, radius * 0.58f)
+        )
+    }
+
+    // Glossy specular lens across top
     val lensMargin = (minOf(w, h) * 0.12f).coerceAtLeast(1.5f)
     if (w > lensMargin * 3f && faceHeight > lensMargin * 3f) {
         drawRoundRect(
             brush = Brush.verticalGradient(
                 colors = listOf(
-                    Color.White.copy(alpha = 0.32f * alpha),
-                    Color.White.copy(alpha = 0.05f * alpha),
+                    Color.White.copy(alpha = 0.45f * alpha),
+                    Color.White.copy(alpha = 0.08f * alpha),
                     Color.Transparent
                 ),
-                startY = y + lensMargin * 0.5f,
-                endY = y + faceHeight * 0.55f
+                startY = y + lensMargin * 0.45f,
+                endY = y + faceHeight * 0.52f
             ),
-            topLeft = Offset(x + lensMargin, y + lensMargin * 0.5f),
-            size = Size(w - lensMargin * 2f, faceHeight * 0.48f),
+            topLeft = Offset(x + lensMargin, y + lensMargin * 0.45f),
+            size = Size(w - lensMargin * 2f, faceHeight * 0.45f),
             cornerRadius = CornerRadius(radius * 0.7f, radius * 0.7f)
         )
     }
 
-    // Subtle top-left bevel edge highlight
+    // Top-left crystal bevel edge highlight
     val highlightPath = (scratchHighlightPath.get() ?: Path()).apply {
         rewind()
         moveTo(x + radius * 0.55f, y + faceHeight - bevel * 0.65f)
@@ -127,16 +147,16 @@ private fun DrawScope.drawModernBevelBlock(
     }
     drawPath(
         path = highlightPath,
-        color = palette.highlight.copy(alpha = 0.68f * alpha)
+        color = Color.White.copy(alpha = 0.50f * alpha)
     )
 
-    // Clean top edge crisp rim with jewel gloss
+    // Crisp jewel rim
     drawRoundRect(
-        color = Color.White.copy(alpha = 0.36f * alpha),
+        color = Color.White.copy(alpha = 0.44f * alpha),
         topLeft = Offset(x + 0.5f, y + 0.5f),
         size = Size((w - 1f).coerceAtLeast(1f), (faceHeight - 0.5f).coerceAtLeast(1f)),
         cornerRadius = CornerRadius(radius, radius),
-        style = Stroke(width = 1f)
+        style = Stroke(width = 1.1f)
     )
 }
 

@@ -106,12 +106,12 @@ fun PlayerAvatarBadge(
 
     val bgColor = when (avatar) {
         ProfileAvatar.CLASSIC_BLOCK -> SurfaceCard
-        ProfileAvatar.COBALT_SHIELD -> Color(0xFFE0EEFF)
-        ProfileAvatar.EMERALD_GEM -> Color(0xFFE0F7EA)
-        ProfileAvatar.AMBER_CROWN -> Color(0xFFFFF4DC)
-        ProfileAvatar.CORAL_SPARK -> Color(0xFFFFE5E8)
-        ProfileAvatar.VIOLET_ORB -> Color(0xFFF0E8FF)
-        ProfileAvatar.GOOGLE_PHOTO -> Color(0xFFE8F0FE)
+        ProfileAvatar.COBALT_SHIELD -> Color(0xFF102A6B)
+        ProfileAvatar.EMERALD_GEM -> Color(0xFF0A332A)
+        ProfileAvatar.AMBER_CROWN -> Color(0xFF332106)
+        ProfileAvatar.CORAL_SPARK -> Color(0xFF380C1B)
+        ProfileAvatar.VIOLET_ORB -> Color(0xFF27114F)
+        ProfileAvatar.GOOGLE_PHOTO -> Color(0xFF122354)
     }
 
     Box(
@@ -564,3 +564,93 @@ fun SkinCard(
         }
     }
 }
+
+enum class BottomNavTab(val label: String, val icon: ImageVector, val tag: String) {
+    HOME("Home", Icons.Filled.Home, "bottom_nav_home"),
+    MODES("Play", Icons.Filled.GridView, "bottom_nav_modes"),
+    EVENTS("Events", Icons.Filled.AutoAwesome, "bottom_nav_events"),
+    SHOP("Shop", Icons.Filled.ShoppingBag, "bottom_nav_shop"),
+    PROFILE("Profile", Icons.Filled.Person, "bottom_nav_profile")
+}
+
+@Composable
+fun BlockFallBottomNav(
+    selectedTab: BottomNavTab,
+    onSelectTab: (BottomNavTab) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val shape = RoundedCornerShape(22.dp)
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceEvenly,
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(
+                Brush.verticalGradient(
+                    listOf(SurfaceCardElevated, Color(0xFF091233))
+                )
+            )
+            .border(1.2.dp, GlassBorder, shape)
+            .padding(horizontal = 6.dp, vertical = 6.dp)
+            .testTag("block_fall_bottom_nav")
+    ) {
+        BottomNavTab.entries.forEach { tab ->
+            val selected = tab == selectedTab
+            val tint by animateColorAsState(
+                targetValue = if (selected) AccentGold else TextSecondary,
+                label = "nav_tint"
+            )
+            val bgModifier = if (selected) {
+                Modifier
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                AccentCyan.copy(alpha = 0.22f),
+                                AccentPurple.copy(alpha = 0.16f)
+                            )
+                        )
+                    )
+                    .border(1.dp, AccentCyan.copy(alpha = 0.45f), RoundedCornerShape(14.dp))
+            } else {
+                Modifier.clip(RoundedCornerShape(14.dp))
+            }
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+                modifier = Modifier
+                    .weight(1f)
+                    .defaultMinSize(minHeight = 48.dp)
+                    .then(bgModifier)
+                    .clickable(
+                        role = Role.Tab,
+                        onClick = { onSelectTab(tab) }
+                    )
+                    .semantics { this.selected = selected }
+                    .padding(vertical = 4.dp, horizontal = 2.dp)
+                    .testTag(tab.tag)
+            ) {
+                Icon(
+                    imageVector = tab.icon,
+                    contentDescription = tab.label,
+                    tint = tint,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    text = tab.label,
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        fontFamily = OutfitFontFamily,
+                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                        fontSize = 10.sp
+                    ),
+                    color = tint,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+    }
+}
+

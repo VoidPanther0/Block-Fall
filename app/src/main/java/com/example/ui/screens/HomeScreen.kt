@@ -1,5 +1,11 @@
 package com.example.ui.screens
 
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -16,11 +22,14 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Leaderboard
 import androidx.compose.material.icons.filled.PlayArrow
@@ -28,19 +37,17 @@ import androidx.compose.material.icons.filled.Replay
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.ShoppingBag
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.WorkspacePremium
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -50,30 +57,32 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.runtime.getValue
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
+import com.example.game.AchievementsCatalog
 import com.example.game.BlockColor
 import com.example.game.DailyChallengeGenerator
+import com.example.game.DailyMissionsCatalog
 import com.example.ui.GameUiState
 import com.example.ui.components.ArcadeButtonStyle
 import com.example.ui.components.ArcadeTitleLogo
+import com.example.ui.components.BlockFallBottomNav
+import com.example.ui.components.BottomNavTab
 import com.example.ui.components.CascadeScreenContainer
 import com.example.ui.components.PlayerProfileHeader
 import com.example.ui.components.PremiumCard
 import com.example.ui.components.PremiumPrimaryButton
 import com.example.ui.components.drawBevelBlock
+import com.example.ui.theme.AccentCoral
 import com.example.ui.theme.AccentCyan
 import com.example.ui.theme.AccentEmerald
 import com.example.ui.theme.AccentGold
@@ -85,6 +94,7 @@ import com.example.ui.theme.LocalBlockStyle
 import com.example.ui.theme.LocalBoardPalette
 import com.example.ui.theme.OutfitFontFamily
 import com.example.ui.theme.SurfaceCard
+import com.example.ui.theme.SurfaceCardElevated
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
 import com.example.ui.theme.toBoardColors
@@ -105,22 +115,51 @@ fun HomeScreen(
     onOpenLeaderboard: () -> Unit = {},
     onOpenShop: () -> Unit = {},
     onOpenSettings: () -> Unit,
-    onOpenStatistics: () -> Unit
+    onOpenStatistics: () -> Unit,
+    onOpenDailyRewards: () -> Unit = {},
+    onOpenAchievements: () -> Unit = {},
+    onOpenDailyMissions: () -> Unit = {},
+    onOpenEvents: () -> Unit = {}
 ) {
     val savedSummary = state.savedClassicSummary
     val canContinue = savedSummary != null
     val hasCrown = "cosmetic_prism_crown" in state.wallet.unlockedEntitlements
-    val dailySpec = remember {
-        DailyChallengeGenerator.forDateKey(DailyChallengeGenerator.todayDateKey())
+    val todayKey = remember { DailyChallengeGenerator.todayDateKey() }
+    val dailySpec = remember(todayKey) { DailyChallengeGenerator.forDateKey(todayKey) }
+    val canClaimDailyReward = state.dailyRewardProgress.canClaimToday(todayKey)
+    val claimableMissions = remember(state.statistics, state.dailyMissionSnapshot, todayKey) {
+        val snap = state.dailyMissionSnapshot.anchoredTo(todayKey, state.statistics)
+        DailyMissionsCatalog.missions.count { m ->
+            m.id !in snap.claimedMissionIds && m.progressProvider(state.statistics, snap) >= m.target
+        }
+    }
+    val claimableAchievements = remember(state.statistics, state.challengeProgress, state.claimedAchievementIds) {
+        AchievementsCatalog.items.count { ach ->
+            ach.id !in state.claimedAchievementIds && ach.progressProvider(state.statistics, state.challengeProgress) >= ach.target
+        }
     }
 
     CascadeScreenContainer(
         maxContentWidth = 960.dp,
-        modifier = Modifier.testTag("home_screen")
+        modifier = Modifier.testTag("home_screen"),
+        footerBar = {
+            BlockFallBottomNav(
+                selectedTab = BottomNavTab.HOME,
+                onSelectTab = { tab ->
+                    when (tab) {
+                        BottomNavTab.HOME -> Unit
+                        BottomNavTab.MODES -> onOpenModes()
+                        BottomNavTab.EVENTS -> onOpenEvents()
+                        BottomNavTab.SHOP -> onOpenShop()
+                        BottomNavTab.PROFILE -> onOpenStatistics()
+                    }
+                }
+            )
+        }
     ) {
         Column(
             modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             PlayerProfileHeader(
                 playerName = playerName,
@@ -150,7 +189,7 @@ fun HomeScreen(
                     modifier = Modifier
                         .fillMaxSize()
                         .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     if (isWide) {
                         Row(
@@ -177,11 +216,18 @@ fun HomeScreen(
                                     onClick = onPlayDaily
                                 )
                                 HomeActionHub(
+                                    canClaimDailyReward = canClaimDailyReward,
+                                    claimableMissions = claimableMissions,
+                                    claimableAchievements = claimableAchievements,
                                     onOpenModes = onOpenModes,
                                     onOpenChallenges = onOpenChallenges,
                                     onOpenShop = onOpenShop,
                                     onOpenSettings = onOpenSettings,
-                                    onOpenStatistics = onOpenStatistics
+                                    onOpenStatistics = onOpenStatistics,
+                                    onOpenDailyRewards = onOpenDailyRewards,
+                                    onOpenAchievements = onOpenAchievements,
+                                    onOpenDailyMissions = onOpenDailyMissions,
+                                    onOpenEvents = onOpenEvents
                                 )
                             }
                         }
@@ -200,11 +246,18 @@ fun HomeScreen(
                             onClick = onPlayDaily
                         )
                         HomeActionHub(
+                            canClaimDailyReward = canClaimDailyReward,
+                            claimableMissions = claimableMissions,
+                            claimableAchievements = claimableAchievements,
                             onOpenModes = onOpenModes,
                             onOpenChallenges = onOpenChallenges,
                             onOpenShop = onOpenShop,
                             onOpenSettings = onOpenSettings,
-                            onOpenStatistics = onOpenStatistics
+                            onOpenStatistics = onOpenStatistics,
+                            onOpenDailyRewards = onOpenDailyRewards,
+                            onOpenAchievements = onOpenAchievements,
+                            onOpenDailyMissions = onOpenDailyMissions,
+                            onOpenEvents = onOpenEvents
                         )
                     }
 
@@ -220,7 +273,6 @@ private val MiniWheelColors = listOf(
     Color(0xFFFF5252), Color(0xFFEC407A), Color(0xFF3D8BFF), Color(0xFFFF8F00)
 )
 
-/** Lucky Wheel header shortcut: custom-drawn colorful spinning prize wheel with spin badge. */
 @Composable
 private fun LuckyWheelHeaderButton(
     spinPoints: Int,
@@ -262,7 +314,6 @@ private fun LuckyWheelHeaderButton(
             val rim = outer * 0.14f
             val wheelRadius = outer - rim
 
-            // Outer golden bezel
             drawCircle(
                 brush = Brush.linearGradient(listOf(Color(0xFFFFE57F), Color(0xFFFFA000))),
                 radius = outer,
@@ -270,7 +321,6 @@ private fun LuckyWheelHeaderButton(
             )
             drawCircle(color = Color(0xFF3A1B7A), radius = wheelRadius + 1.5f, center = center)
 
-            // Rotating rainbow slices
             val sweep = 360f / MiniWheelColors.size
             rotate(spinDeg, pivot = center) {
                 MiniWheelColors.forEachIndexed { idx, sliceColor ->
@@ -294,11 +344,9 @@ private fun LuckyWheelHeaderButton(
                 }
             }
 
-            // Center hub
             drawCircle(Color(0xFFFFD54F), radius = wheelRadius * 0.30f, center = center)
             drawCircle(Color(0xFF3A1B7A), radius = wheelRadius * 0.16f, center = center)
 
-            // Top pointer
             val pointer = Path().apply {
                 moveTo(center.x, center.y - wheelRadius + 3f)
                 lineTo(center.x - 5.5f, center.y - outer - 2f)
@@ -314,9 +362,9 @@ private fun LuckyWheelHeaderButton(
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .size(19.dp)
-                .clip(androidx.compose.foundation.shape.CircleShape)
-                .background(if (spinPoints > 0) Color(0xFFFF3D57) else Color(0xFF64748B))
-                .border(1.5.dp, Color.White, androidx.compose.foundation.shape.CircleShape)
+                .clip(CircleShape)
+                .background(if (spinPoints > 0) Color(0xFFFF3D57) else Color(0xFF475569))
+                .border(1.5.dp, Color.White, CircleShape)
         ) {
             Text(
                 text = "$spinPoints",
@@ -341,56 +389,57 @@ private fun HomeHeroSection(
     val boardWellColor = LocalBoardPalette.current.toBoardColors().wellTop
 
     PremiumCard(
-        cornerRadius = 18.dp,
-        borderColor = GlassBorder,
+        cornerRadius = 20.dp,
+        borderColor = AccentGold.copy(alpha = 0.45f),
         modifier = modifier.fillMaxWidth()
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(18.dp)
+                .padding(horizontal = 16.dp, vertical = 14.dp)
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(14.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 HeroCascadeCluster(
                     modifier = Modifier
-                        .size(72.dp)
+                        .size(64.dp)
                         .clip(RoundedCornerShape(14.dp))
                         .background(boardWellColor)
-                        .padding(8.dp)
+                        .border(1.2.dp, AccentCyan.copy(alpha = 0.45f), RoundedCornerShape(14.dp))
+                        .padding(7.dp)
                 )
 
                 Column(
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                     modifier = Modifier.weight(1f)
                 ) {
-                    ArcadeTitleLogo(fontSize = 28.sp)
+                    ArcadeTitleLogo(fontSize = 26.sp)
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                         modifier = Modifier
                             .clip(RoundedCornerShape(8.dp))
                             .background(BoardWellBg)
-                            .border(1.dp, GlassBorder, RoundedCornerShape(8.dp))
-                            .padding(horizontal = 10.dp, vertical = 4.dp)
+                            .border(1.dp, AccentGold.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
+                            .padding(horizontal = 10.dp, vertical = 3.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Filled.EmojiEvents,
                             contentDescription = null,
                             tint = AccentGold,
-                            modifier = Modifier.size(15.dp)
+                            modifier = Modifier.size(14.dp)
                         )
                         Text(
                             text = "Best: $bestScore",
                             style = MaterialTheme.typography.labelLarge.copy(
                                 fontFamily = JetBrainsMonoFontFamily,
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 12.5.sp
+                                fontSize = 12.sp
                             ),
                             color = TextPrimary,
                             maxLines = 1
@@ -399,15 +448,14 @@ private fun HomeHeroSection(
                 }
             }
 
-            // Primary focus: unmistakable classic Play button.
             PremiumPrimaryButton(
                 text = stringResource(R.string.nav_play),
                 icon = Icons.Filled.PlayArrow,
-                style = ArcadeButtonStyle.GREEN,
+                style = ArcadeButtonStyle.GOLD_BLUE,
                 onClick = onPlayNewClassic,
-                height = 58.dp,
-                cornerRadius = 14.dp,
-                fontSize = 19.sp,
+                height = 54.dp,
+                cornerRadius = 27.dp,
+                fontSize = 18.sp,
                 testTag = "home_play_button",
                 modifier = Modifier.fillMaxWidth()
             )
@@ -416,11 +464,11 @@ private fun HomeHeroSection(
                 PremiumPrimaryButton(
                     text = "Continue · ${savedScore ?: 0} pts (${savedMoves ?: 0} moves)",
                     icon = Icons.Filled.Replay,
-                    style = ArcadeButtonStyle.SLATE,
+                    style = ArcadeButtonStyle.GOLD_PURPLE,
                     onClick = onContinueClassic,
                     height = 48.dp,
-                    cornerRadius = 12.dp,
-                    fontSize = 14.sp,
+                    cornerRadius = 24.dp,
+                    fontSize = 13.5.sp,
                     testTag = "home_continue_button",
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -469,16 +517,16 @@ private fun DailyRewardStrip(
     targetScore: Int,
     onClick: () -> Unit
 ) {
-    val shape = RoundedCornerShape(14.dp)
+    val shape = RoundedCornerShape(16.dp)
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(2.dp, shape, clip = false)
+            .shadow(4.dp, shape, clip = false)
             .clip(shape)
-            .background(SurfaceCard)
-            .border(1.dp, GlassBorder, shape)
+            .background(Brush.verticalGradient(listOf(SurfaceCardElevated, SurfaceCard)))
+            .border(1.2.dp, AccentPurple.copy(alpha = 0.65f), shape)
             .clickable(onClick = onClick)
             .padding(horizontal = 14.dp, vertical = 12.dp)
             .testTag("home_daily_button")
@@ -486,9 +534,10 @@ private fun DailyRewardStrip(
         Box(
             contentAlignment = Alignment.Center,
             modifier = Modifier
-                .size(38.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(AccentPurple.copy(alpha = 0.12f))
+                .size(40.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(AccentPurple.copy(alpha = 0.20f))
+                .border(1.dp, AccentPurple.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
         ) {
             Icon(
                 imageVector = Icons.Filled.CalendarToday,
@@ -499,7 +548,7 @@ private fun DailyRewardStrip(
         }
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = "Daily Puzzle & Rewards",
+                text = "Daily Gravity Puzzle",
                 style = MaterialTheme.typography.titleMedium.copy(
                     fontFamily = OutfitFontFamily,
                     fontWeight = FontWeight.Bold,
@@ -510,7 +559,7 @@ private fun DailyRewardStrip(
                 overflow = TextOverflow.Ellipsis
             )
             Text(
-                text = "$dailyTitle · Target $targetScore · Earn Gold & Gems",
+                text = "$dailyTitle · Target $targetScore · Win Gold & Gems",
                 style = MaterialTheme.typography.bodySmall,
                 color = TextSecondary,
                 maxLines = 1,
@@ -520,21 +569,79 @@ private fun DailyRewardStrip(
         Icon(
             imageVector = Icons.Filled.PlayArrow,
             contentDescription = "Play Daily Puzzle",
-            tint = AccentPurple,
-            modifier = Modifier.size(20.dp)
+            tint = AccentGold,
+            modifier = Modifier.size(22.dp)
         )
     }
 }
 
 @Composable
 private fun HomeActionHub(
+    canClaimDailyReward: Boolean,
+    claimableMissions: Int,
+    claimableAchievements: Int,
     onOpenModes: () -> Unit,
     onOpenChallenges: () -> Unit,
     onOpenShop: () -> Unit,
     onOpenSettings: () -> Unit,
-    onOpenStatistics: () -> Unit
+    onOpenStatistics: () -> Unit,
+    onOpenDailyRewards: () -> Unit,
+    onOpenAchievements: () -> Unit,
+    onOpenDailyMissions: () -> Unit,
+    onOpenEvents: () -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            HomeHubTile(
+                title = "Daily Rewards",
+                subtitle = if (canClaimDailyReward) "Reward ready!" else "7-day calendar",
+                icon = Icons.Filled.WorkspacePremium,
+                accent = AccentGold,
+                badgeCount = if (canClaimDailyReward) 1 else 0,
+                onClick = onOpenDailyRewards,
+                testTag = "home_daily_rewards_button",
+                modifier = Modifier.weight(1f)
+            )
+            HomeHubTile(
+                title = "Missions",
+                subtitle = "Daily goals & bonuses",
+                icon = Icons.Filled.Flag,
+                accent = AccentEmerald,
+                badgeCount = claimableMissions,
+                onClick = onOpenDailyMissions,
+                testTag = "home_missions_button",
+                modifier = Modifier.weight(1f)
+            )
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            HomeHubTile(
+                title = "Achievements",
+                subtitle = "Trophies & medals",
+                icon = Icons.Filled.EmojiEvents,
+                accent = AccentGold,
+                badgeCount = claimableAchievements,
+                onClick = onOpenAchievements,
+                testTag = "home_achievements_button",
+                modifier = Modifier.weight(1f)
+            )
+            HomeHubTile(
+                title = "Crystal Event",
+                subtitle = "Limited-time rewards",
+                icon = Icons.Filled.AutoAwesome,
+                accent = AccentPurple,
+                onClick = onOpenEvents,
+                testTag = "home_events_button",
+                modifier = Modifier.weight(1f)
+            )
+        }
+
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -603,56 +710,81 @@ private fun HomeHubTile(
     accent: Color,
     onClick: () -> Unit,
     testTag: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    badgeCount: Int = 0
 ) {
-    val shape = RoundedCornerShape(14.dp)
-    Column(
-        verticalArrangement = Arrangement.spacedBy(6.dp),
-        modifier = modifier
-            .shadow(2.dp, shape, clip = false)
-            .clip(shape)
-            .background(SurfaceCard)
-            .border(1.dp, GlassBorder, shape)
-            .clickable(onClick = onClick)
-            .padding(14.dp)
-            .testTag(testTag)
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
+    val shape = RoundedCornerShape(16.dp)
+    Box(modifier = modifier) {
+        Column(
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .shadow(4.dp, shape, clip = false)
+                .clip(shape)
+                .background(Brush.verticalGradient(listOf(SurfaceCardElevated, SurfaceCard)))
+                .border(1.1.dp, GlassBorder, shape)
+                .clickable(onClick = onClick)
+                .padding(13.dp)
+                .testTag(testTag)
         ) {
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier
-                    .size(34.dp)
-                    .clip(RoundedCornerShape(9.dp))
-                    .background(accent.copy(alpha = 0.14f))
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(9.dp)
             ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = accent,
-                    modifier = Modifier.size(19.dp)
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .size(34.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(accent.copy(alpha = 0.16f))
+                        .border(1.dp, accent.copy(alpha = 0.42f), RoundedCornerShape(10.dp))
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = accent,
+                        modifier = Modifier.size(19.dp)
+                    )
+                }
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontFamily = OutfitFontFamily,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.5.sp
+                    ),
+                    color = TextPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
             Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontFamily = OutfitFontFamily,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 15.sp
-                ),
-                color = TextPrimary,
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = TextSecondary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
         }
-        Text(
-            text = subtitle,
-            style = MaterialTheme.typography.bodySmall,
-            color = TextSecondary,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
+
+        if (badgeCount > 0) {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(6.dp)
+                    .size(20.dp)
+                    .clip(CircleShape)
+                    .background(AccentCoral)
+                    .border(1.5.dp, Color.White, CircleShape)
+            ) {
+                Text(
+                    text = "$badgeCount",
+                    color = Color.White,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.ExtraBold
+                )
+            }
+        }
     }
 }

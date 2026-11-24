@@ -85,9 +85,9 @@ fun TopGameBar(
     onBack: (() -> Unit)? = null
 ) {
     val modeBadgeText = when {
-        state.isDailyChallenge -> "DAILY GRAVITY"
-        state.mode == GameMode.CLASSIC -> stringResource(R.string.mode_classic)
-        else -> "Level ${state.currentChallengeLevel.levelNumber}"
+        state.isDailyChallenge -> "DAILY"
+        state.mode == GameMode.CLASSIC -> stringResource(R.string.mode_classic).uppercase()
+        else -> "LVL ${state.currentChallengeLevel.levelNumber}"
     }
     val modeAccent = when {
         state.isDailyChallenge -> AccentPurple
@@ -110,38 +110,68 @@ fun TopGameBar(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
                         .size(48.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(SurfaceCard)
-                        .border(1.dp, GlassBorder, RoundedCornerShape(12.dp))
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(
+                                    com.example.ui.theme.PurpleBtnTop,
+                                    com.example.ui.theme.PurpleBtnBottom
+                                )
+                            )
+                        )
+                        .border(1.2.dp, Color.White.copy(alpha = 0.25f), RoundedCornerShape(14.dp))
                         .clickable(onClick = onBack)
                         .testTag("gameplay_back_button")
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
                         contentDescription = stringResource(R.string.back_label),
-                        tint = TextPrimary,
+                        tint = Color.White,
                         modifier = Modifier.size(26.dp)
                     )
                 }
+            }
+
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(SurfaceCardElevated)
+                    .border(1.dp, modeAccent.copy(alpha = 0.55f), RoundedCornerShape(12.dp))
+                    .padding(horizontal = 10.dp, vertical = 6.dp)
+            ) {
+                Text(
+                    text = modeBadgeText,
+                    style = MaterialTheme.typography.labelMedium.copy(
+                        fontFamily = OutfitFontFamily,
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 11.sp,
+                        letterSpacing = 0.8.sp
+                    ),
+                    color = modeAccent,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
         }
 
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(2.dp),
-            modifier = Modifier
-                .clip(RoundedCornerShape(12.dp))
-                .background(SurfaceCard)
-                .border(1.dp, GlassBorder, RoundedCornerShape(12.dp))
-                .padding(horizontal = 4.dp)
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
+            CurrencyWallet(
+                goldCoins = state.wallet.goldCoins,
+                diamonds = state.wallet.diamonds,
+                compact = true
+            )
+
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
                     .size(48.dp)
-                    .padding(5.dp)
-                    .clip(RoundedCornerShape(10.dp))
+                    .clip(RoundedCornerShape(14.dp))
                     .background(Brush.verticalGradient(listOf(BlueBtnTop, BlueBtnBottom)))
+                    .border(1.2.dp, Color.White.copy(alpha = 0.30f), RoundedCornerShape(14.dp))
                     .clickable(onClick = onPause)
                     .testTag("pause_button")
             ) {
@@ -149,7 +179,7 @@ fun TopGameBar(
                     imageVector = Icons.Filled.Pause,
                     contentDescription = stringResource(R.string.pause),
                     tint = Color.White,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(22.dp)
                 )
             }
         }
@@ -411,16 +441,16 @@ private fun StudioHudCard(
     badgeText: String? = null,
     valueColor: Color = TextPrimary
 ) {
-    val shape = RoundedCornerShape(14.dp)
+    val shape = RoundedCornerShape(16.dp)
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(9.dp),
         modifier = modifier
-            .shadow(2.dp, shape, clip = false)
+            .shadow(4.dp, shape, clip = false)
             .clip(shape)
-            .background(SurfaceCard)
+            .background(Brush.verticalGradient(listOf(SurfaceCardElevated, SurfaceCard)))
             .border(
-                width = if (highlight) 1.5.dp else 1.dp,
+                width = if (highlight) 1.5.dp else 1.1.dp,
                 color = if (highlight) AccentGold else GlassBorder,
                 shape = shape
             )

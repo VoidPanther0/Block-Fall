@@ -95,19 +95,31 @@ fun GameBoard(
 
     val isInvalidHover = dragState != null && dragState.hoverAnchor != null && !dragState.isHoverValid
     val rimColor = when {
-        isInvalidHover -> InvalidTint.copy(alpha = 0.9f)
-        hasSelectedSlot && dragState == null -> AccentCyan.copy(alpha = 0.82f)
+        isInvalidHover -> InvalidTint.copy(alpha = 0.92f)
+        hasSelectedSlot && dragState == null -> AccentCyan.copy(alpha = 0.9f)
         else -> boardTheme.rim
     }
 
     Box(
         modifier = modifier
             .aspectRatio(1f)
-            .shadow(4.dp, boardShape, clip = false)
+            .shadow(10.dp, boardShape, clip = false)
             .clip(boardShape)
+            .background(
+                Brush.verticalGradient(
+                    listOf(
+                        rimColor.copy(alpha = 0.55f),
+                        Color(0xFF0A163D),
+                        rimColor.copy(alpha = 0.38f)
+                    )
+                )
+            )
+            .border(2.2.dp, rimColor, boardShape)
+            .padding(4.dp)
+            .clip(RoundedCornerShape((boardCorner - 3.dp).coerceAtLeast(6.dp)))
             .background(boardBrush)
-            .border(2.dp, rimColor, boardShape)
-            .padding(8.dp)
+            .border(1.dp, AccentGold.copy(alpha = 0.35f), RoundedCornerShape((boardCorner - 3.dp).coerceAtLeast(6.dp)))
+            .padding(6.dp)
             .testTag("game_board")
             .semantics {
                 contentDescription = "8 by 8 Block Fall puzzle board"

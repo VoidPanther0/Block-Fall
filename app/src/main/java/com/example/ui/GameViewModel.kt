@@ -11,6 +11,7 @@ import com.example.ads.AdState
 import com.example.ads.RewardedAdManager
 import com.example.audio.SoundManager
 import com.example.data.GameRepository
+import com.example.game.AchievementsCatalog
 import com.example.game.BlockColor
 import com.example.game.BlockStyle
 import com.example.game.Board
@@ -20,6 +21,11 @@ import com.example.game.ChallengeLevel
 import com.example.game.ChallengeLevelProgress
 import com.example.game.ChallengeLevels
 import com.example.game.DailyChallengeGenerator
+import com.example.game.DailyMissionSnapshot
+import com.example.game.DailyMissionsCatalog
+import com.example.game.DailyProgress
+import com.example.game.DailyRewardProgress
+import com.example.game.DailyRewardsCatalog
 import com.example.game.EconomyEngine
 import com.example.game.EconomyMutationResult
 import com.example.game.FallingBlockMove
@@ -142,7 +148,12 @@ data class GameUiState(
     val continueOfferUsedThisRun: Boolean = false,
     val showRulesDialog: Boolean = false,
     /** True while the seeded Daily Gravity puzzle is being played. UI-only routing flag. */
-    val isDailyChallenge: Boolean = false
+    val isDailyChallenge: Boolean = false,
+    val dailyRewardProgress: DailyRewardProgress = DailyRewardProgress(),
+    val dailyMissionSnapshot: DailyMissionSnapshot = DailyMissionSnapshot(),
+    val claimedAchievementIds: Set<String> = emptySet(),
+    val selectedLanguage: String = "English",
+    val dailyProgress: DailyProgress = DailyProgress()
 ) {
     val movesRemaining: Int
         get() = (currentChallengeLevel.moveLimit - movesPlayed).coerceAtLeast(0)
@@ -282,6 +293,12 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 null
             }
 
+            val todayKey = DailyChallengeGenerator.todayDateKey()
+            val anchoredMissions = saved.dailyMissionSnapshot.anchoredTo(todayKey, saved.statistics)
+            if (anchoredMissions != saved.dailyMissionSnapshot) {
+                runCatching { repository.updateDailyMissionSnapshot(anchoredMissions) }
+            }
+
             if (validSaved != null) {
                 nextIdCounter = validSaved.nextIdCounter.coerceAtLeast(100L)
                 val mergedStats = saved.statistics.copy(
@@ -308,7 +325,12 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                         wallet = saved.wallet,
                         playerDisplayName = saved.playerDisplayName,
                         profileAvatarId = saved.profileAvatarId,
-                        savedClassicSummary = validSaved
+                        savedClassicSummary = validSaved,
+                        dailyRewardProgress = saved.dailyRewardProgress,
+                        dailyMissionSnapshot = anchoredMissions,
+                        claimedAchievementIds = saved.claimedAchievementIds,
+                        selectedLanguage = saved.selectedLanguage,
+                        dailyProgress = saved.dailyProgress.forDate(todayKey)
                     )
                 }
             } else {
@@ -332,7 +354,12 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                         wallet = saved.wallet,
                         playerDisplayName = saved.playerDisplayName,
                         profileAvatarId = saved.profileAvatarId,
-                        savedClassicSummary = null
+                        savedClassicSummary = null,
+                        dailyRewardProgress = saved.dailyRewardProgress,
+                        dailyMissionSnapshot = anchoredMissions,
+                        claimedAchievementIds = saved.claimedAchievementIds,
+                        selectedLanguage = saved.selectedLanguage,
+                        dailyProgress = saved.dailyProgress.forDate(todayKey)
                     )
                 }
             }
@@ -448,6 +475,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         pieceGenerator.reseed(spec.seed)
         activeDailyKey = todayKey
         comboStreak = 0
+        _uiState.update { it.copy(dailyProgress = it.dailyProgress.withAttemptStarted(todayKey)) }
         viewModelScope.launch {
             repository.updateDailyProgress { it.withAttemptStarted(todayKey) }
         }
@@ -689,9 +717,127 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                     visualPhase = BoardVisualPhase.Idle,
                     dragState = null,
                     floatingBanner = null,
-                    latestParticles = emptyList()
+                    latestParticles = emptyList(),
+                    dailyRewardProgress = DailyRewardProgress(),
+                    dailyMissionSnapshot = DailyMissionSnapshot(dateKey = DailyChallengeGenerator.todayDateKey()),
+                    claimedAchievementIds = emptySet(),
+                    dailyProgress = DailyProgress()
                 )
             }
+        }
+    }
+
+    fun setLanguage(language: String) {
+        _uiState.update { it.copy(selectedLanguage = language) }
+        viewModelScope.launch { repository.updateSelectedLanguage(language) }
+    }
+
+    fun claimDailyReward() {
+        val state = _uiState.value
+        val todayKey = DailyChallengeGenerator.todayDateKey()
+        val progress = state.dailyRewardProgress
+        if (!progress.canClaimToday(todayKey)) return
+
+        val dayIndex = progress.currentCycleDay()
+        val tier = DailyRewardsCatalog.tiers.firstOrNull { it.day == dayIndex } ?: return
+        val txId = "daily_reward_${todayKey}_d${tier.day}_${UUID.randomUUID()}"
+        val baseWallet = if (tier.gold > 0 || tier.diamonds > 0) {
+            val res = EconomyEngine.creditReward(
+                wallet = state.wallet,
+                goldDelta = tier.gold,
+                diamondDelta = tier.diamonds,
+                transactionId = txId,
+                reason = "Daily Reward Day ${tier.day}"
+            )
+            if (res is EconomyMutationResult.Success) res.updatedWallet else state.wallet
+        } else {
+            state.wallet
+        }
+        val updatedWallet = baseWallet.copy(
+            shuffleCount = (baseWallet.shuffleCount + tier.shuffleBoosters).coerceAtMost(PlayerWallet.MAX_BOOSTER_STACK)
+        )
+        val updatedProgress = progress.copy(
+            claimedDaysCount = progress.claimedDaysCount + 1,
+            lastClaimedDateKey = todayKey
+        )
+        soundManager.playLevelComplete()
+        haptics.perform(com.example.audio.HapticEvent.CLEAR)
+        _economyMessage.value = "Claimed Day ${tier.day}: ${tier.title}!"
+        _uiState.update {
+            it.copy(
+                wallet = updatedWallet,
+                dailyRewardProgress = updatedProgress
+            )
+        }
+        viewModelScope.launch {
+            repository.updateWallet(updatedWallet)
+            repository.updateDailyRewardProgress(updatedProgress)
+        }
+    }
+
+    fun claimDailyMission(missionId: String) {
+        val state = _uiState.value
+        val todayKey = DailyChallengeGenerator.todayDateKey()
+        val snapshot = state.dailyMissionSnapshot.anchoredTo(todayKey, state.statistics)
+        if (missionId in snapshot.claimedMissionIds) return
+        val mission = DailyMissionsCatalog.missions.firstOrNull { it.id == missionId } ?: return
+        val progress = mission.progressProvider(state.statistics, snapshot)
+        if (progress < mission.target) return
+
+        val txId = "daily_mission_${todayKey}_${mission.id}_${UUID.randomUUID()}"
+        val res = EconomyEngine.creditReward(
+            wallet = state.wallet,
+            goldDelta = mission.rewardGold,
+            diamondDelta = mission.rewardDiamonds,
+            transactionId = txId,
+            reason = "Daily Mission: ${mission.title}"
+        )
+        val updatedWallet = if (res is EconomyMutationResult.Success) res.updatedWallet else state.wallet
+        val updatedSnapshot = snapshot.copy(claimedMissionIds = snapshot.claimedMissionIds + mission.id)
+        soundManager.playGreat()
+        haptics.perform(com.example.audio.HapticEvent.CLEAR)
+        _economyMessage.value = "Mission complete: ${mission.title}!"
+        _uiState.update {
+            it.copy(
+                wallet = updatedWallet,
+                dailyMissionSnapshot = updatedSnapshot
+            )
+        }
+        viewModelScope.launch {
+            repository.updateWallet(updatedWallet)
+            repository.updateDailyMissionSnapshot(updatedSnapshot)
+        }
+    }
+
+    fun claimAchievement(achievementId: String) {
+        val state = _uiState.value
+        if (achievementId in state.claimedAchievementIds) return
+        val ach = AchievementsCatalog.items.firstOrNull { it.id == achievementId } ?: return
+        val progress = ach.progressProvider(state.statistics, state.challengeProgress)
+        if (progress < ach.target) return
+
+        val txId = "achievement_${ach.id}_${UUID.randomUUID()}"
+        val res = EconomyEngine.creditReward(
+            wallet = state.wallet,
+            goldDelta = ach.rewardGold,
+            diamondDelta = ach.rewardDiamonds,
+            transactionId = txId,
+            reason = "Achievement: ${ach.title}"
+        )
+        val updatedWallet = if (res is EconomyMutationResult.Success) res.updatedWallet else state.wallet
+        val updatedClaimed = state.claimedAchievementIds + ach.id
+        soundManager.playLevelComplete()
+        haptics.perform(com.example.audio.HapticEvent.PERFECT)
+        _economyMessage.value = "Unlocked ${ach.title}!"
+        _uiState.update {
+            it.copy(
+                wallet = updatedWallet,
+                claimedAchievementIds = updatedClaimed
+            )
+        }
+        viewModelScope.launch {
+            repository.updateWallet(updatedWallet)
+            repository.updateClaimedAchievements(updatedClaimed)
         }
     }
 
@@ -1490,20 +1636,27 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             state.challengeProgress
         }
 
+        val dailyWonAdded = if (state.isDailyChallenge && nextStatus == GameStatus.CHALLENGE_WON) 1 else 0
         val updatedStats = state.statistics.copy(
             totalBlocksPlaced = state.statistics.totalBlocksPlaced + blocksPlaced,
             totalLinesCleared = state.statistics.totalLinesCleared + turn.totalLinesInTurn,
             totalCascadesTriggered = state.statistics.totalCascadesTriggered + cascadesInTurn,
             maxCascadeDepth = maxOf(state.statistics.maxCascadeDepth, maxDepthInTurn),
             fullBoardClears = state.statistics.fullBoardClears + fullClearAdded,
-            dailyCompletedCount = state.statistics.dailyCompletedCount +
-                if (state.isDailyChallenge && nextStatus == GameStatus.CHALLENGE_WON) 1 else 0,
+            dailyCompletedCount = state.statistics.dailyCompletedCount + dailyWonAdded,
             classicBestScore = maxOf(
                 state.statistics.classicBestScore,
                 if (state.mode == GameMode.CLASSIC) turn.finalScore else 0
             )
         )
         val rank = computeProgression(updatedStats)
+        val todayKey = DailyChallengeGenerator.todayDateKey()
+        val anchoredMissions = state.dailyMissionSnapshot.anchoredTo(todayKey, state.statistics)
+        val updatedDailyProgress = if (isDaily && (nextStatus == GameStatus.CHALLENGE_WON || nextStatus == GameStatus.CHALLENGE_LOST)) {
+            state.dailyProgress.withResult(activeDailyKey!!, turn.finalScore, nextStatus == GameStatus.CHALLENGE_WON)
+        } else {
+            state.dailyProgress
+        }
 
         _visualPhase.value = BoardVisualPhase.Idle
         _uiState.update {
@@ -1520,6 +1673,8 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 challengeProgress = updatedChallengeMap,
                 statistics = updatedStats,
                 playerRank = rank,
+                dailyMissionSnapshot = anchoredMissions,
+                dailyProgress = updatedDailyProgress,
                 showContinueOffer = triggerContinueOffer,
                 continueCountdownSeconds = if (triggerContinueOffer) CONTINUE_COUNTDOWN_SECONDS else it.continueCountdownSeconds,
                 continueOfferUsedThisRun = it.continueOfferUsedThisRun || triggerContinueOffer
@@ -1541,12 +1696,16 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         viewModelScope.launch {
+            if (anchoredMissions != state.dailyMissionSnapshot) {
+                repository.updateDailyMissionSnapshot(anchoredMissions)
+            }
             repository.recordTurnStatistics(
                 blocksPlaced = blocksPlaced,
                 linesCleared = turn.totalLinesInTurn,
                 cascadesTriggered = cascadesInTurn,
                 maxDepthInTurn = maxDepthInTurn,
-                fullClearAdded = fullClearAdded
+                fullClearAdded = fullClearAdded,
+                dailyWonAdded = dailyWonAdded
             )
             if (state.mode == GameMode.CLASSIC) {
                 repository.updateClassicBestScore(turn.finalScore)

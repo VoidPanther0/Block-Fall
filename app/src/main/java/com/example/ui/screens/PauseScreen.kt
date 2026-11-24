@@ -17,12 +17,16 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -34,6 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -45,16 +50,21 @@ import com.example.ui.GameUiState
 import com.example.ui.components.ArcadeButtonStyle
 import com.example.ui.components.CascadeScreenContainer
 import com.example.ui.components.FloatingModalBadge
+import com.example.ui.components.GoldMetallicBanner
 import com.example.ui.components.PremiumCard
 import com.example.ui.components.PremiumPrimaryButton
 import com.example.ui.components.RestartConfirmationDialog
+import com.example.ui.theme.AccentCyan
 import com.example.ui.theme.AccentGold
+import com.example.ui.theme.AccentPurple
 import com.example.ui.theme.BlueBtnBottom
 import com.example.ui.theme.BlueBtnTop
 import com.example.ui.theme.BoardWellBg
 import com.example.ui.theme.GlassBorder
 import com.example.ui.theme.JetBrainsMonoFontFamily
 import com.example.ui.theme.OutfitFontFamily
+import com.example.ui.theme.SwitchTrackOff
+import com.example.ui.theme.SwitchTrackOn
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
 
@@ -63,7 +73,9 @@ fun PauseScreen(
     state: GameUiState,
     onResume: () -> Unit,
     onRestartConfirmed: () -> Unit,
-    onExitToHomeConfirmed: () -> Unit
+    onExitToHomeConfirmed: () -> Unit,
+    onToggleSound: (Boolean) -> Unit = {},
+    onToggleMusic: (Boolean) -> Unit = {}
 ) {
     var showRestartConfirm by remember { mutableStateOf(false) }
 
@@ -85,7 +97,8 @@ fun PauseScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 PremiumCard(
-                    cornerRadius = 18.dp,
+                    cornerRadius = 22.dp,
+                    borderColor = AccentGold.copy(alpha = 0.5f),
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 34.dp)
@@ -95,17 +108,9 @@ fun PauseScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(start = 22.dp, end = 22.dp, top = 46.dp, bottom = 22.dp)
+                            .padding(start = 22.dp, end = 22.dp, top = 48.dp, bottom = 22.dp)
                     ) {
-                        Text(
-                            text = "Game Paused",
-                            style = MaterialTheme.typography.headlineMedium.copy(
-                                fontFamily = OutfitFontFamily,
-                                fontWeight = FontWeight.ExtraBold,
-                                fontSize = 25.sp
-                            ),
-                            color = TextPrimary
-                        )
+                        GoldMetallicBanner(text = "PAUSED", isPurple = true)
 
                         Text(
                             text = when {
@@ -120,15 +125,40 @@ fun PauseScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
+                                .clip(RoundedCornerShape(14.dp))
                                 .background(BoardWellBg)
-                                .border(1.dp, GlassBorder, RoundedCornerShape(12.dp))
+                                .border(1.dp, GlassBorder, RoundedCornerShape(14.dp))
                                 .padding(vertical = 10.dp, horizontal = 8.dp),
                             horizontalArrangement = Arrangement.SpaceEvenly
                         ) {
                             PauseStatChip("Score", "${state.score}")
                             PauseStatChip("Lines", "${state.totalLinesCleared}")
                             PauseStatChip("Moves", "${state.movesPlayed}")
+                        }
+
+                        // Sound and Music quick toggles
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            PauseAudioToggle(
+                                label = "Sound",
+                                icon = Icons.AutoMirrored.Filled.VolumeUp,
+                                checked = state.settings.soundEnabled,
+                                accent = AccentCyan,
+                                onCheckedChange = onToggleSound,
+                                testTag = "pause_sound_switch",
+                                modifier = Modifier.weight(1f)
+                            )
+                            PauseAudioToggle(
+                                label = "Music",
+                                icon = Icons.Filled.MusicNote,
+                                checked = state.settings.musicEnabled,
+                                accent = AccentPurple,
+                                onCheckedChange = onToggleMusic,
+                                testTag = "pause_music_switch",
+                                modifier = Modifier.weight(1f)
+                            )
                         }
 
                         Spacer(Modifier.height(2.dp))
@@ -139,7 +169,7 @@ fun PauseScreen(
                             style = ArcadeButtonStyle.GREEN,
                             onClick = onResume,
                             height = 54.dp,
-                            cornerRadius = 12.dp,
+                            cornerRadius = 27.dp,
                             fontSize = 17.sp,
                             testTag = "pause_resume_button",
                             modifier = Modifier.fillMaxWidth()
@@ -151,7 +181,7 @@ fun PauseScreen(
                             style = ArcadeButtonStyle.GOLD,
                             onClick = { showRestartConfirm = true },
                             height = 50.dp,
-                            cornerRadius = 12.dp,
+                            cornerRadius = 25.dp,
                             fontSize = 16.sp,
                             testTag = "pause_restart_button",
                             modifier = Modifier.fillMaxWidth()
@@ -160,27 +190,26 @@ fun PauseScreen(
                         PremiumPrimaryButton(
                             text = stringResource(R.string.nav_home),
                             icon = Icons.Filled.Home,
-                            style = ArcadeButtonStyle.BLUE,
+                            style = ArcadeButtonStyle.GOLD_BLUE,
                             onClick = onExitToHomeConfirmed,
                             height = 50.dp,
-                            cornerRadius = 12.dp,
+                            cornerRadius = 25.dp,
                             fontSize = 16.sp,
                             testTag = "pause_home_button",
                             modifier = Modifier.fillMaxWidth()
                         )
-
                     }
                 }
 
                 FloatingModalBadge(
-                    size = 68.dp,
+                    size = 70.dp,
                     backgroundBrush = Brush.verticalGradient(listOf(BlueBtnTop, BlueBtnBottom))
                 ) {
                     Icon(
                         imageVector = Icons.Filled.Pause,
                         contentDescription = null,
                         tint = Color.White,
-                        modifier = Modifier.size(32.dp)
+                        modifier = Modifier.size(34.dp)
                     )
                 }
             }
@@ -196,7 +225,59 @@ fun PauseScreen(
             onDismiss = { showRestartConfirm = false }
         )
     }
+}
 
+@Composable
+private fun PauseAudioToggle(
+    label: String,
+    icon: ImageVector,
+    checked: Boolean,
+    accent: Color,
+    onCheckedChange: (Boolean) -> Unit,
+    testTag: String,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+        modifier = modifier
+            .clip(RoundedCornerShape(14.dp))
+            .background(BoardWellBg)
+            .border(1.dp, GlassBorder, RoundedCornerShape(14.dp))
+            .padding(horizontal = 10.dp, vertical = 4.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = if (checked) accent else TextSecondary,
+                modifier = Modifier.size(18.dp)
+            )
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelLarge.copy(
+                    fontFamily = OutfitFontFamily,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 12.5.sp
+                ),
+                color = TextPrimary
+            )
+        }
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = Color.White,
+                checkedTrackColor = SwitchTrackOn,
+                uncheckedThumbColor = Color.White,
+                uncheckedTrackColor = SwitchTrackOff
+            ),
+            modifier = Modifier.testTag(testTag)
+        )
+    }
 }
 
 @Composable

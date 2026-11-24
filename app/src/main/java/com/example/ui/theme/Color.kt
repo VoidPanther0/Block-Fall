@@ -6,68 +6,74 @@ import com.example.game.BlockColor
 import com.example.game.BlockStyle
 import com.example.game.BoardColorPalette
 
-// Crisp Daylight Puzzle — Classic Bright Canvas & High-Contrast Board Palette
-val StudioBgTop = Color(0xFFF6F8FC)
-val StudioBgMid = Color(0xFFF1F5FB)
-val StudioBgBottom = Color(0xFFE9EFF8)
+// Midnight Crystal Cavern — Deep Navy, Electric Blue, Violet & Metallic Gold Palette
+val StudioBgTop = Color(0xFF060B21)
+val StudioBgMid = Color(0xFF0B163C)
+val StudioBgBottom = Color(0xFF13255E)
 
 val RoyalBlueTop = StudioBgTop
 val RoyalBlueMid = StudioBgMid
 val RoyalBlueBottom = StudioBgBottom
 
-val ObsidianBg = Color(0xFF1E2B48)
-val ObsidianGlow = Color(0xFF28395E)
-val BoardWellBg = Color(0xFFEBF0F7)
-val BoardRim = Color(0xFF2B3E66)
-val EmptySlotFill = Color(0xFF28395E)
-val EmptySlotBorder = Color(0xFF364B78)
+val ObsidianBg = Color(0xFF070F2B)
+val ObsidianGlow = Color(0xFF162A64)
+val BoardWellBg = Color(0xFF0C173B)
+val BoardRim = Color(0xFF1D7AFC)
+val EmptySlotFill = Color(0xFF0E1D4B)
+val EmptySlotBorder = Color(0xFF213C7D)
 
-val SurfaceCard = Color(0xFFFFFFFF)
-val SurfaceCardElevated = Color(0xFFF7F9FD)
-val SurfaceElevatedHigh = Color(0xFFEEF3FA)
-val GlassBorder = Color(0xFFD5DFED)
-val DividerSubtle = Color(0xFFE4ECF5)
-val GlassTopSheen = Color(0x20FFFFFF)
+val SurfaceCard = Color(0xFF111F4D)
+val SurfaceCardElevated = Color(0xFF172B66)
+val SurfaceElevatedHigh = Color(0xFF1F3880)
+val GlassBorder = Color(0xFF2E52A8)
+val DividerSubtle = Color(0xFF1F3778)
+val GlassTopSheen = Color(0x2EFFFFFF)
 
-val TextPrimary = Color(0xFF17233B)
-val TextSecondary = Color(0xFF566580)
-val TextMuted = Color(0xFF7D8CA6)
+val TextPrimary = Color(0xFFFFFFFF)
+val TextSecondary = Color(0xFFB5C7EE)
+val TextMuted = Color(0xFF7B93C9)
 
-val AccentCyan = Color(0xFF1D7AFC)
-val AccentBlue = Color(0xFF2563EB)
-val AccentGold = Color(0xFFE59500)
-val AccentDiamond = Color(0xFF0EA5E9)
-val AccentDiamondViolet = Color(0xFF7C3AED)
-val AccentCoral = Color(0xFFE5484D)
-val AccentWarning = Color(0xFFD97706)
-val AccentEmerald = Color(0xFF16A34A)
-val AccentPurple = Color(0xFF7C3AED)
-val InvalidTint = Color(0xFFEF4444)
+val AccentCyan = Color(0xFF26D0FF)
+val AccentBlue = Color(0xFF2474FF)
+val AccentGold = Color(0xFFFFC125)
+val AccentGoldBright = Color(0xFFFFEA78)
+val AccentGoldDeep = Color(0xFFD97B00)
+val AccentDiamond = Color(0xFF33E1FF)
+val AccentDiamondViolet = Color(0xFFA855F7)
+val AccentCoral = Color(0xFFFF4D6D)
+val AccentWarning = Color(0xFFFF9F1C)
+val AccentEmerald = Color(0xFF22E584)
+val AccentPurple = Color(0xFF9E4BFF)
+val InvalidTint = Color(0xFFFF4D6D)
 
-// Tactile Classic Puzzle Buttons & Subtle Bottom Depth Lips
-val GoldBtnTop = Color(0xFFFFB71B)
-val GoldBtnBottom = Color(0xFFF59E0B)
-val GoldBtnLip = Color(0xFFC27200)
-val GoldBtnText = Color(0xFF1A2234)
+// Glossy 3D Arcade Buttons & Metallic Lips (matching visual style reference)
+val GoldBtnTop = Color(0xFFFFE15A)
+val GoldBtnBottom = Color(0xFFFF9800)
+val GoldBtnLip = Color(0xFFA85400)
+val GoldBtnText = Color(0xFF241300)
 
-val BlueBtnTop = Color(0xFF3B82F6)
-val BlueBtnBottom = Color(0xFF2563EB)
-val BlueBtnLip = Color(0xFF1D4ED8)
+val BlueBtnTop = Color(0xFF3BC4FF)
+val BlueBtnBottom = Color(0xFF0B5FFF)
+val BlueBtnLip = Color(0xFF06379C)
 
-val GreenBtnTop = Color(0xFF22C55E)
-val GreenBtnBottom = Color(0xFF16A34A)
-val GreenBtnLip = Color(0xFF15803D)
+val PurpleBtnTop = Color(0xFFC259FF)
+val PurpleBtnBottom = Color(0xFF6B18E8)
+val PurpleBtnLip = Color(0xFF3E0896)
 
-val RedBtnTop = Color(0xFFF43F5E)
-val RedBtnBottom = Color(0xFFE11D48)
-val RedBtnLip = Color(0xFFBE123C)
+val GreenBtnTop = Color(0xFF3DF285)
+val GreenBtnBottom = Color(0xFF0CA34A)
+val GreenBtnLip = Color(0xFF06632B)
 
-val SlateBtnTop = Color(0xFFFFFFFF)
-val SlateBtnBottom = Color(0xFFF1F5F9)
-val SlateBtnLip = Color(0xFFCBD5E1)
+val RedBtnTop = Color(0xFFFF5972)
+val RedBtnBottom = Color(0xFFD9163B)
+val RedBtnLip = Color(0xFF870921)
 
-val SwitchTrackOn = Color(0xFF16A34A)
-val SwitchTrackOff = Color(0xFFCBD5E1)
+val SlateBtnTop = Color(0xFF1B2E66)
+val SlateBtnBottom = Color(0xFF101D45)
+val SlateBtnLip = Color(0xFF09122E)
+
+val SwitchTrackOn = Color(0xFF1CD46E)
+val SwitchTrackOff = Color(0xFF25386E)
 
 val LocalBlockStyle = compositionLocalOf { BlockStyle.MODERN }
 val LocalBoardPalette = compositionLocalOf { BoardColorPalette.ROYAL }
@@ -101,80 +107,80 @@ data class BoardThemeColors(
 
 fun BoardColorPalette.toBoardColors(): BoardThemeColors = when (this) {
     BoardColorPalette.ROYAL -> BoardThemeColors(
-        studioTop = Color(0xFFF6F8FC),
-        studioMid = Color(0xFFF0F4FB),
-        studioBottom = Color(0xFFE7EEF8),
-        studioGlowPrimary = Color(0xFF3B82F6),
-        studioGlowSecondary = Color(0xFF0EA5E9),
-        wellTop = Color(0xFF1B2B4B),
-        wellBottom = Color(0xFF14213B),
-        rim = Color(0xFF31497A),
-        slotFill = Color(0xFF283E6B),
-        slotBorder = Color(0xFF3B578F),
-        trayTop = Color(0xFFFFFFFF),
-        trayBottom = Color(0xFFF8FAFE),
-        trayBorder = Color(0xFFD5DFED),
-        selectedSlotBg = Color(0xFFEBF3FF),
-        slotBg = Color(0xFFF1F5FB),
-        swatchPrimary = Color(0xFF2563EB),
-        swatchSecondary = Color(0xFF1B2B4B)
+        studioTop = Color(0xFF050A1E),
+        studioMid = Color(0xFF0A153A),
+        studioBottom = Color(0xFF122662),
+        studioGlowPrimary = Color(0xFF26D0FF),
+        studioGlowSecondary = Color(0xFF8F45FF),
+        wellTop = Color(0xFF0A1538),
+        wellBottom = Color(0xFF070F2B),
+        rim = Color(0xFF249EFF),
+        slotFill = Color(0xFF0F2052),
+        slotBorder = Color(0xFF22428F),
+        trayTop = Color(0xFF122359),
+        trayBottom = Color(0xFF0B173D),
+        trayBorder = Color(0xFF2C55B5),
+        selectedSlotBg = Color(0xFF1B3A8C),
+        slotBg = Color(0xFF0B163C),
+        swatchPrimary = Color(0xFF2474FF),
+        swatchSecondary = Color(0xFF0A1538)
     )
     BoardColorPalette.MIDNIGHT -> BoardThemeColors(
-        studioTop = Color(0xFFF3F5F9),
-        studioMid = Color(0xFFEDEFF5),
-        studioBottom = Color(0xFFE4E8F0),
-        studioGlowPrimary = Color(0xFF475569),
-        studioGlowSecondary = Color(0xFF64748B),
-        wellTop = Color(0xFF1C2333),
-        wellBottom = Color(0xFF141925),
-        rim = Color(0xFF344059),
-        slotFill = Color(0xFF273147),
-        slotBorder = Color(0xFF3B4966),
-        trayTop = Color(0xFFFFFFFF),
-        trayBottom = Color(0xFFF7F8FB),
-        trayBorder = Color(0xFFD3D9E5),
-        selectedSlotBg = Color(0xFFE9EEF7),
-        slotBg = Color(0xFFF1F3F8),
-        swatchPrimary = Color(0xFF475569),
-        swatchSecondary = Color(0xFF141925)
+        studioTop = Color(0xFF050712),
+        studioMid = Color(0xFF0B1024),
+        studioBottom = Color(0xFF141B3B),
+        studioGlowPrimary = Color(0xFF477BFF),
+        studioGlowSecondary = Color(0xFF7B4DFF),
+        wellTop = Color(0xFF0B1024),
+        wellBottom = Color(0xFF070A18),
+        rim = Color(0xFF4E67B8),
+        slotFill = Color(0xFF121A38),
+        slotBorder = Color(0xFF28376B),
+        trayTop = Color(0xFF131B3B),
+        trayBottom = Color(0xFF0B1024),
+        trayBorder = Color(0xFF334685),
+        selectedSlotBg = Color(0xFF1E2B5C),
+        slotBg = Color(0xFF0A0E21),
+        swatchPrimary = Color(0xFF477BFF),
+        swatchSecondary = Color(0xFF070A18)
     )
     BoardColorPalette.EMERALD -> BoardThemeColors(
-        studioTop = Color(0xFFF3F8F5),
-        studioMid = Color(0xFFEDF4F0),
-        studioBottom = Color(0xFFE3EEE8),
-        studioGlowPrimary = Color(0xFF16A34A),
-        studioGlowSecondary = Color(0xFF10B981),
-        wellTop = Color(0xFF15382F),
-        wellBottom = Color(0xFF0F2B24),
-        rim = Color(0xFF275C4E),
-        slotFill = Color(0xFF205144),
-        slotBorder = Color(0xFF307362),
-        trayTop = Color(0xFFFFFFFF),
-        trayBottom = Color(0xFFF6FAF8),
-        trayBorder = Color(0xFFCFE2D8),
-        selectedSlotBg = Color(0xFFE7F6EE),
-        slotBg = Color(0xFFF0F6F3),
-        swatchPrimary = Color(0xFF16A34A),
-        swatchSecondary = Color(0xFF0F2B24)
+        studioTop = Color(0xFF041418),
+        studioMid = Color(0xFF082229),
+        studioBottom = Color(0xFF0E3642),
+        studioGlowPrimary = Color(0xFF22E584),
+        studioGlowSecondary = Color(0xFF19C9E6),
+        wellTop = Color(0xFF072126),
+        wellBottom = Color(0xFF041519),
+        rim = Color(0xFF1FD495),
+        slotFill = Color(0xFF0D2F36),
+        slotBorder = Color(0xFF1D5863),
+        trayTop = Color(0xFF0D2E36),
+        trayBottom = Color(0xFF071D22),
+        trayBorder = Color(0xFF216E73),
+        selectedSlotBg = Color(0xFF12474D),
+        slotBg = Color(0xFF061B20),
+        swatchPrimary = Color(0xFF22E584),
+        swatchSecondary = Color(0xFF041519)
     )
     BoardColorPalette.SUNSET -> BoardThemeColors(
-        studioTop = Color(0xFFFAF6F2),
-        studioMid = Color(0xFFF5EEE8),
-        studioBottom = Color(0xFFEEE3DA),
-        studioGlowPrimary = Color(0xFFF97316),
-        studioGlowSecondary = Color(0xFFF59E0B),
-        wellTop = Color(0xFF28324E),
-        wellBottom = Color(0xFF1E263D),
-        rim = Color(0xFF43537D),
-        slotFill = Color(0xFF344163),
-        slotBorder = Color(0xFF4D5F8F),
-        trayTop = Color(0xFFFFFFFF),
-        trayBottom = Color(0xFFFCF9F6),
-        trayBorder = Color(0xFFE6D9CF),
-        selectedSlotBg = Color(0xFFFFF3E8),
-        slotBg = Color(0xFFF8F2EC),
-        swatchPrimary = Color(0xFFF97316),
-        swatchSecondary = Color(0xFF1E263D)
+        studioTop = Color(0xFF120826),
+        studioMid = Color(0xFF1E0E40),
+        studioBottom = Color(0xFF2D165E),
+        studioGlowPrimary = Color(0xFFFF9E2C),
+        studioGlowSecondary = Color(0xFFB54CFF),
+        wellTop = Color(0xFF190C36),
+        wellBottom = Color(0xFF100724),
+        rim = Color(0xFFFFA834),
+        slotFill = Color(0xFF24134D),
+        slotBorder = Color(0xFF46288C),
+        trayTop = Color(0xFF24124A),
+        trayBottom = Color(0xFF160B30),
+        trayBorder = Color(0xFF5D36B5),
+        selectedSlotBg = Color(0xFF391D75),
+        slotBg = Color(0xFF14092E),
+        swatchPrimary = Color(0xFFFF9E2C),
+        swatchSecondary = Color(0xFF100724)
     )
 }
 
@@ -183,181 +189,181 @@ fun BlockColor.toPalette(
 ): BlockPalette = when (boardPalette) {
     BoardColorPalette.ROYAL -> when (this) {
         BlockColor.CYAN -> BlockPalette(
-            fill = Color(0xFF22B8CF),
-            highlight = Color(0xFF99E9F2),
-            shadow = Color(0xFF0C8599),
-            glow = Color(0xFF66D9E8)
+            fill = Color(0xFF00C8FF),
+            highlight = Color(0xFFBDF4FF),
+            shadow = Color(0xFF0074B8),
+            glow = Color(0xFF5CE1FF)
         )
         BlockColor.AMBER -> BlockPalette(
-            fill = Color(0xFFFAB005),
-            highlight = Color(0xFFFFEC99),
-            shadow = Color(0xFFD97706),
-            glow = Color(0xFFFFD43B)
+            fill = Color(0xFFFFCE00),
+            highlight = Color(0xFFFFF6B3),
+            shadow = Color(0xFFD97A00),
+            glow = Color(0xFFFFE14D)
         )
         BlockColor.CORAL -> BlockPalette(
-            fill = Color(0xFFFA5252),
-            highlight = Color(0xFFFFB8B8),
-            shadow = Color(0xFFC92A2A),
-            glow = Color(0xFFFF8787)
+            fill = Color(0xFFFF2E4D),
+            highlight = Color(0xFFFFB8C3),
+            shadow = Color(0xFFA80A24),
+            glow = Color(0xFFFF6B81)
         )
         BlockColor.EMERALD -> BlockPalette(
-            fill = Color(0xFF40C057),
-            highlight = Color(0xFFB2F2BB),
-            shadow = Color(0xFF2B8A3E),
-            glow = Color(0xFF69DB7C)
+            fill = Color(0xFF2CE622),
+            highlight = Color(0xFFC2FFB8),
+            shadow = Color(0xFF0E9608),
+            glow = Color(0xFF70FF66)
         )
         BlockColor.VIOLET -> BlockPalette(
-            fill = Color(0xFF7950F2),
-            highlight = Color(0xFFD0BFFF),
-            shadow = Color(0xFF5F3DC4),
-            glow = Color(0xFF9775FA)
+            fill = Color(0xFF993DFF),
+            highlight = Color(0xFFE0C2FF),
+            shadow = Color(0xFF5712B8),
+            glow = Color(0xFFB878FF)
         )
         BlockColor.TANGERINE -> BlockPalette(
-            fill = Color(0xFFFD7E14),
-            highlight = Color(0xFFFFD8A8),
-            shadow = Color(0xFFD9480F),
-            glow = Color(0xFFFFA94D)
+            fill = Color(0xFFFF7A00),
+            highlight = Color(0xFFFFD8AD),
+            shadow = Color(0xFFBA4000),
+            glow = Color(0xFFFFA64D)
         )
         BlockColor.COBALT -> BlockPalette(
-            fill = Color(0xFF339AF0),
-            highlight = Color(0xFFA5D8FF),
-            shadow = Color(0xFF1864AB),
-            glow = Color(0xFF74C0FC)
+            fill = Color(0xFF197BFF),
+            highlight = Color(0xFFAAD2FF),
+            shadow = Color(0xFF093EB5),
+            glow = Color(0xFF5CA3FF)
         )
     }
 
     BoardColorPalette.MIDNIGHT -> when (this) {
         BlockColor.CYAN -> BlockPalette(
-            fill = Color(0xFF06B6D4),
-            highlight = Color(0xFFA5F3FC),
-            shadow = Color(0xFF0E7490),
-            glow = Color(0xFF67E8F9)
+            fill = Color(0xFF06C7E8),
+            highlight = Color(0xFFB3F7FF),
+            shadow = Color(0xFF097696),
+            glow = Color(0xFF67EAFF)
         )
         BlockColor.AMBER -> BlockPalette(
-            fill = Color(0xFFEAB308),
-            highlight = Color(0xFFFEF08A),
-            shadow = Color(0xFFA16207),
-            glow = Color(0xFFFDE047)
+            fill = Color(0xFFF5C400),
+            highlight = Color(0xFFFFF3A8),
+            shadow = Color(0xFFB37400),
+            glow = Color(0xFFFFE047)
         )
         BlockColor.CORAL -> BlockPalette(
-            fill = Color(0xFFF43F5E),
-            highlight = Color(0xFFFECDD3),
-            shadow = Color(0xFFBE123C),
-            glow = Color(0xFFFB7185)
+            fill = Color(0xFFFF335E),
+            highlight = Color(0xFFFFC2CE),
+            shadow = Color(0xFFAD0E32),
+            glow = Color(0xFFFF708F)
         )
         BlockColor.EMERALD -> BlockPalette(
-            fill = Color(0xFF10B981),
-            highlight = Color(0xFFA7F3D0),
-            shadow = Color(0xFF047857),
-            glow = Color(0xFF34D399)
+            fill = Color(0xFF1CE07A),
+            highlight = Color(0xFFB3FFDA),
+            shadow = Color(0xFF078A46),
+            glow = Color(0xFF57F5A4)
         )
         BlockColor.VIOLET -> BlockPalette(
-            fill = Color(0xFF8B5CF6),
-            highlight = Color(0xFFDDD6FE),
-            shadow = Color(0xFF5B21B6),
-            glow = Color(0xFFA78BFA)
+            fill = Color(0xFF9C5CFF),
+            highlight = Color(0xFFE4D1FF),
+            shadow = Color(0xFF5B1FC4),
+            glow = Color(0xFFBC8FFF)
         )
         BlockColor.TANGERINE -> BlockPalette(
-            fill = Color(0xFFF97316),
-            highlight = Color(0xFFFED7AA),
-            shadow = Color(0xFFC2410C),
-            glow = Color(0xFFFB923C)
+            fill = Color(0xFFFF7D1A),
+            highlight = Color(0xFFFFDAB8),
+            shadow = Color(0xFFB84300),
+            glow = Color(0xFFFFA35C)
         )
         BlockColor.COBALT -> BlockPalette(
-            fill = Color(0xFF3B82F6),
-            highlight = Color(0xFFBFDBFE),
-            shadow = Color(0xFF1D4ED8),
-            glow = Color(0xFF60A5FA)
+            fill = Color(0xFF3385FF),
+            highlight = Color(0xFFC2DCFF),
+            shadow = Color(0xFF1147B8),
+            glow = Color(0xFF70ACFF)
         )
     }
 
     BoardColorPalette.EMERALD -> when (this) {
         BlockColor.CYAN -> BlockPalette(
-            fill = Color(0xFF14B8A6),
-            highlight = Color(0xFF99F6E4),
-            shadow = Color(0xFF0F766E),
-            glow = Color(0xFF5EEAD4)
+            fill = Color(0xFF14D9CE),
+            highlight = Color(0xFFB3FFF9),
+            shadow = Color(0xFF07827B),
+            glow = Color(0xFF5EF2E9)
         )
         BlockColor.AMBER -> BlockPalette(
-            fill = Color(0xFFF59E0B),
-            highlight = Color(0xFFFDE68A),
-            shadow = Color(0xFFB45309),
-            glow = Color(0xFFFCD34D)
+            fill = Color(0xFFFFBE1A),
+            highlight = Color(0xFFFFEEB3),
+            shadow = Color(0xFFB87000),
+            glow = Color(0xFFFFD866)
         )
         BlockColor.CORAL -> BlockPalette(
-            fill = Color(0xFFEF4444),
-            highlight = Color(0xFFFECACA),
-            shadow = Color(0xFFB91C1C),
-            glow = Color(0xFFF87171)
+            fill = Color(0xFFFF4252),
+            highlight = Color(0xFFFFC2C7),
+            shadow = Color(0xFFB01220),
+            glow = Color(0xFFFF7A85)
         )
         BlockColor.EMERALD -> BlockPalette(
-            fill = Color(0xFF22C55E),
-            highlight = Color(0xFFBBF7D0),
-            shadow = Color(0xFF15803D),
-            glow = Color(0xFF4ADE80)
+            fill = Color(0xFF2AE659),
+            highlight = Color(0xFFC2FFD0),
+            shadow = Color(0xFF0C8F2E),
+            glow = Color(0xFF66F589)
         )
         BlockColor.VIOLET -> BlockPalette(
-            fill = Color(0xFF8B5CF6),
-            highlight = Color(0xFFDDD6FE),
-            shadow = Color(0xFF6D28D9),
-            glow = Color(0xFFA78BFA)
+            fill = Color(0xFF945CFF),
+            highlight = Color(0xFFE0D1FF),
+            shadow = Color(0xFF5822BD),
+            glow = Color(0xFFB48CFF)
         )
         BlockColor.TANGERINE -> BlockPalette(
-            fill = Color(0xFFFB923C),
-            highlight = Color(0xFFFFEDD5),
-            shadow = Color(0xFFC2410C),
-            glow = Color(0xFFFDBA74)
+            fill = Color(0xFFFF8833),
+            highlight = Color(0xFFFFDFC7),
+            shadow = Color(0xFFBF4900),
+            glow = Color(0xFFFFAB6E)
         )
         BlockColor.COBALT -> BlockPalette(
-            fill = Color(0xFF0EA5E9),
-            highlight = Color(0xFFBAE6FD),
-            shadow = Color(0xFF0369A1),
-            glow = Color(0xFF38BDF8)
+            fill = Color(0xFF199BFF),
+            highlight = Color(0xFFB8E2FF),
+            shadow = Color(0xFF0856A8),
+            glow = Color(0xFF5EBBFF)
         )
     }
 
     BoardColorPalette.SUNSET -> when (this) {
         BlockColor.CYAN -> BlockPalette(
-            fill = Color(0xFF38BDF8),
-            highlight = Color(0xFFE0F2FE),
-            shadow = Color(0xFF0284C7),
-            glow = Color(0xFF7DD3FC)
+            fill = Color(0xFF33CCFF),
+            highlight = Color(0xFFC7F2FF),
+            shadow = Color(0xFF0078B8),
+            glow = Color(0xFF75DEFF)
         )
         BlockColor.AMBER -> BlockPalette(
-            fill = Color(0xFFFBBF24),
-            highlight = Color(0xFFFEF3C7),
-            shadow = Color(0xFFD97706),
-            glow = Color(0xFFFDE68A)
+            fill = Color(0xFFFFCC29),
+            highlight = Color(0xFFFFF3C2),
+            shadow = Color(0xFFC27C00),
+            glow = Color(0xFFFFDF70)
         )
         BlockColor.CORAL -> BlockPalette(
-            fill = Color(0xFFFB7185),
-            highlight = Color(0xFFFFE4E6),
-            shadow = Color(0xFFE11D48),
-            glow = Color(0xFFFDA4AF)
+            fill = Color(0xFFFF4D7D),
+            highlight = Color(0xFFFFC7D6),
+            shadow = Color(0xFFB81242),
+            glow = Color(0xFFFF85A6)
         )
         BlockColor.EMERALD -> BlockPalette(
-            fill = Color(0xFF34D399),
-            highlight = Color(0xFFD1FAE5),
-            shadow = Color(0xFF059669),
-            glow = Color(0xFF6EE7B7)
+            fill = Color(0xFF2EE69B),
+            highlight = Color(0xFFC2FFEA),
+            shadow = Color(0xFF08945B),
+            glow = Color(0xFF6CF5BD)
         )
         BlockColor.VIOLET -> BlockPalette(
-            fill = Color(0xFFA855F7),
-            highlight = Color(0xFFF3E8FF),
-            shadow = Color(0xFF7E22CE),
-            glow = Color(0xFFC084FC)
+            fill = Color(0xFFB84DFF),
+            highlight = Color(0xFFECC7FF),
+            shadow = Color(0xFF7014BD),
+            glow = Color(0xFFD08AFF)
         )
         BlockColor.TANGERINE -> BlockPalette(
-            fill = Color(0xFFF97316),
-            highlight = Color(0xFFFFEDD5),
-            shadow = Color(0xFFEA580C),
-            glow = Color(0xFFFB923C)
+            fill = Color(0xFFFF7A29),
+            highlight = Color(0xFFFFD8BF),
+            shadow = Color(0xFFBF4000),
+            glow = Color(0xFFFFA066)
         )
         BlockColor.COBALT -> BlockPalette(
-            fill = Color(0xFF6366F1),
-            highlight = Color(0xFFE0E7FF),
-            shadow = Color(0xFF4338CA),
-            glow = Color(0xFF818CF8)
+            fill = Color(0xFF5271FF),
+            highlight = Color(0xFFCCD6FF),
+            shadow = Color(0xFF2038BA),
+            glow = Color(0xFF859CFF)
         )
     }
 }

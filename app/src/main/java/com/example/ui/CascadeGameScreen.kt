@@ -25,11 +25,13 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.PlayCircle
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -241,13 +243,13 @@ fun CascadeGameScreen(
                             onDragEnd = viewModel::endDrag,
                             onDragCancel = viewModel::cancelDrag
                         )
-                        ShuffleBoosterButton(
-                            count = state.wallet.shuffleCount,
-                            enabled = state.status == GameStatus.PLAYING &&
+                        PowerUpToolbar(
+                            shuffleCount = state.wallet.shuffleCount,
+                            shuffleEnabled = state.status == GameStatus.PLAYING &&
                                 state.dragState == null &&
                                 state.wallet.shuffleCount > 0 &&
                                 state.traySlots.any { it.piece != null },
-                            onClick = viewModel::useShuffleBooster
+                            onShuffleClick = viewModel::useShuffleBooster
                         )
                         BannerAdBar()
                     }
@@ -355,13 +357,13 @@ fun CascadeGameScreen(
                             onDragEnd = viewModel::endDrag,
                             onDragCancel = viewModel::cancelDrag
                         )
-                        ShuffleBoosterButton(
-                            count = state.wallet.shuffleCount,
-                            enabled = state.status == GameStatus.PLAYING &&
+                        PowerUpToolbar(
+                            shuffleCount = state.wallet.shuffleCount,
+                            shuffleEnabled = state.status == GameStatus.PLAYING &&
                                 state.dragState == null &&
                                 state.wallet.shuffleCount > 0 &&
                                 state.traySlots.any { it.piece != null },
-                            onClick = viewModel::useShuffleBooster
+                            onShuffleClick = viewModel::useShuffleBooster
                         )
                         BannerAdBar()
                         Spacer(Modifier.height(2.dp))
@@ -507,14 +509,95 @@ private fun ContinueCountdownOverlay(
 }
 
 @Composable
-private fun ShuffleBoosterButton(count: Int, enabled: Boolean, onClick: () -> Unit) {
-    com.example.ui.components.SecondaryButton(
-        text = "Shuffle Tray ($count)",
-        icon = Icons.Filled.Shuffle,
-        accent = AccentCyan,
-        enabled = enabled,
-        height = 42.dp,
-        onClick = onClick,
-        testTag = "shuffle_booster_button"
-    )
+private fun PowerUpToolbar(
+    shuffleCount: Int,
+    shuffleEnabled: Boolean,
+    onShuffleClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        PremiumPrimaryButton(
+            text = "Shuffle ($shuffleCount)",
+            icon = Icons.Filled.Shuffle,
+            style = ArcadeButtonStyle.PURPLE,
+            enabled = shuffleEnabled,
+            height = 48.dp,
+            cornerRadius = 14.dp,
+            fontSize = 13.5.sp,
+            onClick = onShuffleClick,
+            testTag = "shuffle_booster_button",
+            modifier = Modifier.weight(1.35f)
+        )
+        LockedBoosterSlot(
+            label = "Hammer",
+            icon = Icons.Filled.Build,
+            modifier = Modifier.weight(1f)
+        )
+        LockedBoosterSlot(
+            label = "Refresh",
+            icon = Icons.Filled.Refresh,
+            modifier = Modifier.weight(1f)
+        )
+    }
 }
+
+@Composable
+private fun LockedBoosterSlot(
+    label: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    modifier: Modifier = Modifier
+) {
+    val shape = RoundedCornerShape(14.dp)
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
+        modifier = modifier
+            .height(48.dp)
+            .clip(shape)
+            .background(com.example.ui.theme.SurfaceCard.copy(alpha = 0.72f))
+            .border(1.dp, GlassBorder.copy(alpha = 0.55f), shape)
+            .padding(horizontal = 6.dp)
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = "$label coming soon",
+            tint = TextSecondary.copy(alpha = 0.65f),
+            modifier = Modifier.size(16.dp)
+        )
+        Spacer(Modifier.width(4.dp))
+        Column {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontFamily = OutfitFontFamily,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 11.sp
+                ),
+                color = TextSecondary.copy(alpha = 0.75f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Lock,
+                    contentDescription = null,
+                    tint = AccentGold.copy(alpha = 0.75f),
+                    modifier = Modifier.size(9.dp)
+                )
+                Text(
+                    text = "Soon",
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                    color = AccentGold.copy(alpha = 0.85f),
+                    maxLines = 1
+                )
+            }
+        }
+    }
+}
+
