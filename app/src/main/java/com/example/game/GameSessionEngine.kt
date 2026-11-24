@@ -129,8 +129,8 @@ class GameSessionEngine(
         fun calculateChallengeStars(score: Int, targetScore: Int, movesRemaining: Int): Int {
             if (score < targetScore) return 0
             return when {
-                score >= (targetScore * 1.5f).toInt() || movesRemaining >= 5 -> 3
-                score >= (targetScore * 1.25f).toInt() || movesRemaining >= 3 -> 2
+                score >= (targetScore * 1.4f).toInt() || movesRemaining >= 3 -> 3
+                score >= (targetScore * 1.15f).toInt() || movesRemaining >= 1 -> 2
                 else -> 1
             }
         }

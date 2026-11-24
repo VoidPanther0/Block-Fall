@@ -35,6 +35,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.material.icons.filled.Casino
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
@@ -74,6 +78,8 @@ import com.example.ui.theme.toBoardColors
 @Composable
 fun HomeScreen(
     state: GameUiState,
+    spinPoints: Int = 0,
+    onOpenWheel: () -> Unit = {},
     isCloudSignedIn: Boolean = false,
     playerName: String? = null,
     googlePhotoUrl: String? = null,
@@ -184,7 +190,73 @@ fun HomeScreen(
 
                     Spacer(Modifier.height(4.dp))
                 }
+
+                WheelFab(
+                    spinPoints = spinPoints,
+                    onClick = onOpenWheel,
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(end = 4.dp, bottom = 8.dp)
+                )
             }
+        }
+    }
+}
+
+/** Lucky Wheel entry: a pulsing wheel icon with the current spin-point badge. */
+@Composable
+private fun WheelFab(
+    spinPoints: Int,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val pulse by androidx.compose.animation.core.rememberInfiniteTransition(label = "wheelFab").animateFloat(
+        initialValue = 1f,
+        targetValue = if (spinPoints > 0) 1.1f else 1.03f,
+        animationSpec = androidx.compose.animation.core.infiniteRepeatable(
+            androidx.compose.animation.core.tween(800),
+            androidx.compose.animation.core.RepeatMode.Reverse
+        ),
+        label = "pulse"
+    )
+    Box(modifier = modifier.testTag("home_wheel_button")) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .size(64.dp)
+                .graphicsLayer { scaleX = pulse; scaleY = pulse }
+                .shadow(8.dp, androidx.compose.foundation.shape.CircleShape)
+                .clip(androidx.compose.foundation.shape.CircleShape)
+                .background(
+                    androidx.compose.ui.graphics.Brush.linearGradient(
+                        listOf(Color(0xFFFFD54F), Color(0xFFFF8F00))
+                    )
+                )
+                .border(3.dp, Color.White, androidx.compose.foundation.shape.CircleShape)
+                .clickable(onClick = onClick)
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Casino,
+                contentDescription = "Lucky Wheel",
+                tint = Color(0xFF3A1B7A),
+                modifier = Modifier.size(34.dp)
+            )
+        }
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .size(22.dp)
+                .clip(androidx.compose.foundation.shape.CircleShape)
+                .background(if (spinPoints > 0) Color(0xFFFF3D57) else Color(0xFF7D8CA6))
+                .border(1.5.dp, Color.White, androidx.compose.foundation.shape.CircleShape)
+        ) {
+            Text(
+                text = "$spinPoints",
+                color = Color.White,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.ExtraBold
+            )
         }
     }
 }

@@ -265,8 +265,15 @@ private fun CascadeNavHost(
             composable<HomeRoute> {
                 val effectiveName = state.playerDisplayName?.takeIf { it.isNotBlank() }
                     ?: currentUser?.displayName?.takeIf { it.isNotBlank() }
+                val homeSpinPoints by viewModel.wheelSpinPoints.collectAsStateWithLifecycle()
+                LaunchedEffect(Unit) { viewModel.refreshServerWallet() }
                 HomeScreen(
                     state = state,
+                    spinPoints = homeSpinPoints,
+                    onOpenWheel = {
+                        viewModel.playUiClick()
+                        navController.navigate(LuckyWheelRoute)
+                    },
                     isCloudSignedIn = currentUser != null,
                     playerName = effectiveName,
                     googlePhotoUrl = currentUser?.photoUrl?.toString(),
@@ -500,11 +507,7 @@ private fun CascadeNavHost(
                     goldAdReady = adState is AdState.Ready && activity != null,
                     message = economyMessage,
                     onWatchDiamondAd = { activity?.let { viewModel.watchDiamondAd(it) } },
-                    onWatchGoldAd = { activity?.let { viewModel.watchRewardedAd(it) } },
-                    onOpenWheel = {
-                        viewModel.playUiClick()
-                        navController.navigate(LuckyWheelRoute)
-                    }
+                    onWatchGoldAd = { activity?.let { viewModel.watchRewardedAd(it) } }
                 )
             }
 

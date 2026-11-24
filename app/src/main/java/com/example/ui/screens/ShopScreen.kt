@@ -66,7 +66,7 @@ private val GoldPacks = listOf(
  * All-in-one shop on a single page:
  * 1. Diamond packs (Google Play Billing, coming soon)
  * 2. Gold packs (Google Play Billing, coming soon)
- * 3. Watch-ad rewards: +5 Diamonds, +50 Gold, and 1 Lucky Wheel spin point.
+ * 3. Watch-ad rewards: +5 Diamonds and +50 Gold (the Lucky Wheel lives on the Home screen).
  * Ad rewards are credited by the server for signed-in players.
  */
 @Composable
@@ -77,8 +77,7 @@ fun ShopScreen(
     goldAdReady: Boolean,
     message: String?,
     onWatchDiamondAd: () -> Unit,
-    onWatchGoldAd: () -> Unit,
-    onOpenWheel: () -> Unit
+    onWatchGoldAd: () -> Unit
 ) {
     CascadeScreenContainer(
         maxContentWidth = 820.dp,
@@ -142,16 +141,6 @@ fun ShopScreen(
                 enabled = goldAdReady,
                 onClick = onWatchGoldAd,
                 tag = "shop_watch_ad_button"
-            )
-            AdRewardCard(
-                icon = Icons.Filled.Casino,
-                accent = AccentCyan,
-                title = "Lucky Wheel",
-                subtitle = "Watch an ad for a spin point, then spin for Diamonds, Gold and abilities",
-                buttonText = "Open Lucky Wheel",
-                enabled = true,
-                onClick = onOpenWheel,
-                tag = "shop_open_wheel_button"
             )
 
             if (message != null) {

@@ -204,6 +204,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         continueAdManager.loadAd()
         diamondAdManager.loadAd()
         wheelAdManager.loadAd()
+        if (!isSignedIn()) _wheelSpinPoints.value = localSpinPoints()
         viewModelScope.launch {
             val saved = repository.loadInitialProgress()
             soundManager.soundEnabled = saved.settings.soundEnabled
@@ -694,10 +695,6 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun watchWheelAd(activity: Activity) {
-        if (!isSignedIn()) {
-            _economyMessage.value = "Sign in with Google to use the Lucky Wheel."
-            return
-        }
         wheelAdManager.showAd(
             activity = activity,
             onRewarded = { claimAdRewardOnServer(com.example.data.cloud.AdRewardType.WHEEL_POINT) },
@@ -726,13 +723,21 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                     )
                     if (result is EconomyMutationResult.Success) applyWalletMutation(result.updatedWallet)
                 }
-                com.example.data.cloud.AdRewardType.WHEEL_POINT -> Unit
+                com.example.data.cloud.AdRewardType.WHEEL_POINT -> {
+                    setLocalSpinPoints(localSpinPoints() + 1)
+                    _economyMessage.value = "+1 Spin Point earned!"
+                }
             }
             return
         }
         viewModelScope.launch {
             serverEconomy.claimAdReward(type)
-                .onSuccess { applyServerWallet(it) }
+                .onSuccess {
+                    applyServerWallet(it)
+                    if (type == com.example.data.cloud.AdRewardType.WHEEL_POINT) {
+                        _economyMessage.value = "+1 Spin Point earned!"
+                    }
+                }
                 .onFailure { _economyMessage.value = "Reward could not be verified. Please try again." }
         }
     }
@@ -741,8 +746,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     fun spinLuckyWheel(onResult: (Int?) -> Unit) {
         if (_isSpinning.value) return
         if (!isSignedIn()) {
-            _economyMessage.value = "Sign in with Google to use the Lucky Wheel."
-            onResult(null)
+            spinLocalWheel(onResult)
             return
         }
         _isSpinning.value = true
@@ -768,6 +772,21 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     /** Called by the wheel UI once the spin animation stops, so the balance updates after the reveal. */
     fun finishWheelSpin() {
+        pendingLocalPrize?.let { prize ->
+            val w = _uiState.value.wallet
+            viewModelScope.launch {
+                applyWalletMutation(
+                    w.copy(
+                        goldCoins = (w.goldCoins + prize.gold).coerceAtMost(PlayerWallet.MAX_GOLD),
+                        diamonds = (w.diamonds + prize.diamonds).coerceAtMost(PlayerWallet.MAX_DIAMONDS),
+                        hammerCount = w.hammerCount + prize.hammer,
+                        shuffleCount = w.shuffleCount + prize.shuffle,
+                        refreshCount = w.refreshCount + prize.refresh
+                    )
+                )
+            }
+        }
+        pendingLocalPrize = null
         pendingSpinWallet?.let { wallet ->
             viewModelScope.launch { applyServerWallet(wallet) }
         }
@@ -775,8 +794,62 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         _isSpinning.value = false
     }
 
+    // ---- Guest (not signed in) wheel: points + prizes are handled on-device. ----
+    private val wheelPrefs by lazy {
+        getApplication<Application>().getSharedPreferences("lucky_wheel_local", android.content.Context.MODE_PRIVATE)
+    }
+
+    private fun localSpinPoints(): Int = wheelPrefs.getInt("points", 0)
+
+    private fun setLocalSpinPoints(value: Int) {
+        val v = value.coerceIn(0, 99)
+        wheelPrefs.edit().putInt("points", v).apply()
+        _wheelSpinPoints.value = v
+    }
+
+    /** Same 10 segments / weights as `WHEEL_SEGMENTS` in functions/index.js. */
+    private data class LocalPrize(val label: String, val gold: Int = 0, val diamonds: Int = 0, val hammer: Int = 0, val shuffle: Int = 0, val refresh: Int = 0, val weight: Int)
+
+    private val localPrizes = listOf(
+        LocalPrize("100 Diamonds", diamonds = 100, weight = 1),
+        LocalPrize("50 Diamonds", diamonds = 50, weight = 3),
+        LocalPrize("10 Diamonds", diamonds = 10, weight = 10),
+        LocalPrize("1,000 Gold", gold = 1000, weight = 2),
+        LocalPrize("500 Gold", gold = 500, weight = 5),
+        LocalPrize("100 Gold", gold = 100, weight = 20),
+        LocalPrize("20 Gold", gold = 20, weight = 30),
+        LocalPrize("Hammer +1", hammer = 1, weight = 8),
+        LocalPrize("Shuffle +1", shuffle = 1, weight = 8),
+        LocalPrize("Refresh +1", refresh = 1, weight = 8)
+    )
+    private var pendingLocalPrize: LocalPrize? = null
+
+    private fun spinLocalWheel(onResult: (Int?) -> Unit) {
+        val points = localSpinPoints()
+        if (points <= 0) {
+            _economyMessage.value = "No spin points. Watch an ad to get 1 spin."
+            onResult(null)
+            return
+        }
+        setLocalSpinPoints(points - 1)
+        var roll = kotlin.random.Random.nextInt(localPrizes.sumOf { it.weight })
+        var index = localPrizes.lastIndex
+        for ((i, p) in localPrizes.withIndex()) {
+            if (roll < p.weight) { index = i; break }
+            roll -= p.weight
+        }
+        pendingLocalPrize = localPrizes[index]
+        lastSpinLabel = localPrizes[index].label
+        _economyMessage.value = null
+        _isSpinning.value = true
+        onResult(index)
+    }
+
     fun refreshServerWallet() {
-        if (!isSignedIn()) return
+        if (!isSignedIn()) {
+            _wheelSpinPoints.value = localSpinPoints()
+            return
+        }
         viewModelScope.launch {
             serverEconomy.fetchWallet().onSuccess { _wheelSpinPoints.value = it.wheelSpinPoints }
         }
