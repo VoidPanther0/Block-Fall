@@ -287,16 +287,18 @@ private fun feedbackTierFor(headline: String, wave: Int): Pair<String, Color> {
         ?.toIntOrNull()
         ?: 0
     val depth = maxOf(wave, comboFromHeadline)
-    return when {
-        depth >= 5 -> "COMBO 5+" to AccentGold
-        depth == 4 -> "COMBO 4" to AccentGold
-        depth == 3 -> "COMBO 3" to AccentCoral
-        depth == 2 -> "COMBO 2" to AccentPurple
-        headline.contains("BOARD", ignoreCase = true) || headline.contains("TRIPLE", ignoreCase = true) ->
-            "PERFECT" to AccentGold
-        headline.contains("DOUBLE", ignoreCase = true) -> "GREAT" to AccentCyan
-        else -> "LINE CLEAR" to AccentCyan
+    val (tierLabel, tierColor) = when {
+        depth >= 5 -> "⚡ UNSTOPPABLE 5x" to AccentGold
+        depth == 4 -> "🔥 INCREDIBLE 4x" to AccentGold
+        depth == 3 -> "✨ SUPER COMBO 3x" to AccentCoral
+        depth == 2 -> "💫 COMBO 2x" to AccentPurple
+        headline.contains("BOARD", ignoreCase = true) || headline.contains("PERFECT", ignoreCase = true) ->
+            "👑 PERFECT CLEAR!" to AccentGold
+        headline.contains("TRIPLE", ignoreCase = true) -> "💥 TRIPLE CLEAR!" to AccentGold
+        headline.contains("DOUBLE", ignoreCase = true) -> "⚡ DOUBLE CLEAR!" to AccentCyan
+        else -> "CLEAR!" to AccentCyan
     }
+    return tierLabel to tierColor
 }
 
 @Composable

@@ -72,18 +72,19 @@ private fun DrawScope.drawModernBevelBlock(
 
     // Crisp bottom lip for tactile classic puzzle depth
     drawRoundRect(
-        color = palette.shadow.copy(alpha = 0.95f * alpha),
+        color = palette.shadow.copy(alpha = 0.98f * alpha),
         topLeft = Offset(x, y),
         size = Size(w, h),
         cornerRadius = CornerRadius(radius, radius)
     )
 
-    val faceHeight = (h - bevel * 0.55f).coerceAtLeast(1f)
+    val faceHeight = (h - bevel * 0.52f).coerceAtLeast(1f)
     drawRoundRect(
         brush = Brush.verticalGradient(
             colors = listOf(
+                palette.highlight.copy(alpha = 0.92f * alpha),
                 palette.fill.copy(alpha = alpha),
-                palette.fill.copy(alpha = 0.94f * alpha)
+                palette.shadow.copy(alpha = 0.94f * alpha)
             ),
             startY = y,
             endY = y + faceHeight
@@ -92,6 +93,25 @@ private fun DrawScope.drawModernBevelBlock(
         size = Size(w, faceHeight),
         cornerRadius = CornerRadius(radius, radius)
     )
+
+    // Inner jewel sheen reflection lens
+    val lensMargin = (minOf(w, h) * 0.12f).coerceAtLeast(1.5f)
+    if (w > lensMargin * 3f && faceHeight > lensMargin * 3f) {
+        drawRoundRect(
+            brush = Brush.verticalGradient(
+                colors = listOf(
+                    Color.White.copy(alpha = 0.32f * alpha),
+                    Color.White.copy(alpha = 0.05f * alpha),
+                    Color.Transparent
+                ),
+                startY = y + lensMargin * 0.5f,
+                endY = y + faceHeight * 0.55f
+            ),
+            topLeft = Offset(x + lensMargin, y + lensMargin * 0.5f),
+            size = Size(w - lensMargin * 2f, faceHeight * 0.48f),
+            cornerRadius = CornerRadius(radius * 0.7f, radius * 0.7f)
+        )
+    }
 
     // Subtle top-left bevel edge highlight
     val highlightPath = (scratchHighlightPath.get() ?: Path()).apply {
@@ -107,14 +127,14 @@ private fun DrawScope.drawModernBevelBlock(
     }
     drawPath(
         path = highlightPath,
-        color = palette.highlight.copy(alpha = 0.58f * alpha)
+        color = palette.highlight.copy(alpha = 0.68f * alpha)
     )
 
-    // Clean top edge crisp rim
+    // Clean top edge crisp rim with jewel gloss
     drawRoundRect(
-        color = palette.highlight.copy(alpha = 0.28f * alpha),
+        color = Color.White.copy(alpha = 0.36f * alpha),
         topLeft = Offset(x + 0.5f, y + 0.5f),
-        size = Size((w - 1f).coerceAtLeast(1f), (h - 1f).coerceAtLeast(1f)),
+        size = Size((w - 1f).coerceAtLeast(1f), (faceHeight - 0.5f).coerceAtLeast(1f)),
         cornerRadius = CornerRadius(radius, radius),
         style = Stroke(width = 1f)
     )

@@ -229,36 +229,52 @@ fun GameBoard(
                 strokeWidth = 1.4f
             )
 
-            // 2. Predictive line-clear highlight while hovering a valid placement
+            // 2. Predictive line-clear highlight while hovering a valid placement (Anticipation Psychology)
             if (placementPreviewEnabled && dragState != null && dragState.isHoverValid) {
                 for (rowIdx in dragState.predictedClearRows) {
                     drawRoundRect(
-                        color = AccentGold.copy(alpha = 0.22f),
+                        brush = Brush.horizontalGradient(
+                            listOf(
+                                AccentGold.copy(alpha = 0.15f),
+                                AccentGold.copy(alpha = 0.42f),
+                                Color.White.copy(alpha = 0.60f),
+                                AccentGold.copy(alpha = 0.42f),
+                                AccentGold.copy(alpha = 0.15f)
+                            )
+                        ),
                         topLeft = Offset(0f, rowIdx * cellSize),
                         size = Size(size.width, cellSize),
                         cornerRadius = CornerRadius(8f, 8f)
                     )
                     drawRoundRect(
-                        color = AccentGold.copy(alpha = 0.78f),
+                        color = Color.White.copy(alpha = 0.88f),
                         topLeft = Offset(1f, rowIdx * cellSize + 1f),
                         size = Size(size.width - 2f, cellSize - 2f),
                         cornerRadius = CornerRadius(8f, 8f),
-                        style = Stroke(width = 2f)
+                        style = Stroke(width = 2.2f)
                     )
                 }
                 for (colIdx in dragState.predictedClearCols) {
                     drawRoundRect(
-                        color = AccentGold.copy(alpha = 0.22f),
+                        brush = Brush.verticalGradient(
+                            listOf(
+                                AccentGold.copy(alpha = 0.15f),
+                                AccentGold.copy(alpha = 0.42f),
+                                Color.White.copy(alpha = 0.60f),
+                                AccentGold.copy(alpha = 0.42f),
+                                AccentGold.copy(alpha = 0.15f)
+                            )
+                        ),
                         topLeft = Offset(colIdx * cellSize, 0f),
                         size = Size(cellSize, size.height),
                         cornerRadius = CornerRadius(8f, 8f)
                     )
                     drawRoundRect(
-                        color = AccentGold.copy(alpha = 0.78f),
+                        color = Color.White.copy(alpha = 0.88f),
                         topLeft = Offset(colIdx * cellSize + 1f, 1f),
                         size = Size(cellSize - 2f, size.height - 2f),
                         cornerRadius = CornerRadius(8f, 8f),
-                        style = Stroke(width = 2f)
+                        style = Stroke(width = 2.2f)
                     )
                 }
             }
