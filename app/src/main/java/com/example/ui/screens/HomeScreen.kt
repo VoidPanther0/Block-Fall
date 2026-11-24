@@ -35,14 +35,28 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
-import androidx.compose.material.icons.filled.Casino
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -120,7 +134,13 @@ fun HomeScreen(
                 onOpenProfile = onOpenStatistics,
                 onOpenWallet = onOpenShop,
                 onOpenLeaderboard = onOpenLeaderboard,
-                onOpenSettings = onOpenSettings
+                onOpenSettings = onOpenSettings,
+                trailingWalletAction = {
+                    LuckyWheelHeaderButton(
+                        spinPoints = spinPoints,
+                        onClick = onOpenWheel
+                    )
+                }
             )
 
             BoxWithConstraints(modifier = Modifier.weight(1f).fillMaxWidth()) {
@@ -190,71 +210,118 @@ fun HomeScreen(
 
                     Spacer(Modifier.height(4.dp))
                 }
-
-                WheelFab(
-                    spinPoints = spinPoints,
-                    onClick = onOpenWheel,
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(end = 4.dp, bottom = 8.dp)
-                )
             }
         }
     }
 }
 
-/** Lucky Wheel entry: a pulsing wheel icon with the current spin-point badge. */
+private val MiniWheelColors = listOf(
+    Color(0xFF7C4DFF), Color(0xFF00B8D4), Color(0xFFFFB300), Color(0xFF26C281),
+    Color(0xFFFF5252), Color(0xFFEC407A), Color(0xFF3D8BFF), Color(0xFFFF8F00)
+)
+
+/** Lucky Wheel header shortcut: custom-drawn colorful spinning prize wheel with spin badge. */
 @Composable
-private fun WheelFab(
+private fun LuckyWheelHeaderButton(
     spinPoints: Int,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val pulse by androidx.compose.animation.core.rememberInfiniteTransition(label = "wheelFab").animateFloat(
+    val transition = rememberInfiniteTransition(label = "luckyWheelHeader")
+    val pulse by transition.animateFloat(
         initialValue = 1f,
-        targetValue = if (spinPoints > 0) 1.1f else 1.03f,
-        animationSpec = androidx.compose.animation.core.infiniteRepeatable(
-            androidx.compose.animation.core.tween(800),
-            androidx.compose.animation.core.RepeatMode.Reverse
-        ),
+        targetValue = if (spinPoints > 0) 1.09f else 1.02f,
+        animationSpec = infiniteRepeatable(tween(850), RepeatMode.Reverse),
         label = "pulse"
     )
-    Box(modifier = modifier.testTag("home_wheel_button")) {
-        Box(
-            contentAlignment = Alignment.Center,
+    val spinDeg by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(tween(9000, easing = LinearEasing)),
+        label = "rotate"
+    )
+
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = modifier
+            .size(50.dp)
+            .semantics {
+                contentDescription = "Lucky Wheel ($spinPoints spins)"
+                role = Role.Button
+            }
+            .testTag("home_wheel_button")
+            .clickable(onClick = onClick)
+    ) {
+        Canvas(
             modifier = Modifier
-                .size(64.dp)
+                .size(44.dp)
                 .graphicsLayer { scaleX = pulse; scaleY = pulse }
-                .shadow(8.dp, androidx.compose.foundation.shape.CircleShape)
-                .clip(androidx.compose.foundation.shape.CircleShape)
-                .background(
-                    androidx.compose.ui.graphics.Brush.linearGradient(
-                        listOf(Color(0xFFFFD54F), Color(0xFFFF8F00))
-                    )
-                )
-                .border(3.dp, Color.White, androidx.compose.foundation.shape.CircleShape)
-                .clickable(onClick = onClick)
         ) {
-            Icon(
-                imageVector = Icons.Filled.Casino,
-                contentDescription = "Lucky Wheel",
-                tint = Color(0xFF3A1B7A),
-                modifier = Modifier.size(34.dp)
+            val outer = size.minDimension / 2f
+            val center = Offset(size.width / 2f, size.height / 2f + 1.5f)
+            val rim = outer * 0.14f
+            val wheelRadius = outer - rim
+
+            // Outer golden bezel
+            drawCircle(
+                brush = Brush.linearGradient(listOf(Color(0xFFFFE57F), Color(0xFFFFA000))),
+                radius = outer,
+                center = center
             )
+            drawCircle(color = Color(0xFF3A1B7A), radius = wheelRadius + 1.5f, center = center)
+
+            // Rotating rainbow slices
+            val sweep = 360f / MiniWheelColors.size
+            rotate(spinDeg, pivot = center) {
+                MiniWheelColors.forEachIndexed { idx, sliceColor ->
+                    drawArc(
+                        color = sliceColor,
+                        startAngle = -90f + idx * sweep,
+                        sweepAngle = sweep,
+                        useCenter = true,
+                        topLeft = Offset(center.x - wheelRadius, center.y - wheelRadius),
+                        size = Size(wheelRadius * 2f, wheelRadius * 2f)
+                    )
+                    drawArc(
+                        color = Color.White.copy(alpha = 0.7f),
+                        startAngle = -90f + idx * sweep,
+                        sweepAngle = sweep,
+                        useCenter = true,
+                        topLeft = Offset(center.x - wheelRadius, center.y - wheelRadius),
+                        size = Size(wheelRadius * 2f, wheelRadius * 2f),
+                        style = Stroke(width = 1.4f)
+                    )
+                }
+            }
+
+            // Center hub
+            drawCircle(Color(0xFFFFD54F), radius = wheelRadius * 0.30f, center = center)
+            drawCircle(Color(0xFF3A1B7A), radius = wheelRadius * 0.16f, center = center)
+
+            // Top pointer
+            val pointer = Path().apply {
+                moveTo(center.x, center.y - wheelRadius + 3f)
+                lineTo(center.x - 5.5f, center.y - outer - 2f)
+                lineTo(center.x + 5.5f, center.y - outer - 2f)
+                close()
+            }
+            drawPath(pointer, Color(0xFFFF3D57))
+            drawPath(pointer, Color.White, style = Stroke(width = 1.6f))
         }
+
         Box(
             contentAlignment = Alignment.Center,
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .size(22.dp)
+                .size(19.dp)
                 .clip(androidx.compose.foundation.shape.CircleShape)
-                .background(if (spinPoints > 0) Color(0xFFFF3D57) else Color(0xFF7D8CA6))
+                .background(if (spinPoints > 0) Color(0xFFFF3D57) else Color(0xFF64748B))
                 .border(1.5.dp, Color.White, androidx.compose.foundation.shape.CircleShape)
         ) {
             Text(
                 text = "$spinPoints",
                 color = Color.White,
-                fontSize = 11.sp,
+                fontSize = 10.sp,
                 fontWeight = FontWeight.ExtraBold
             )
         }

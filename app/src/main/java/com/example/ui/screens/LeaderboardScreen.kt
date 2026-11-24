@@ -3,8 +3,6 @@ package com.example.ui.screens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -17,13 +15,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.EmojiEvents
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -40,23 +38,18 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.cloud.LeaderboardEntry
+import com.example.game.ProfileAvatar
 import com.example.ui.CloudStreamState
 import com.example.ui.components.CascadeScreenContainer
 import com.example.ui.components.EmptyState
 import com.example.ui.components.GoogleSignInCard
 import com.example.ui.components.LoadingIndicator
-import com.example.ui.components.PremiumCard
+import com.example.ui.components.PlayerAvatarBadge
 import com.example.ui.components.ScreenTopBar
-import com.example.ui.components.SectionHeader
 import com.example.ui.theme.AccentCoral
-import com.example.ui.theme.AccentCyan
 import com.example.ui.theme.AccentGold
-import com.example.ui.theme.AccentPurple
-import com.example.ui.theme.BoardWellBg
-import com.example.ui.theme.GlassBorder
 import com.example.ui.theme.JetBrainsMonoFontFamily
 import com.example.ui.theme.OutfitFontFamily
-import com.example.ui.theme.SurfaceCardElevated
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
 
@@ -65,7 +58,9 @@ fun LeaderboardScreen(
     isSignedIn: Boolean,
     currentUserId: String?,
     leaderboardState: CloudStreamState<List<LeaderboardEntry>>,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    currentUserAvatarId: String = ProfileAvatar.CLASSIC_BLOCK.id,
+    currentUserPhotoUrl: String? = null
 ) {
     CascadeScreenContainer(
         maxContentWidth = 620.dp,
@@ -128,15 +123,23 @@ fun LeaderboardScreen(
                             modifier = Modifier.fillMaxSize()
                         ) {
                             item(key = "podium") {
-                                LeaderboardPodium(podium = podium, currentUserId = currentUserId)
+                                LeaderboardPodium(
+                                    podium = podium,
+                                    currentUserId = currentUserId,
+                                    currentUserAvatarId = currentUserAvatarId,
+                                    currentUserPhotoUrl = currentUserPhotoUrl
+                                )
                             }
                             if (rest.isNotEmpty()) {
                                 item(key = "table_header") { LeaderboardTableHeader() }
                                 itemsIndexed(rest, key = { _, item -> item.userId }) { index, entry ->
+                                    val isCurrent = entry.userId == currentUserId
                                     LeaderboardRow(
                                         rank = index + 4,
                                         entry = entry,
-                                        isCurrentUser = entry.userId == currentUserId
+                                        isCurrentUser = isCurrent,
+                                        currentUserAvatarId = currentUserAvatarId,
+                                        currentUserPhotoUrl = currentUserPhotoUrl
                                     )
                                 }
                             }
@@ -148,14 +151,6 @@ fun LeaderboardScreen(
         }
     }
 }
-
-private val AvatarPalette = listOf(
-    Color(0xFF6C4DFF), Color(0xFF1D7AFC), Color(0xFF00A8C6), Color(0xFFE5484D),
-    Color(0xFFEC407A), Color(0xFF16A34A), Color(0xFFF59E0B), Color(0xFF7C3AED)
-)
-
-private fun avatarColor(name: String): Color =
-    AvatarPalette[(name.hashCode() and 0x7fffffff) % AvatarPalette.size]
 
 @Composable
 private fun LeaderboardTableHeader() {
@@ -175,7 +170,13 @@ private fun LeaderboardTableHeader() {
 }
 
 @Composable
-private fun LeaderboardRow(rank: Int, entry: LeaderboardEntry, isCurrentUser: Boolean) {
+private fun LeaderboardRow(
+    rank: Int,
+    entry: LeaderboardEntry,
+    isCurrentUser: Boolean,
+    currentUserAvatarId: String,
+    currentUserPhotoUrl: String?
+) {
     val shape = RoundedCornerShape(16.dp)
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -206,7 +207,14 @@ private fun LeaderboardRow(rank: Int, entry: LeaderboardEntry, isCurrentUser: Bo
             )
         }
         Spacer(Modifier.width(10.dp))
-        LeaderboardAvatar(entry = entry, rank = rank, accent = avatarColor(entry.displayName), size = 42.dp)
+        LeaderboardAvatar(
+            entry = entry,
+            isCurrentUser = isCurrentUser,
+            currentUserAvatarId = currentUserAvatarId,
+            currentUserPhotoUrl = currentUserPhotoUrl,
+            size = 42.dp,
+            ring = if (isCurrentUser) AccentGold else Color(0xFFDCE4F2)
+        )
         Column(modifier = Modifier.weight(1f).padding(horizontal = 10.dp)) {
             Text(
                 text = entry.displayName,
@@ -244,30 +252,38 @@ private fun LeaderboardRow(rank: Int, entry: LeaderboardEntry, isCurrentUser: Bo
 }
 
 @Composable
-private fun LeaderboardAvatar(entry: LeaderboardEntry, rank: Int, accent: Color, size: Dp, ring: Color = Color.White) {
-    val initials = entry.displayName.trim().split(" ").filter { it.isNotEmpty() }
-        .take(2).joinToString("") { it.first().uppercase() }.ifEmpty { "P$rank" }
-    Box(
-        contentAlignment = Alignment.Center,
-        modifier = Modifier
-            .size(size)
-            .clip(CircleShape)
-            .background(Brush.linearGradient(listOf(accent, accent.copy(alpha = 0.65f))))
-            .border(2.5.dp, ring, CircleShape)
-    ) {
-        Text(
-            initials,
-            style = MaterialTheme.typography.labelLarge.copy(
-                fontFamily = OutfitFontFamily, fontWeight = FontWeight.ExtraBold,
-                fontSize = (size.value * 0.34f).sp
-            ),
-            color = Color.White
-        )
+private fun LeaderboardAvatar(
+    entry: LeaderboardEntry,
+    isCurrentUser: Boolean,
+    currentUserAvatarId: String,
+    currentUserPhotoUrl: String?,
+    size: Dp,
+    ring: Color = Color.White
+) {
+    val resolvedAvatarId = if (isCurrentUser) currentUserAvatarId else entry.avatarId
+    val resolvedPhotoUrl = when {
+        isCurrentUser && !currentUserPhotoUrl.isNullOrBlank() -> currentUserPhotoUrl
+        entry.photoUrl.isNotBlank() -> entry.photoUrl
+        else -> null
     }
+    PlayerAvatarBadge(
+        avatarId = resolvedAvatarId,
+        googlePhotoUrl = resolvedPhotoUrl,
+        size = size,
+        hasCrownCosmetic = resolvedAvatarId == ProfileAvatar.AMBER_CROWN.id,
+        shape = CircleShape,
+        borderColor = ring,
+        borderWidth = 2.5.dp
+    )
 }
 
 @Composable
-private fun LeaderboardPodium(podium: List<LeaderboardEntry>, currentUserId: String?) {
+private fun LeaderboardPodium(
+    podium: List<LeaderboardEntry>,
+    currentUserId: String?,
+    currentUserAvatarId: String,
+    currentUserPhotoUrl: String?
+) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -283,13 +299,13 @@ private fun LeaderboardPodium(podium: List<LeaderboardEntry>, currentUserId: Str
             val second = podium.getOrNull(1)
             val third = podium.getOrNull(2)
             Box(Modifier.weight(1f)) {
-                if (second != null) PodiumSlot(2, second, Color(0xFFC0C8D8), second.userId == currentUserId, 58.dp, 54.dp)
+                if (second != null) PodiumSlot(2, second, Color(0xFFC0C8D8), second.userId == currentUserId, currentUserAvatarId, currentUserPhotoUrl, 58.dp, 54.dp)
             }
             Box(Modifier.weight(1.15f)) {
-                PodiumSlot(1, podium[0], AccentGold, podium[0].userId == currentUserId, 76.dp, 84.dp)
+                PodiumSlot(1, podium[0], AccentGold, podium[0].userId == currentUserId, currentUserAvatarId, currentUserPhotoUrl, 76.dp, 84.dp)
             }
             Box(Modifier.weight(1f)) {
-                if (third != null) PodiumSlot(3, third, Color(0xFFD08A4E), third.userId == currentUserId, 58.dp, 40.dp)
+                if (third != null) PodiumSlot(3, third, Color(0xFFD08A4E), third.userId == currentUserId, currentUserAvatarId, currentUserPhotoUrl, 58.dp, 40.dp)
             }
         }
     }
@@ -301,6 +317,8 @@ private fun PodiumSlot(
     entry: LeaderboardEntry,
     medal: Color,
     isCurrentUser: Boolean,
+    currentUserAvatarId: String,
+    currentUserPhotoUrl: String?,
     avatarSize: Dp,
     pedestalHeight: Dp,
     modifier: Modifier = Modifier
@@ -309,7 +327,14 @@ private fun PodiumSlot(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = modifier.fillMaxWidth()
     ) {
-        LeaderboardAvatar(entry, rank, avatarColor(entry.displayName), avatarSize, ring = medal)
+        LeaderboardAvatar(
+            entry = entry,
+            isCurrentUser = isCurrentUser,
+            currentUserAvatarId = currentUserAvatarId,
+            currentUserPhotoUrl = currentUserPhotoUrl,
+            size = avatarSize,
+            ring = medal
+        )
         Spacer(Modifier.height(5.dp))
         Text(
             text = entry.displayName,

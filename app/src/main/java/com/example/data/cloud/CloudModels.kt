@@ -89,6 +89,11 @@ data class UserCloudProfile(
         fun sanitizeAvatarId(raw: String?): String =
             if (raw != null && raw in ProfileAvatar.VALID_IDS) raw else ProfileAvatar.CLASSIC_BLOCK.id
 
+        fun sanitizePhotoUrl(raw: String?): String {
+            val trimmed = raw?.trim().orEmpty()
+            return if (trimmed.startsWith("https://") && trimmed.length <= 512) trimmed else ""
+        }
+
         fun sanitizeBlockStyle(raw: String): String =
             if (raw in VALID_BLOCK_STYLES) raw else "modern"
 
@@ -117,6 +122,8 @@ data class LeaderboardEntry(
     @DocumentId val documentId: String = "",
     val userId: String = "",
     val displayName: String = "Player",
+    val avatarId: String = ProfileAvatar.CLASSIC_BLOCK.id,
+    val photoUrl: String = "",
     val visibility: String = "public",
     val classicBestScore: Long = 0L,
     val maxCascadeDepth: Long = 0L,

@@ -95,12 +95,14 @@ fun PlayerAvatarBadge(
     googlePhotoUrl: String? = null,
     size: Dp = 48.dp,
     hasCrownCosmetic: Boolean = false,
+    shape: androidx.compose.ui.graphics.Shape = RoundedCornerShape((size.value * 0.25f).dp),
+    borderColor: Color? = null,
+    borderWidth: Dp? = null,
     modifier: Modifier = Modifier
 ) {
     val avatar = ProfileAvatar.fromId(avatarId)
-    val shape = RoundedCornerShape((size.value * 0.25f).dp)
-    val borderColor = if (hasCrownCosmetic) AccentGold else GlassBorder
-    val borderWidth = if (hasCrownCosmetic) 1.5.dp else 1.dp
+    val effectiveBorderColor = borderColor ?: if (hasCrownCosmetic) AccentGold else GlassBorder
+    val effectiveBorderWidth = borderWidth ?: if (hasCrownCosmetic) 1.5.dp else 1.dp
 
     val bgColor = when (avatar) {
         ProfileAvatar.CLASSIC_BLOCK -> SurfaceCard
@@ -118,7 +120,7 @@ fun PlayerAvatarBadge(
             .size(size)
             .clip(shape)
             .background(bgColor)
-            .border(borderWidth, borderColor, shape)
+            .border(effectiveBorderWidth, effectiveBorderColor, shape)
     ) {
         when {
             avatar == ProfileAvatar.GOOGLE_PHOTO && !googlePhotoUrl.isNullOrBlank() -> {
@@ -200,6 +202,7 @@ fun PlayerProfileHeader(
     onOpenWallet: () -> Unit,
     onOpenLeaderboard: () -> Unit,
     onOpenSettings: () -> Unit,
+    trailingWalletAction: (@Composable () -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val accent = if (hasCrownCosmetic) AccentGold else AccentCyan
@@ -278,30 +281,39 @@ fun PlayerProfileHeader(
             }
         }
 
-        // Wallet row — dedicated line so gold and diamond values never overlap the name.
+        // Wallet row — dedicated line so gold and diamond values never overlap the name, plus optional Lucky Wheel shortcut.
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(14.dp))
-                .clickable(onClick = onOpenWallet),
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            CurrencyWallet(
-                goldCoins = goldCoins,
-                diamonds = diamonds,
-                compact = true,
-                modifier = Modifier.weight(1f)
-            )
-            Text(
-                text = "${rank.xp} XP",
-                style = MaterialTheme.typography.labelMedium.copy(
-                    fontFamily = JetBrainsMonoFontFamily,
-                    fontSize = 10.sp
-                ),
-                color = TextMuted,
-                maxLines = 1
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(14.dp))
+                    .clickable(onClick = onOpenWallet)
+            ) {
+                CurrencyWallet(
+                    goldCoins = goldCoins,
+                    diamonds = diamonds,
+                    compact = true,
+                    modifier = Modifier.weight(1f)
+                )
+                Text(
+                    text = "${rank.xp} XP",
+                    style = MaterialTheme.typography.labelMedium.copy(
+                        fontFamily = JetBrainsMonoFontFamily,
+                        fontSize = 10.sp
+                    ),
+                    color = TextMuted,
+                    maxLines = 1
+                )
+            }
+            if (trailingWalletAction != null) {
+                trailingWalletAction()
+            }
         }
     }
 }

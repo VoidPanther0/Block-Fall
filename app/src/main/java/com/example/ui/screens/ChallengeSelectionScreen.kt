@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -10,6 +11,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -19,7 +21,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -29,17 +30,19 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
@@ -72,6 +75,7 @@ import com.example.ui.GameUiState
 import com.example.ui.components.ArcadeButtonStyle
 import com.example.ui.components.BoardPreview
 import com.example.ui.components.CascadeScreenContainer
+import com.example.ui.components.FloatingModalBadge
 import com.example.ui.components.PremiumCard
 import com.example.ui.components.PremiumPrimaryButton
 import com.example.ui.components.ScreenTopBar
@@ -110,65 +114,64 @@ fun ChallengeSelectionScreen(
     onBack: () -> Unit,
     onPlayLevel: (Int) -> Unit
 ) {
-    var selectedLevelNumber by remember(state.unlockedChallengeLevel) {
-        mutableIntStateOf(state.unlockedChallengeLevel.coerceIn(1, ChallengeLevels.levels.size))
-    }
-    val selectedLevel = ChallengeLevels.getLevel(selectedLevelNumber)
-    val selectedProgress = state.challengeProgress[selectedLevelNumber]
+    var popupLevelNumber by remember { mutableStateOf<Int?>(null) }
+    val activeSelectedLevel = popupLevelNumber ?: state.unlockedChallengeLevel.coerceIn(1, ChallengeLevels.levels.size)
     val totalStars = state.challengeProgress.values.sumOf { it.stars }
     val maxStars = ChallengeLevels.levels.size * 3
 
-    CascadeScreenContainer(
-        maxContentWidth = 560.dp,
-        backdrop = { Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(SkyTop, SkyBottom)))) },
-        modifier = Modifier.testTag("challenge_selection_screen")
-    ) {
-        ScreenTopBar(
-            title = "Challenges",
-            onBack = onBack,
-            backTestTag = "challenge_selection_back_button"
+    Box(modifier = Modifier.fillMaxSize()) {
+        CascadeScreenContainer(
+            maxContentWidth = 560.dp,
+            backdrop = { Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(SkyTop, SkyBottom)))) },
+            modifier = Modifier.testTag("challenge_selection_screen")
         ) {
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(SurfaceCardElevated)
-                    .border(1.dp, AccentGold.copy(alpha = 0.48f), RoundedCornerShape(12.dp))
-                    .padding(horizontal = 10.dp, vertical = 6.dp)
+            ScreenTopBar(
+                title = "Challenges",
+                onBack = onBack,
+                backTestTag = "challenge_selection_back_button"
             ) {
-                Text(
-                    text = "★ $totalStars/$maxStars",
-                    style = MaterialTheme.typography.labelLarge.copy(
-                        fontFamily = JetBrainsMonoFontFamily,
-                        fontSize = 13.sp
-                    ),
-                    color = AccentGold
-                )
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(SurfaceCardElevated)
+                        .border(1.dp, AccentGold.copy(alpha = 0.48f), RoundedCornerShape(12.dp))
+                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                ) {
+                    Text(
+                        text = "★ $totalStars/$maxStars",
+                        style = MaterialTheme.typography.labelLarge.copy(
+                            fontFamily = JetBrainsMonoFontFamily,
+                            fontSize = 13.sp
+                        ),
+                        color = AccentGold
+                    )
+                }
             }
-        }
 
-        Column(modifier = Modifier.fillMaxSize()) {
             GravityTrailMap(
                 unlockedLevel = state.unlockedChallengeLevel,
-                selectedLevelNumber = selectedLevelNumber,
+                selectedLevelNumber = activeSelectedLevel,
                 progress = state.challengeProgress,
-                onSelect = { selectedLevelNumber = it },
+                onSelect = { levelNum -> popupLevelNumber = levelNum },
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
             )
-            Spacer(Modifier.height(8.dp))
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(max = 300.dp)
-                    .verticalScroll(rememberScrollState())
-            ) {
-                ChallengeInspectorCard(
-                    level = selectedLevel,
-                    progress = selectedProgress,
-                    onPlay = { onPlayLevel(selectedLevel.levelNumber) }
-                )
-            }
+        }
+
+        val modalLevelNum = popupLevelNumber
+        if (modalLevelNum != null) {
+            val modalLevel = ChallengeLevels.getLevel(modalLevelNum)
+            val modalProgress = state.challengeProgress[modalLevelNum]
+            ChallengeLevelPopupModal(
+                level = modalLevel,
+                progress = modalProgress,
+                onPlay = {
+                    popupLevelNumber = null
+                    onPlayLevel(modalLevel.levelNumber)
+                },
+                onDismiss = { popupLevelNumber = null }
+            )
         }
     }
 }
@@ -452,112 +455,201 @@ private fun TrailNode(
 }
 
 @Composable
-private fun ChallengeInspectorCard(
+private fun ChallengeLevelPopupModal(
     level: ChallengeLevel,
     progress: ChallengeLevelProgress?,
     onPlay: () -> Unit,
-    modifier: Modifier = Modifier
+    onDismiss: () -> Unit
 ) {
     val previewBoard = remember(level.levelNumber) { level.buildBoard() }
     val twoStarTarget = ceil(level.targetScore * 1.15).toInt()
     val threeStarTarget = ceil(level.targetScore * 1.4).toInt()
     val (rewardGold, rewardDiamonds) = EconomyEngine.calculateChallengeWinReward(3)
+    val earnedStars = (progress?.stars ?: 0).coerceIn(0, 3)
 
-    PremiumCard(
-        cornerRadius = 22.dp,
-        borderColor = AccentGold.copy(alpha = 0.45f),
-        modifier = modifier
-            .fillMaxWidth()
-            .testTag("challenge_target_summary_card")
+    BackHandler(onBack = onDismiss)
+
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0x9E140B33))
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onDismiss
+            )
+            .padding(horizontal = 20.dp, vertical = 24.dp)
+            .testTag("challenge_level_popup")
     ) {
         Column(
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
             modifier = Modifier
+                .widthIn(max = 420.dp)
                 .fillMaxWidth()
-                .padding(14.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                BoardPreview(
-                    board = previewBoard,
-                    modifier = Modifier
-                        .widthIn(max = 78.dp)
-                        .fillMaxWidth(0.24f)
+                .verticalScroll(rememberScrollState())
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = {}
                 )
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(3.dp),
-                    modifier = Modifier.weight(1f)
+        ) {
+            Box(
+                contentAlignment = Alignment.TopCenter,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                PremiumCard(
+                    cornerRadius = 24.dp,
+                    borderColor = AccentGold.copy(alpha = 0.65f),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 34.dp)
+                        .testTag("challenge_target_summary_card")
+                ) {
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        IconButton(
+                            onClick = onDismiss,
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(6.dp)
+                                .size(48.dp)
+                                .testTag("challenge_popup_close_button")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Close,
+                                contentDescription = "Close level popup",
+                                tint = TextSecondary
+                            )
+                        }
+
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(start = 20.dp, end = 20.dp, top = 46.dp, bottom = 20.dp)
+                        ) {
+                            // Candy Crush style 3-star arch
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                for (idx in 1..3) {
+                                    val lit = idx <= earnedStars
+                                    Icon(
+                                        imageVector = Icons.Filled.Star,
+                                        contentDescription = null,
+                                        tint = if (lit) Color(0xFFFFC107) else Color(0xFFD5DCE8),
+                                        modifier = Modifier
+                                            .size(if (idx == 2) 34.dp else 26.dp)
+                                            .offset(y = if (idx == 2) (-5).dp else 0.dp)
+                                    )
+                                }
+                            }
+
+                            Text(
+                                text = "LEVEL ${level.levelNumber}",
+                                style = CascadeTextStyles.SectionKicker,
+                                color = AccentGold
+                            )
+                            Text(
+                                text = level.title,
+                                style = MaterialTheme.typography.headlineSmall.copy(
+                                    fontFamily = OutfitFontFamily,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    fontSize = 24.sp
+                                ),
+                                color = TextPrimary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                text = level.subtitle,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = TextSecondary,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
+                            )
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                BoardPreview(
+                                    board = previewBoard,
+                                    modifier = Modifier
+                                        .widthIn(max = 84.dp)
+                                        .fillMaxWidth(0.28f)
+                                )
+                                Column(
+                                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        InspectorStatChip("Target", "${level.targetScore}", Modifier.weight(1f))
+                                        InspectorStatChip("Moves", "${level.moveLimit}", Modifier.weight(1f))
+                                    }
+                                    InspectorStatChip("Best Score", "${progress?.bestScore ?: 0}", Modifier.fillMaxWidth())
+                                }
+                            }
+
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(BoardWellBg)
+                                    .border(1.dp, GlassBorder.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
+                                    .padding(horizontal = 10.dp, vertical = 8.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("★ ${level.targetScore}", style = CascadeTextStyles.NumericBalance.copy(fontSize = 11.sp), color = TextSecondary)
+                                Text("★★ $twoStarTarget", style = CascadeTextStyles.NumericBalance.copy(fontSize = 11.sp), color = Color(0xFF1D7AFC))
+                                Text("★★★ $threeStarTarget", style = CascadeTextStyles.NumericBalance.copy(fontSize = 11.sp), color = AccentGold)
+                            }
+
+                            Text(
+                                text = "3★ Reward: $rewardGold Gold · $rewardDiamonds Gems",
+                                style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp, fontWeight = FontWeight.SemiBold),
+                                color = TextSecondary
+                            )
+
+                            PremiumPrimaryButton(
+                                text = "Play Level ${level.levelNumber}",
+                                icon = Icons.Filled.PlayArrow,
+                                style = ArcadeButtonStyle.GOLD,
+                                onClick = onPlay,
+                                height = 56.dp,
+                                cornerRadius = 16.dp,
+                                fontSize = 18.sp,
+                                testTag = "challenge_play_button",
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    }
+                }
+
+                FloatingModalBadge(
+                    size = 70.dp,
+                    backgroundBrush = Brush.verticalGradient(listOf(Color(0xFFFFD54F), Color(0xFFFF8F00)))
                 ) {
                     Text(
-                        text = "LEVEL ${level.levelNumber}",
-                        style = CascadeTextStyles.SectionKicker,
-                        color = AccentGold
-                    )
-                    Text(
-                        text = level.title,
-                        style = MaterialTheme.typography.titleLarge.copy(
+                        text = "${level.levelNumber}",
+                        style = MaterialTheme.typography.headlineMedium.copy(
                             fontFamily = OutfitFontFamily,
-                            fontWeight = FontWeight.ExtraBold
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 30.sp
                         ),
-                        color = TextPrimary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Text(
-                        text = level.subtitle,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = TextSecondary,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
+                        color = Color.White
                     )
                 }
             }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                InspectorStatChip("Target", "${level.targetScore}", Modifier.weight(1f))
-                InspectorStatChip("Moves", "${level.moveLimit}", Modifier.weight(1f))
-                InspectorStatChip("Best", "${progress?.bestScore ?: 0}", Modifier.weight(1f))
-            }
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(BoardWellBg)
-                    .border(1.dp, GlassBorder.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
-                    .padding(horizontal = 10.dp, vertical = 7.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("★ ${level.targetScore}", style = CascadeTextStyles.NumericBalance.copy(fontSize = 11.sp), color = TextSecondary)
-                Text("★★ $twoStarTarget / 1 move left", style = CascadeTextStyles.NumericBalance.copy(fontSize = 10.sp), color = Color(0xFF1D7AFC), maxLines = 1)
-                Text("★★★ $threeStarTarget / 3 left", style = CascadeTextStyles.NumericBalance.copy(fontSize = 10.sp), color = AccentGold, maxLines = 1)
-            }
-            Text(
-                text = "More stars = finish faster or score higher. 3★ reward: $rewardGold Gold · $rewardDiamonds Gems",
-                style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp),
-                color = TextSecondary,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-
-            PremiumPrimaryButton(
-                text = "Play Level ${level.levelNumber}",
-                icon = Icons.Filled.PlayArrow,
-                style = ArcadeButtonStyle.GOLD,
-                onClick = onPlay,
-                height = 50.dp,
-                cornerRadius = 15.dp,
-                fontSize = 16.sp,
-                testTag = "challenge_play_button",
-                modifier = Modifier.fillMaxWidth()
-            )
         }
     }
 }

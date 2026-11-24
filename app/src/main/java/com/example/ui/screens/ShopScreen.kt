@@ -158,9 +158,14 @@ fun ShopScreen(
                 accent = AccentDiamond,
                 title = "Free Diamonds",
                 subtitle = "Watch a short ad to earn +5 Diamonds",
-                buttonText = if (diamondAdReady) "Watch Ad · +5 Diamonds" else "Ad Loading...",
-                enabled = diamondAdReady,
-                onClick = onWatchDiamondAd,
+                buttonText = if (diamondAdReady) "Watch Ad · +5 Diamonds" else "Prepare Ad · +5 Diamonds",
+                enabled = true,
+                onClick = {
+                    if (diamondAdReady) onWatchDiamondAd() else {
+                        onEnsureAdsLoaded()
+                        onWatchDiamondAd()
+                    }
+                },
                 tag = "shop_watch_diamond_ad_button"
             )
             AdRewardCard(
@@ -168,9 +173,14 @@ fun ShopScreen(
                 accent = AccentGold,
                 title = "Free Gold",
                 subtitle = "Watch a short ad to earn +50 Gold",
-                buttonText = if (goldAdReady) "Watch Ad · +50 Gold" else "Ad Loading...",
-                enabled = goldAdReady,
-                onClick = onWatchGoldAd,
+                buttonText = if (goldAdReady) "Watch Ad · +50 Gold" else "Prepare Ad · +50 Gold",
+                enabled = true,
+                onClick = {
+                    if (goldAdReady) onWatchGoldAd() else {
+                        onEnsureAdsLoaded()
+                        onWatchGoldAd()
+                    }
+                },
                 tag = "shop_watch_ad_button"
             )
 

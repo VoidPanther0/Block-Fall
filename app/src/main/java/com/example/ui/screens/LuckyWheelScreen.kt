@@ -299,10 +299,13 @@ fun LuckyWheelScreen(
                     modifier = Modifier.fillMaxWidth()
                 )
                 PremiumPrimaryButton(
-                    text = if (adReady) "Watch Ad · +1 Spin" else "Ad Loading...",
+                    text = if (adReady) "Watch Ad · +1 Spin" else "Tap for Ad · +1 Spin",
                     style = ArcadeButtonStyle.GREEN,
-                    enabled = adReady && !isSpinning,
-                    onClick = onWatchAd,
+                    enabled = !isSpinning,
+                    onClick = {
+                        if (!adReady) onRefresh()
+                        onWatchAd()
+                    },
                     height = 44.dp,
                     fontSize = 13.sp,
                     testTag = "wheel_watch_ad_button",
@@ -317,10 +320,13 @@ fun LuckyWheelScreen(
                     textAlign = TextAlign.Center
                 )
                 PremiumPrimaryButton(
-                    text = if (adReady) "Watch Ad · +1 Spin" else "Ad Loading...",
+                    text = if (adReady) "Watch Ad · +1 Spin" else "Tap for Ad · +1 Spin",
                     style = ArcadeButtonStyle.GREEN,
-                    enabled = adReady,
-                    onClick = onWatchAd,
+                    enabled = true,
+                    onClick = {
+                        if (!adReady) onRefresh()
+                        onWatchAd()
+                    },
                     height = 58.dp,
                     fontSize = 18.sp,
                     testTag = "wheel_watch_ad_button",

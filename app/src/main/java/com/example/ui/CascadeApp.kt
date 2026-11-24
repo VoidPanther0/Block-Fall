@@ -183,7 +183,12 @@ private fun AuthenticatedCloudSession(
         gameState.playerDisplayName,
         gameState.profileAvatarId
     ) {
-        if (initialRestoreDone) cloudViewModel.syncLocalStateToCloud(gameState)
+        if (initialRestoreDone) {
+            cloudViewModel.syncLocalStateToCloud(
+                uiState = gameState,
+                photoUrl = currentUser.photoUrl?.toString()
+            )
+        }
     }
 
     CascadeNavHost(
@@ -191,6 +196,12 @@ private fun AuthenticatedCloudSession(
         currentUser = currentUser,
         cloudViewModel = cloudViewModel
     )
+}
+
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is android.content.ContextWrapper -> baseContext.findActivity()
+    else -> null
 }
 
 @OptIn(ExperimentalComposeUiApi::class)
@@ -204,7 +215,7 @@ private fun CascadeNavHost(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val adState by viewModel.adState.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    val activity = context as? Activity
+    val activity = remember(context) { context.findActivity() }
     val lifecycleOwner = LocalLifecycleOwner.current
     val onboardingPrefs = remember(context) { com.example.data.OnboardingPrefs(context) }
     val onboardingComplete = remember(currentUser != null) {
@@ -224,7 +235,7 @@ private fun CascadeNavHost(
     val adsSdkReady by AdConfig.sdkInitialized.collectAsStateWithLifecycle()
     LaunchedEffect(adsSdkReady) {
         if (adsSdkReady) {
-            viewModel.ensureAdsLoaded()
+            viewModel.onAdsSdkReady()
         }
     }
 
@@ -481,7 +492,12 @@ private fun CascadeNavHost(
                                 displayName = currentUser.displayName ?: "Player",
                                 email = currentUser.email,
                                 sessionStatus = sessionStatus,
-                                onSyncNow = { cloudViewModel.syncLocalStateToCloud(state) },
+                                onSyncNow = {
+                                    cloudViewModel.syncLocalStateToCloud(
+                                        uiState = state,
+                                        photoUrl = currentUser.photoUrl?.toString()
+                                    )
+                                },
                                 onVerifyIntegrity = { cloudViewModel.verifyAppIntegrity() },
                                 onSignedOut = viewModel::onCloudSignedOut
                             )
@@ -549,6 +565,8 @@ private fun CascadeNavHost(
                     LeaderboardScreen(
                         isSignedIn = false,
                         currentUserId = null,
+                        currentUserAvatarId = state.profileAvatarId,
+                        currentUserPhotoUrl = null,
                         leaderboardState = CloudStreamState.Success(emptyList<LeaderboardEntry>()),
                         onBack = { navController.popBackStack() }
                     )
@@ -557,6 +575,8 @@ private fun CascadeNavHost(
                     LeaderboardScreen(
                         isSignedIn = true,
                         currentUserId = currentUser.uid,
+                        currentUserAvatarId = state.profileAvatarId,
+                        currentUserPhotoUrl = currentUser.photoUrl?.toString(),
                         leaderboardState = leaderboardState,
                         onBack = { navController.popBackStack() }
                     )

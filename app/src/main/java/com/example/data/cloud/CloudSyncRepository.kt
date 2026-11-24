@@ -135,6 +135,8 @@ class CloudSyncRepository(
 
     suspend fun publishLeaderboardEntry(
         displayName: String,
+        avatarId: String = com.example.game.ProfileAvatar.CLASSIC_BLOCK.id,
+        photoUrl: String? = null,
         classicBestScore: Int,
         maxCascadeDepth: Int,
         rankTitle: String
@@ -149,6 +151,8 @@ class CloudSyncRepository(
             val mergedScore = maxOf(prevBest, classicBestScore.toLong())
                 .coerceIn(0L, UserCloudProfile.MAX_SCORE)
             val safeName = UserCloudProfile.sanitizeDisplayName(displayName)
+            val safeAvatarId = UserCloudProfile.sanitizeAvatarId(avatarId)
+            val safePhotoUrl = UserCloudProfile.sanitizePhotoUrl(photoUrl)
             val safeRank = rankTitle.trim().take(32).ifEmpty { "Block Initiate" }
             val safeDepth = maxCascadeDepth.toLong().coerceIn(0L, UserCloudProfile.MAX_DEPTH)
 
@@ -156,6 +160,8 @@ class CloudSyncRepository(
                 val createMap = mapOf(
                     "userId" to uid,
                     "displayName" to safeName,
+                    "avatarId" to safeAvatarId,
+                    "photoUrl" to safePhotoUrl,
                     "visibility" to "public",
                     "classicBestScore" to mergedScore,
                     "maxCascadeDepth" to safeDepth,
@@ -167,6 +173,8 @@ class CloudSyncRepository(
             } else {
                 val updateMap = mapOf(
                     "displayName" to safeName,
+                    "avatarId" to safeAvatarId,
+                    "photoUrl" to safePhotoUrl,
                     "classicBestScore" to mergedScore,
                     "maxCascadeDepth" to safeDepth,
                     "rankTitle" to safeRank,

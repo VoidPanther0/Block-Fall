@@ -36,11 +36,12 @@ class TabletLayoutRobolectricTest {
         composeRule.onNodeWithTag("home_play_button").assertIsDisplayed()
         composeRule.onNodeWithTag("home_challenges_button").assertIsDisplayed()
 
-        // Challenges shows side-by-side level grid + inspector summary card
+        // Challenges shows trail map; tapping node 1 opens Candy Crush-style level popup
         composeRule.onNodeWithTag("home_challenges_button").performClick()
         composeRule.waitForIdle()
         composeRule.onNodeWithTag("challenge_selection_screen").assertIsDisplayed()
-        composeRule.onNodeWithTag("challenge_level_card_1").assertIsDisplayed()
+        composeRule.onNodeWithTag("challenge_level_card_1").assertIsDisplayed().performClick()
+        composeRule.waitForIdle()
         composeRule.onNodeWithTag("challenge_target_summary_card").assertIsDisplayed()
         composeRule.onNodeWithTag("challenge_play_button").performScrollTo().performClick()
         composeRule.waitForIdle()

@@ -235,6 +235,17 @@ class SecurityAndPerfTest {
         assertTrue(createMap["createdAt"] is com.google.firebase.firestore.FieldValue)
         assertTrue(createMap["updatedAt"] is com.google.firebase.firestore.FieldValue)
 
+        assertEquals("https://example.com/photo.jpg", com.example.data.cloud.UserCloudProfile.sanitizePhotoUrl("  https://example.com/photo.jpg  "))
+        assertEquals("", com.example.data.cloud.UserCloudProfile.sanitizePhotoUrl("http://insecure.example.com/photo.jpg"))
+        val lbEntry = com.example.data.cloud.LeaderboardEntry(
+            userId = "uid_test_1",
+            displayName = "Cascade Pro",
+            avatarId = "amber_crown",
+            photoUrl = "https://example.com/photo.jpg"
+        )
+        assertEquals("amber_crown", lbEntry.avatarId)
+        assertEquals("https://example.com/photo.jpg", lbEntry.photoUrl)
+
         runBlocking {
             repo.resetAllProgress()
             repo.updateClassicBestScore(2500)

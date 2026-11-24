@@ -33,8 +33,9 @@ class RedesignLayoutRobolectricTest {
             composeRule.waitForIdle()
         }
 
-        // Home renders hero play CTA on narrow 320dp width
+        // Home renders hero play CTA and top Lucky Wheel icon on narrow 320dp width
         composeRule.onNodeWithTag("home_screen").assertIsDisplayed()
+        composeRule.onNodeWithTag("home_wheel_button").assertIsDisplayed()
         composeRule.onNodeWithTag("home_play_button").assertIsDisplayed()
 
         // Home -> Play (Mode Selection)
@@ -63,7 +64,6 @@ class RedesignLayoutRobolectricTest {
 
         composeRule.onNodeWithTag("shop_watch_diamond_ad_button").performScrollTo().assertIsDisplayed()
         composeRule.onNodeWithTag("shop_watch_ad_button").performScrollTo().assertIsDisplayed()
-        composeRule.onNodeWithTag("shop_open_wheel_button").performScrollTo().assertIsDisplayed()
 
         // Back, then Home -> Profile (Rank, 100-Diamond Name Change, Avatar Picker, Best Score)
         composeRule.onNodeWithTag("shop_back_button").performClick()

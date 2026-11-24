@@ -95,7 +95,14 @@ fun CascadeGameScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val visualPhase by viewModel.visualPhase.collectAsStateWithLifecycle()
     val continueAdState by viewModel.continueAdState.collectAsStateWithLifecycle()
-    val activity = LocalContext.current as? Activity
+    val context = LocalContext.current
+    val activity = remember(context) {
+        var cur: android.content.Context? = context
+        while (cur is android.content.ContextWrapper && cur !is Activity) {
+            cur = cur.baseContext
+        }
+        cur as? Activity
+    }
     val density = LocalDensity.current
     val haptics = LocalHapticFeedback.current
     // Clearance between pointer finger and bottom edge of lifted floating piece
@@ -489,10 +496,10 @@ private fun ContinueCountdownOverlay(
                 )
 
                 PremiumPrimaryButton(
-                    text = if (adReady) "Watch Ad to Continue" else "Loading Rewarded Ad...",
+                    text = if (adReady) "Watch Ad to Continue" else "Watch Ad to Continue",
                     icon = Icons.Filled.PlayCircle,
                     style = ArcadeButtonStyle.GREEN,
-                    enabled = adReady,
+                    enabled = true,
                     onClick = onWatchAd,
                     height = 52.dp,
                     cornerRadius = 14.dp,

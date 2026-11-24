@@ -12,10 +12,14 @@ plugins {
 val TEST_ADMOB_APP_ID = "ca-app-pub-3940256099942544~3347511713"
 fun envOrDotEnv(name: String): String? {
   System.getenv(name)?.takeIf { it.isNotBlank() }?.let { return it.trim() }
-  val envFile = rootProject.file(".env")
-  if (!envFile.exists()) return null
-  return envFile.readLines().firstOrNull { it.trim().startsWith("$name=") }
-    ?.substringAfter("=")?.trim()?.trim('"')?.trim(Char(39))?.takeIf { it.isNotBlank() }
+  for (fileName in listOf(".env", ".env.example")) {
+    val envFile = rootProject.file(fileName)
+    if (!envFile.exists()) continue
+    val match = envFile.readLines().firstOrNull { it.trim().startsWith("$name=") }
+      ?.substringAfter("=")?.trim()?.trim('"')?.trim(Char(39))?.takeIf { it.isNotBlank() }
+    if (match != null) return match
+  }
+  return null
 }
 val admobAppIdPattern = Regex("^ca-app-pub-[0-9]{16}~[0-9]{10}$")
 val admobUnitPattern = Regex("^ca-app-pub-[0-9]{16}/[0-9]{10}$")

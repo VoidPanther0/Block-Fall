@@ -262,14 +262,27 @@ test("Public leaderboard enforces query filter visibility=='public' and owner wr
       .set(validLeaderboardPayload(BOB_UID))
   );
 
-  // Alice can upgrade her own leaderboard score
+  // Alice can upgrade her own leaderboard score and avatar
   await assertSucceeds(
     alice
       .collection("leaderboard")
       .doc(ALICE_UID)
       .update({
         classicBestScore: 2400,
+        avatarId: "amber_crown",
+        photoUrl: "https://example.com/avatar.png",
         updatedAt: new Date(Date.now() - 500),
+      })
+  );
+
+  // Reject invalid leaderboard avatarId
+  await assertFails(
+    alice
+      .collection("leaderboard")
+      .doc(ALICE_UID)
+      .update({
+        avatarId: "not_a_real_avatar",
+        updatedAt: new Date(Date.now() - 200),
       })
   );
 });

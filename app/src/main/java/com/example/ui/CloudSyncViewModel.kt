@@ -83,7 +83,7 @@ class CloudSyncViewModel(
                 initialValue = CloudStreamState.Loading
             )
 
-    fun syncLocalStateToCloud(uiState: GameUiState) {
+    fun syncLocalStateToCloud(uiState: GameUiState, photoUrl: String? = null) {
         viewModelScope.launch {
             _sessionStatus.update { it.copy(isSyncing = true, lastErrorMessage = null) }
 
@@ -102,6 +102,8 @@ class CloudSyncViewModel(
             if (effectiveBest > 0) {
                 val lbRes = repository.publishLeaderboardEntry(
                     displayName = effectiveName,
+                    avatarId = uiState.profileAvatarId,
+                    photoUrl = photoUrl,
                     classicBestScore = effectiveBest,
                     maxCascadeDepth = uiState.statistics.maxCascadeDepth,
                     rankTitle = uiState.playerRank.title

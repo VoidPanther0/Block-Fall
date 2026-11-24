@@ -216,6 +216,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     val visualPhase: StateFlow<BoardVisualPhase> = _visualPhase.asStateFlow()
 
     init {
+        publishSpinPoints()
         ensureAdsLoaded()
         viewModelScope.launch {
             val saved = repository.loadInitialProgress()
@@ -638,6 +639,13 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         wheelAdManager.reloadIfNeeded()
     }
 
+    fun onAdsSdkReady() {
+        adManager.reloadAfterSdkInit()
+        continueAdManager.reloadAfterSdkInit()
+        diamondAdManager.reloadAfterSdkInit()
+        wheelAdManager.reloadAfterSdkInit()
+    }
+
     fun purchaseShopItem(itemId: String) {
         viewModelScope.launch {
             val result = EconomyEngine.purchaseShopItem(
@@ -707,31 +715,55 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     fun watchRewardedAd(activity: Activity) {
         _economyMessage.value = null
+        if (!adManager.isReady()) {
+            adManager.reloadIfNeeded()
+            _economyMessage.value = "Preparing reward ad, please tap again..."
+            return
+        }
         adManager.showAd(
             activity = activity,
             onRewarded = { claimAdRewardOnServer(com.example.data.cloud.AdRewardType.GOLD_50) },
             onDismissed = { },
-            onFailed = { _economyMessage.value = "Ad unavailable, retrying automatically..." }
+            onFailed = {
+                adManager.reloadIfNeeded()
+                _economyMessage.value = "Ad couldn't open, reloading now..."
+            }
         )
     }
 
     fun watchDiamondAd(activity: Activity) {
         _economyMessage.value = null
+        if (!diamondAdManager.isReady()) {
+            diamondAdManager.reloadIfNeeded()
+            _economyMessage.value = "Preparing reward ad, please tap again..."
+            return
+        }
         diamondAdManager.showAd(
             activity = activity,
             onRewarded = { claimAdRewardOnServer(com.example.data.cloud.AdRewardType.DIAMOND_5) },
             onDismissed = { },
-            onFailed = { _economyMessage.value = "Ad unavailable, retrying automatically..." }
+            onFailed = {
+                diamondAdManager.reloadIfNeeded()
+                _economyMessage.value = "Ad couldn't open, reloading now..."
+            }
         )
     }
 
     fun watchWheelAd(activity: Activity) {
         _economyMessage.value = null
+        if (!wheelAdManager.isReady()) {
+            wheelAdManager.reloadIfNeeded()
+            _economyMessage.value = "Preparing spin ad, please tap again..."
+            return
+        }
         wheelAdManager.showAd(
             activity = activity,
             onRewarded = { claimAdRewardOnServer(com.example.data.cloud.AdRewardType.WHEEL_POINT) },
             onDismissed = { },
-            onFailed = { _economyMessage.value = "Ad unavailable, retrying automatically..." }
+            onFailed = {
+                wheelAdManager.reloadIfNeeded()
+                _economyMessage.value = "Ad couldn't open, reloading now..."
+            }
         )
     }
 
@@ -740,11 +772,13 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     /**
-     * Always grants the earned ad reward locally upon impression reward verification so players
-     * never lose Gold, Diamonds, or Spin Points due to backend unavailability or App Check lag.
-     * Signed-in sessions also mirror the claim to the server ledger in the background.
+     * Always grants the earned ad reward locally immediately upon reward verification so players
+     * never lose Gold, Diamonds, or Spin Points due to backend latency or App Check delays.
+     * Signed-in sessions reconcile with the server ledger in the background.
      */
     private fun claimAdRewardOnServer(type: com.example.data.cloud.AdRewardType) {
+        soundManager.playGreat()
+        haptics.perform(com.example.audio.HapticEvent.CLEAR)
         when (type) {
             com.example.data.cloud.AdRewardType.GOLD_50 -> {
                 claimAdReward(AD_REWARD_GOLD, UUID.randomUUID().toString())
@@ -772,22 +806,17 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 }
             }
             com.example.data.cloud.AdRewardType.WHEEL_POINT -> {
-                if (!isSignedIn()) {
-                    setLocalSpinPoints(localSpinPoints() + 1)
-                    _economyMessage.value = "+1 Spin Point earned!"
-                    return
-                }
-                viewModelScope.launch {
-                    serverEconomy.claimAdReward(type)
-                        .onSuccess { wallet ->
-                            serverSpinPoints = wallet.wheelSpinPoints.coerceAtLeast(serverSpinPoints + 1)
-                            publishSpinPoints()
-                            _economyMessage.value = "+1 Spin Point earned!"
-                        }
-                        .onFailure {
-                            setLocalSpinPoints(localSpinPoints() + 1)
-                            _economyMessage.value = "+1 Spin Point earned!"
-                        }
+                setLocalSpinPoints(localSpinPoints() + 1)
+                _economyMessage.value = "+1 Spin Point earned!"
+                if (isSignedIn()) {
+                    viewModelScope.launch {
+                        serverEconomy.claimAdReward(type)
+                            .onSuccess { wallet ->
+                                setLocalSpinPoints((localSpinPoints() - 1).coerceAtLeast(0))
+                                serverSpinPoints = wallet.wheelSpinPoints
+                                publishSpinPoints()
+                            }
+                    }
                 }
             }
         }
@@ -946,6 +975,10 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     fun watchContinueRewardedAd(activity: Activity) {
         val state = _uiState.value
         if (!state.showContinueOffer) return
+        if (!continueAdManager.isReady()) {
+            continueAdManager.reloadIfNeeded()
+            return
+        }
         var rewardDelivered = false
         isContinueAdShowing = true
         continueAdManager.showAd(

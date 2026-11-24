@@ -113,4 +113,15 @@ class AdSafetyTest {
         assertTrue(replay is EconomyMutationResult.Rejected)
         assertEquals(25, applyResult(updated, replay).diamonds)
     }
+
+    @Test
+    fun `configured_admob_ids_from_env_example_are_active`() {
+        assertEquals("ca-app-pub-3956806922961659~5844639339", com.example.ads.AdConfig.configuredAppId)
+        assertEquals("ca-app-pub-3956806922961659/2616122603", com.example.ads.AdConfig.bannerGameplayUnitId)
+        assertEquals("ca-app-pub-3956806922961659/1692042840", com.example.ads.AdConfig.rewardedContinueUnitId)
+        assertEquals("ca-app-pub-3956806922961659/6496939128", com.example.ads.AdConfig.rewardedDiamondUnitId)
+        assertEquals("ca-app-pub-3956806922961659/3967743045", com.example.ads.AdConfig.rewardedGoldUnitId)
+        assertEquals("ca-app-pub-3956806922961659/5922224058", com.example.ads.AdConfig.rewardedWheelUnitId)
+        assertTrue(com.example.ads.AdConfig.isAppIdValid)
+    }
 }

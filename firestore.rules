@@ -84,6 +84,8 @@ service cloud.firestore {
              data.userId == request.auth.uid &&
              data.userId == entryId &&
              data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 40 &&
+             (!('avatarId' in data) || isValidAvatarId(data.avatarId)) &&
+             (!('photoUrl' in data) || (data.photoUrl is string && data.photoUrl.size() <= 512)) &&
              data.visibility is string && data.visibility.size() <= 16 && data.visibility == 'public' &&
              data.classicBestScore is int && data.classicBestScore >= 0 && data.classicBestScore <= 10000000 &&
              data.maxCascadeDepth is int && data.maxCascadeDepth >= 0 && data.maxCascadeDepth <= 100 &&
@@ -186,7 +188,7 @@ service cloud.firestore {
                          'createdAt', 'updatedAt'
                        ]) &&
                        incoming().keys().hasOnly([
-                         'userId', 'displayName', 'visibility',
+                         'userId', 'displayName', 'avatarId', 'photoUrl', 'visibility',
                          'classicBestScore', 'maxCascadeDepth', 'rankTitle',
                          'createdAt', 'updatedAt'
                        ]) &&
@@ -200,7 +202,7 @@ service cloud.firestore {
                        incoming().createdAt == existing().createdAt &&
                        incoming().classicBestScore >= existing().classicBestScore &&
                        incoming().diff(existing()).affectedKeys().hasOnly([
-                         'displayName', 'classicBestScore', 'maxCascadeDepth', 'rankTitle', 'updatedAt'
+                         'displayName', 'avatarId', 'photoUrl', 'classicBestScore', 'maxCascadeDepth', 'rankTitle', 'updatedAt'
                        ]);
 
       allow delete: if isSignedIn() && isValidId(entryId) && entryId == request.auth.uid;
