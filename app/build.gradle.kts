@@ -82,8 +82,9 @@ android {
       signingConfig = signingConfigs.getByName("release")
     }
     debug {
-      // Debug builds always use Google's official test AdMob App ID.
-      manifestPlaceholders["ADMOB_APP_ID"] = TEST_ADMOB_APP_ID
+      // Debug builds (e.g. AI Studio) use the real AdMob App ID when one is supplied via
+      // env / .env / AI Studio Secrets; otherwise Google's official test App ID.
+      manifestPlaceholders["ADMOB_APP_ID"] = prodAdmobAppId
       // Do not remove or modify this signingConfig assignment. It is necessary for Android apps in
       // AI Studio.
       // Falls back to the AGP-generated default debug keystore when no repo-root debug.keystore

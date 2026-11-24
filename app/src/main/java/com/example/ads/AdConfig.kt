@@ -15,8 +15,8 @@ import com.example.BuildConfig
  *
  * The "Rewarded Gold +50" placement is the free-gold card in the Shop's Coins tab.
  *
- * Policy note: the checked-in defaults and debug builds always use Google's official test
- * ad units. Serving production ads while developing/testing can be flagged as invalid
+ * Debug and release builds both use the configured IDs when they are real; otherwise they
+ * fall back to Google's official test ad units. Checked-in defaults are test units. Serving production ads while developing/testing can be flagged as invalid
  * traffic and put the AdMob account at risk. Production IDs must only be enabled after the
  * app is published and the AdMob account is approved.
  */
@@ -32,7 +32,7 @@ object AdConfig {
     private val APP_ID_PATTERN = Regex("^ca-app-pub-\\d{16}~\\d{10}$")
     private val AD_UNIT_PATTERN = Regex("^ca-app-pub-\\d{16}/\\d{10}$")
 
-    val configuredAppId: String = if (BuildConfig.DEBUG) TEST_APP_ID else BuildConfig.ADMOB_APP_ID
+    val configuredAppId: String = BuildConfig.ADMOB_APP_ID
 
     /** True when a release build has no real production IDs and is serving Google test ads. */
     val isUsingTestIds: Boolean get() = configuredAppId == TEST_APP_ID
@@ -45,43 +45,28 @@ object AdConfig {
     private val configuredRewardedDiamondUnitId: String = BuildConfig.ADMOB_REWARDED_DIAMOND_UNIT_ID
     private val configuredRewardedWheelUnitId: String = BuildConfig.ADMOB_REWARDED_WHEEL_UNIT_ID
 
-    val rewardedGoldUnitId: String = if (BuildConfig.DEBUG) {
-        TEST_REWARDED_GOLD_UNIT_ID
-    } else {
+    val rewardedGoldUnitId: String =
         configuredRewardedGoldUnitId
             .takeIf { AD_UNIT_PATTERN.matches(it) }
             ?: TEST_REWARDED_GOLD_UNIT_ID
-    }
 
-    val bannerGameplayUnitId: String = if (BuildConfig.DEBUG) {
-        TEST_BANNER_GAMEPLAY_UNIT_ID
-    } else {
+    val bannerGameplayUnitId: String =
         configuredBannerGameplayUnitId
             .takeIf { AD_UNIT_PATTERN.matches(it) }
             ?: TEST_BANNER_GAMEPLAY_UNIT_ID
-    }
 
-    val rewardedContinueUnitId: String = if (BuildConfig.DEBUG) {
-        TEST_REWARDED_CONTINUE_UNIT_ID
-    } else {
+    val rewardedContinueUnitId: String =
         configuredRewardedContinueUnitId
             .takeIf { AD_UNIT_PATTERN.matches(it) }
             ?: TEST_REWARDED_CONTINUE_UNIT_ID
-    }
 
-    val rewardedDiamondUnitId: String = if (BuildConfig.DEBUG) {
-        TEST_REWARDED_DIAMOND_UNIT_ID
-    } else {
+    val rewardedDiamondUnitId: String =
         configuredRewardedDiamondUnitId
             .takeIf { AD_UNIT_PATTERN.matches(it) }
             ?: TEST_REWARDED_DIAMOND_UNIT_ID
-    }
 
-    val rewardedWheelUnitId: String = if (BuildConfig.DEBUG) {
-        TEST_REWARDED_WHEEL_UNIT_ID
-    } else {
+    val rewardedWheelUnitId: String =
         configuredRewardedWheelUnitId
             .takeIf { AD_UNIT_PATTERN.matches(it) }
             ?: TEST_REWARDED_WHEEL_UNIT_ID
-    }
 }
