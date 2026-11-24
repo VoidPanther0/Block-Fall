@@ -149,68 +149,102 @@ fun LeaderboardScreen(
     }
 }
 
+private val AvatarPalette = listOf(
+    Color(0xFF6C4DFF), Color(0xFF1D7AFC), Color(0xFF00A8C6), Color(0xFFE5484D),
+    Color(0xFFEC407A), Color(0xFF16A34A), Color(0xFFF59E0B), Color(0xFF7C3AED)
+)
+
+private fun avatarColor(name: String): Color =
+    AvatarPalette[(name.hashCode() and 0x7fffffff) % AvatarPalette.size]
+
 @Composable
 private fun LeaderboardTableHeader() {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(6.dp))
-            .background(Color(0xFF1B1464))
-            .padding(horizontal = 14.dp, vertical = 8.dp)
+            .padding(top = 6.dp, start = 6.dp, end = 6.dp)
     ) {
         val style = MaterialTheme.typography.labelMedium.copy(
-            fontWeight = FontWeight.ExtraBold, fontSize = 11.sp
+            fontWeight = FontWeight.ExtraBold, fontSize = 11.sp, letterSpacing = 1.sp
         )
-        Text("RANK", style = style, color = Color.White, modifier = Modifier.width(46.dp))
-        Text("NAME", style = style, color = Color.White, modifier = Modifier.weight(1f).padding(start = 46.dp))
-        Text("HIGHEST SCORE", style = style, color = Color.White, textAlign = TextAlign.End)
+        Text("RANK", style = style, color = TextSecondary, modifier = Modifier.width(52.dp))
+        Text("PLAYER", style = style, color = TextSecondary, modifier = Modifier.weight(1f))
+        Text("BEST SCORE", style = style, color = TextSecondary, textAlign = TextAlign.End)
     }
 }
 
 @Composable
 private fun LeaderboardRow(rank: Int, entry: LeaderboardEntry, isCurrentUser: Boolean) {
+    val shape = RoundedCornerShape(16.dp)
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
-            .background(
-                if (isCurrentUser) AccentGold.copy(alpha = 0.22f)
-                else if (rank % 2 == 0) Color(0x33FFFFFF) else Color(0x1AFFFFFF)
+            .clip(shape)
+            .background(if (isCurrentUser) AccentGold.copy(alpha = 0.16f) else Color.White)
+            .border(
+                if (isCurrentUser) 2.dp else 1.dp,
+                if (isCurrentUser) AccentGold else Color(0xFFDCE4F2),
+                shape
             )
-            .padding(horizontal = 14.dp, vertical = 8.dp)
+            .padding(horizontal = 10.dp, vertical = 8.dp)
     ) {
-        Text(
-            text = "$rank",
-            style = MaterialTheme.typography.titleLarge.copy(
-                fontFamily = OutfitFontFamily, fontWeight = FontWeight.ExtraBold, fontSize = 24.sp
-            ),
-            color = TextPrimary,
-            modifier = Modifier.width(46.dp)
-        )
-        LeaderboardAvatar(entry = entry, rank = rank, accent = AccentCyan, size = 40.dp)
-        Text(
-            text = if (isCurrentUser) "${entry.displayName} (You)" else entry.displayName,
-            style = MaterialTheme.typography.titleSmall.copy(
-                fontFamily = OutfitFontFamily, fontWeight = FontWeight.Bold
-            ),
-            color = if (isCurrentUser) AccentGold else TextPrimary,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f).padding(horizontal = 10.dp)
-        )
-        Text(
-            text = "${entry.classicBestScore}",
-            style = MaterialTheme.typography.titleLarge.copy(
-                fontFamily = JetBrainsMonoFontFamily, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp
-            ),
-            color = TextPrimary
-        )
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .size(34.dp)
+                .clip(CircleShape)
+                .background(Color(0xFFEEF3FA))
+        ) {
+            Text(
+                text = "$rank",
+                style = MaterialTheme.typography.titleSmall.copy(
+                    fontFamily = OutfitFontFamily, fontWeight = FontWeight.ExtraBold, fontSize = 15.sp
+                ),
+                color = TextPrimary
+            )
+        }
+        Spacer(Modifier.width(10.dp))
+        LeaderboardAvatar(entry = entry, rank = rank, accent = avatarColor(entry.displayName), size = 42.dp)
+        Column(modifier = Modifier.weight(1f).padding(horizontal = 10.dp)) {
+            Text(
+                text = entry.displayName,
+                style = MaterialTheme.typography.titleSmall.copy(
+                    fontFamily = OutfitFontFamily, fontWeight = FontWeight.Bold
+                ),
+                color = TextPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            if (isCurrentUser) {
+                Text(
+                    "YOU",
+                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.ExtraBold, fontSize = 10.sp),
+                    color = AccentGold
+                )
+            }
+        }
+        Box(
+            modifier = Modifier
+                .clip(RoundedCornerShape(50))
+                .background(Color(0xFF1B1464))
+                .padding(horizontal = 12.dp, vertical = 5.dp)
+        ) {
+            Text(
+                text = "${entry.classicBestScore}",
+                style = MaterialTheme.typography.titleSmall.copy(
+                    fontFamily = JetBrainsMonoFontFamily, fontWeight = FontWeight.ExtraBold, fontSize = 15.sp
+                ),
+                color = Color.White,
+                maxLines = 1
+            )
+        }
     }
 }
 
 @Composable
-private fun LeaderboardAvatar(entry: LeaderboardEntry, rank: Int, accent: Color, size: Dp) {
+private fun LeaderboardAvatar(entry: LeaderboardEntry, rank: Int, accent: Color, size: Dp, ring: Color = Color.White) {
     val initials = entry.displayName.trim().split(" ").filter { it.isNotEmpty() }
         .take(2).joinToString("") { it.first().uppercase() }.ifEmpty { "P$rank" }
     Box(
@@ -218,10 +252,17 @@ private fun LeaderboardAvatar(entry: LeaderboardEntry, rank: Int, accent: Color,
         modifier = Modifier
             .size(size)
             .clip(CircleShape)
-            .background(Color(0xFF1B1464))
-            .border(2.dp, accent, CircleShape)
+            .background(Brush.linearGradient(listOf(accent, accent.copy(alpha = 0.65f))))
+            .border(2.5.dp, ring, CircleShape)
     ) {
-        Text(initials, style = MaterialTheme.typography.labelLarge.copy(fontFamily = OutfitFontFamily), color = Color.White)
+        Text(
+            initials,
+            style = MaterialTheme.typography.labelLarge.copy(
+                fontFamily = OutfitFontFamily, fontWeight = FontWeight.ExtraBold,
+                fontSize = (size.value * 0.34f).sp
+            ),
+            color = Color.White
+        )
     }
 }
 
@@ -230,21 +271,25 @@ private fun LeaderboardPodium(podium: List<LeaderboardEntry>, currentUserId: Str
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(22.dp))
             .background(Brush.verticalGradient(listOf(Color(0xFF2A1F8F), Color(0xFF14104F))))
-            .padding(horizontal = 10.dp, vertical = 16.dp)
+            .padding(start = 8.dp, end = 8.dp, top = 18.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.Top
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.Bottom
         ) {
-            if (podium.size > 1) {
-                PodiumSlot(2, podium[1], AccentCyan, podium[1].userId == currentUserId, false, Modifier.weight(1f).padding(top = 22.dp))
+            val second = podium.getOrNull(1)
+            val third = podium.getOrNull(2)
+            Box(Modifier.weight(1f)) {
+                if (second != null) PodiumSlot(2, second, Color(0xFFC0C8D8), second.userId == currentUserId, 58.dp, 54.dp)
             }
-            PodiumSlot(1, podium[0], AccentGold, podium[0].userId == currentUserId, true, Modifier.weight(1.2f))
-            if (podium.size > 2) {
-                PodiumSlot(3, podium[2], AccentPurple, podium[2].userId == currentUserId, false, Modifier.weight(1f).padding(top = 22.dp))
+            Box(Modifier.weight(1.15f)) {
+                PodiumSlot(1, podium[0], AccentGold, podium[0].userId == currentUserId, 76.dp, 84.dp)
+            }
+            Box(Modifier.weight(1f)) {
+                if (third != null) PodiumSlot(3, third, Color(0xFFD08A4E), third.userId == currentUserId, 58.dp, 40.dp)
             }
         }
     }
@@ -254,26 +299,22 @@ private fun LeaderboardPodium(podium: List<LeaderboardEntry>, currentUserId: Str
 private fun PodiumSlot(
     rank: Int,
     entry: LeaderboardEntry,
-    accent: Color,
+    medal: Color,
     isCurrentUser: Boolean,
-    elevated: Boolean,
+    avatarSize: Dp,
+    pedestalHeight: Dp,
     modifier: Modifier = Modifier
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(3.dp),
-        modifier = modifier
+        modifier = modifier.fillMaxWidth()
     ) {
+        LeaderboardAvatar(entry, rank, avatarColor(entry.displayName), avatarSize, ring = medal)
+        Spacer(Modifier.height(5.dp))
         Text(
-            text = when (rank) { 1 -> "1st"; 2 -> "2nd"; else -> "3rd" },
-            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.ExtraBold),
-            color = accent
-        )
-        LeaderboardAvatar(entry, rank, accent, if (elevated) 72.dp else 56.dp)
-        Text(
-            text = if (isCurrentUser) "${entry.displayName} (You)" else entry.displayName,
-            style = MaterialTheme.typography.labelMedium,
-            color = Color.White,
+            text = entry.displayName,
+            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+            color = if (isCurrentUser) AccentGold else Color.White,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center
@@ -283,10 +324,27 @@ private fun PodiumSlot(
             style = MaterialTheme.typography.titleMedium.copy(
                 fontFamily = JetBrainsMonoFontFamily,
                 fontWeight = FontWeight.ExtraBold,
-                fontSize = if (elevated) 22.sp else 17.sp
+                fontSize = if (rank == 1) 20.sp else 16.sp
             ),
             color = Color.White,
             maxLines = 1
         )
+        Spacer(Modifier.height(6.dp))
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(pedestalHeight)
+                .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
+                .background(Brush.verticalGradient(listOf(medal, medal.copy(alpha = 0.55f))))
+        ) {
+            Text(
+                text = "$rank",
+                style = MaterialTheme.typography.headlineMedium.copy(
+                    fontFamily = OutfitFontFamily, fontWeight = FontWeight.ExtraBold, fontSize = 30.sp
+                ),
+                color = Color.White.copy(alpha = 0.95f)
+            )
+        }
     }
 }

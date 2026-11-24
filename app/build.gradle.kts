@@ -14,7 +14,8 @@ fun envOrDotEnv(name: String): String? {
   System.getenv(name)?.takeIf { it.isNotBlank() }?.let { return it.trim() }
   val envFile = rootProject.file(".env")
   if (!envFile.exists()) return null
-  return envFile.readLines().firstOrNull { it.startsWith("$name=") }?.substringAfter("=")?.trim()
+  return envFile.readLines().firstOrNull { it.trim().startsWith("$name=") }
+    ?.substringAfter("=")?.trim()?.trim('"', ''')?.takeIf { it.isNotBlank() }
 }
 val admobAppIdPattern = Regex("^ca-app-pub-[0-9]{16}~[0-9]{10}$")
 val admobUnitPattern = Regex("^ca-app-pub-[0-9]{16}/[0-9]{10}$")
@@ -47,6 +48,14 @@ android {
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
+    fun adField(name: String, real: String?, test: String) =
+      buildConfigField("String", name, "\"${real ?: test}\"")
+    adField("ADMOB_APP_ID", realAdmobAppId, TEST_ADMOB_APP_ID)
+    adField("ADMOB_REWARDED_GOLD_UNIT_ID", realAdmobRewardedUnit, "ca-app-pub-3940256099942544/5224354917")
+    adField("ADMOB_BANNER_GAMEPLAY_UNIT_ID", realAdmobBannerGameplayUnit, "ca-app-pub-3940256099942544/6300978111")
+    adField("ADMOB_REWARDED_CONTINUE_UNIT_ID", realAdmobRewardedContinueUnit, "ca-app-pub-3940256099942544/5224354917")
+    adField("ADMOB_REWARDED_DIAMOND_UNIT_ID", realAdmobRewardedDiamondUnit, "ca-app-pub-3940256099942544/5224354917")
+    adField("ADMOB_REWARDED_WHEEL_UNIT_ID", realAdmobRewardedWheelUnit, "ca-app-pub-3940256099942544/5224354917")
   }
 
   // Do not remove or modify these signingConfigs. They are necessary for building, installing,
@@ -147,6 +156,9 @@ secrets {
   propertiesFileName = ".env"
   defaultPropertiesFileName = ".env.example"
   ignoreList.add("FIREBASE_APPCHECK_DEBUG_TOKEN")
+  // AdMob IDs are written to BuildConfig below from env vars OR .env (real IDs win, Google test
+  // IDs are the fallback), so they work no matter how the build host injects its secrets.
+  ignoreList.add("ADMOB_.*")
 }
 
 googleServices { missingGoogleServicesStrategy = MissingGoogleServicesStrategy.WARN }

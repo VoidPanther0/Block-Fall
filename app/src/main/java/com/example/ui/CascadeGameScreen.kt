@@ -280,12 +280,16 @@ fun CascadeGameScreen(
                     }
 
                     // Centered flexible playfield zone: board position stays 100% locked
-                    Box(
+                    BoxWithConstraints(
                         contentAlignment = Alignment.Center,
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxWidth()
                     ) {
+                        // The board is a square: size it from the space actually left between the
+                        // HUD and the dock (extra HUD rows such as the Daily progress bar would
+                        // otherwise push the board underneath the piece tray).
+                        val fitSide = minOf(maxWidth, maxHeight - 44.dp, boardMaxWidth).coerceAtLeast(120.dp)
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center
@@ -325,7 +329,7 @@ fun CascadeGameScreen(
                                     viewModel.updateBoardBounds(rect, dragLiftPx)
                                 },
                                 modifier = Modifier
-                                    .widthIn(max = boardMaxWidth)
+                                    .widthIn(max = fitSide)
                                     .fillMaxWidth()
                             )
                         }
@@ -516,7 +520,7 @@ private fun ShuffleBoosterButton(count: Int, enabled: Boolean, onClick: () -> Un
         icon = Icons.Filled.Shuffle,
         accent = AccentCyan,
         enabled = enabled,
-        height = 48.dp,
+        height = 42.dp,
         onClick = onClick,
         testTag = "shuffle_booster_button"
     )

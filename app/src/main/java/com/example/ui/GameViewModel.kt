@@ -204,7 +204,6 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         continueAdManager.loadAd()
         diamondAdManager.loadAd()
         wheelAdManager.loadAd()
-        if (!isSignedIn()) _wheelSpinPoints.value = localSpinPoints()
         viewModelScope.launch {
             val saved = repository.loadInitialProgress()
             soundManager.soundEnabled = saved.settings.soundEnabled
@@ -738,14 +737,23 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                         _economyMessage.value = "+1 Spin Point earned!"
                     }
                 }
-                .onFailure { _economyMessage.value = "Reward could not be verified. Please try again." }
+                .onFailure {
+                    if (type == com.example.data.cloud.AdRewardType.WHEEL_POINT) {
+                        // Server unreachable / not verified: still give the spin on-device.
+                        setLocalSpinPoints(localSpinPoints() + 1)
+                        _economyMessage.value = "+1 Spin Point earned!"
+                    } else {
+                        _economyMessage.value = "Reward could not be verified. Please try again."
+                    }
+                }
         }
     }
 
     /** Spins the server-side wheel; [onResult] receives the winning segment index. */
     fun spinLuckyWheel(onResult: (Int?) -> Unit) {
         if (_isSpinning.value) return
-        if (!isSignedIn()) {
+        // On-device points (guests, or ads whose server claim failed) are spent first.
+        if (!isSignedIn() || localSpinPoints() > 0) {
             spinLocalWheel(onResult)
             return
         }
@@ -804,7 +812,14 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     private fun setLocalSpinPoints(value: Int) {
         val v = value.coerceIn(0, 99)
         wheelPrefs.edit().putInt("points", v).apply()
-        _wheelSpinPoints.value = v
+        publishSpinPoints()
+    }
+
+    /** Spin points shown in the UI = server-held points (signed in) + on-device points. */
+    private var serverSpinPoints = 0
+
+    private fun publishSpinPoints() {
+        _wheelSpinPoints.value = serverSpinPoints + localSpinPoints()
     }
 
     /** Same 10 segments / weights as `WHEEL_SEGMENTS` in functions/index.js. */
@@ -847,16 +862,18 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     fun refreshServerWallet() {
         if (!isSignedIn()) {
-            _wheelSpinPoints.value = localSpinPoints()
+            serverSpinPoints = 0
+            publishSpinPoints()
             return
         }
         viewModelScope.launch {
-            serverEconomy.fetchWallet().onSuccess { _wheelSpinPoints.value = it.wheelSpinPoints }
+            serverEconomy.fetchWallet().onSuccess { serverSpinPoints = it.wheelSpinPoints; publishSpinPoints() }
         }
     }
 
     private suspend fun applyServerWallet(w: com.example.data.cloud.ServerWallet) {
-        _wheelSpinPoints.value = w.wheelSpinPoints
+        serverSpinPoints = w.wheelSpinPoints
+        publishSpinPoints()
         applyWalletMutation(
             _uiState.value.wallet.copy(
                 goldCoins = w.goldCoins,
