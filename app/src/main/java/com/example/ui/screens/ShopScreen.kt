@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -85,22 +86,28 @@ fun ShopScreen(
     ) {
         ScreenTopBar(title = "Shop", onBack = onBack, backTestTag = "shop_back_button")
 
-        PremiumCard(
-            cornerRadius = 18.dp,
-            borderColor = AccentGold.copy(alpha = 0.38f),
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
             modifier = Modifier
                 .fillMaxWidth()
                 .testTag("shop_wallet_bar")
         ) {
-            Box(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
-                CurrencyWallet(
-                    goldCoins = state.wallet.goldCoins,
-                    diamonds = state.wallet.diamonds,
-                    goldTag = "shop_gold_balance",
-                    diamondTag = "shop_diamond_balance",
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
+            WalletTile(
+                label = "GOLD",
+                amount = state.wallet.goldCoins,
+                icon = Icons.Filled.MonetizationOn,
+                accent = AccentGold,
+                tag = "shop_gold_balance",
+                modifier = Modifier.weight(1f)
+            )
+            WalletTile(
+                label = "DIAMONDS",
+                amount = state.wallet.diamonds,
+                icon = Icons.Filled.Diamond,
+                accent = AccentDiamond,
+                tag = "shop_diamond_balance",
+                modifier = Modifier.weight(1f)
+            )
         }
 
         Spacer(Modifier.height(12.dp))
@@ -108,7 +115,8 @@ fun ShopScreen(
         Column(
             verticalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier
-                .fillMaxSize()
+                .weight(1f)
+                .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
         ) {
             SectionHeader(kicker = "Premium Currency", title = "Diamond Packs", accent = AccentDiamond)
@@ -170,8 +178,8 @@ private fun ComingSoonPackCard(icon: ImageVector, accent: Color, pack: StorePack
         ) {
             IconBadge(icon, accent)
             Column(Modifier.weight(1f)) {
-                Text(pack.title, style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold), color = TextPrimary)
-                Text(pack.subtitle, style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+                Text(pack.title, style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold), color = TextPrimary, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                Text(pack.subtitle, style = MaterialTheme.typography.bodySmall, color = TextSecondary, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
             }
             PremiumPrimaryButton(
                 text = "Coming Soon",
@@ -181,7 +189,8 @@ private fun ComingSoonPackCard(icon: ImageVector, accent: Color, pack: StorePack
                 onClick = {},
                 height = 44.dp,
                 cornerRadius = 12.dp,
-                fontSize = 11.sp
+                fontSize = 11.sp,
+                modifier = Modifier.width(116.dp)
             )
         }
     }
@@ -236,5 +245,47 @@ private fun IconBadge(icon: ImageVector, accent: Color) {
             .border(1.dp, accent.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
     ) {
         Icon(icon, null, tint = accent, modifier = Modifier.size(22.dp))
+    }
+}
+
+@Composable
+private fun WalletTile(
+    label: String,
+    amount: Int,
+    icon: ImageVector,
+    accent: Color,
+    tag: String,
+    modifier: Modifier = Modifier
+) {
+    val shape = RoundedCornerShape(18.dp)
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        modifier = modifier
+            .clip(shape)
+            .background(accent.copy(alpha = 0.12f))
+            .border(1.5.dp, accent.copy(alpha = 0.5f), shape)
+            .padding(horizontal = 12.dp, vertical = 10.dp)
+            .testTag(tag)
+    ) {
+        IconBadge(icon, accent)
+        Column(Modifier.weight(1f)) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp),
+                color = accent,
+                maxLines = 1
+            )
+            Text(
+                text = "%,d".format(amount),
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = if (amount >= 100_000) 15.sp else 19.sp
+                ),
+                color = TextPrimary,
+                maxLines = 1,
+                softWrap = false
+            )
+        }
     }
 }
