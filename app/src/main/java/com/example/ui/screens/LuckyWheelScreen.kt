@@ -62,6 +62,7 @@ import com.example.ui.components.CascadeScreenContainer
 import com.example.ui.components.GlossyArcadeButton
 import com.example.ui.components.GoldMetallicBanner
 import com.example.ui.components.RoyalSkyBackdrop
+import com.example.ui.components.threeDFrame
 import com.example.ui.components.ScreenTopBar
 import com.example.ui.theme.AccentCyan
 import com.example.ui.theme.AccentGold
@@ -154,9 +155,10 @@ fun LuckyWheelScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier
+                    .threeDFrame(shape = CircleShape, depth = 5.dp, base = Color(0xFF3A2400))
                     .shadow(6.dp, CircleShape, clip = false)
                     .clip(CircleShape)
-                    .background(BoardWellBg)
+                    .background(Brush.verticalGradient(listOf(Color(0xFF2A2410), BoardWellBg)))
                     .border(1.5.dp, AccentGold.copy(alpha = 0.85f), CircleShape)
                     .padding(horizontal = 20.dp, vertical = 9.dp)
             ) {
@@ -201,12 +203,38 @@ fun LuckyWheelScreen(
                         radius = outer * 1.15f, center = center
                     )
 
-                    // Metallic gold outer rim
+                    // Extruded wheel body: stacked silhouettes give the disc real thickness.
+                    val thickness = outer * 0.085f
+                    for (i in 7 downTo 1) {
+                        val t = i / 7f
+                        drawCircle(
+                            color = Color(0xFF120A18).copy(alpha = 0.48f + 0.42f * t),
+                            radius = outer,
+                            center = Offset(center.x, center.y + thickness * t)
+                        )
+                    }
+
+                    // Metallic gold outer rim with a specular sweep
                     drawCircle(
-                        Brush.linearGradient(listOf(AccentGoldBright, AccentGold, AccentGoldDeep, AccentGoldBright)),
+                        Brush.linearGradient(
+                            listOf(
+                                AccentGoldDeep,
+                                AccentGoldBright,
+                                Color.White.copy(alpha = 0.92f),
+                                AccentGold,
+                                AccentGoldDeep,
+                                AccentGoldBright
+                            )
+                        ),
                         radius = outer, center = center
                     )
                     drawCircle(Color(0xFF0C173B), radius = radius + 3f, center = center)
+                    drawCircle(
+                        color = AccentGoldBright.copy(alpha = 0.35f),
+                        radius = radius + 1f,
+                        center = center,
+                        style = Stroke(width = 2f)
+                    )
 
                     // Rotating segmented wheel
                     rotate(rotation.value, pivot = center) {
@@ -263,15 +291,29 @@ fun LuckyWheelScreen(
                         )
                     }
 
-                    // Center wheel hub
+                    // Center wheel hub with a raised 3D boss
+                    for (i in 4 downTo 1) {
+                        drawCircle(
+                            color = Color(0xFF3A2400).copy(alpha = 0.70f),
+                            radius = radius * 0.18f,
+                            center = Offset(center.x, center.y + i * 2.2f)
+                        )
+                    }
                     drawCircle(
                         Brush.radialGradient(
-                            listOf(AccentGoldBright, AccentGold, AccentGoldDeep),
-                            center = center, radius = radius * 0.2f
+                            listOf(Color.White.copy(alpha = 0.85f), AccentGoldBright, AccentGold, AccentGoldDeep),
+                            center = Offset(center.x - radius * 0.05f, center.y - radius * 0.05f),
+                            radius = radius * 0.2f
                         ),
                         radius = radius * 0.18f, center = center
                     )
                     drawCircle(Color(0xFF060B21), radius = radius * 0.11f, center = center)
+                    drawCircle(
+                        color = Color.White.copy(alpha = 0.28f),
+                        radius = radius * 0.11f,
+                        center = center,
+                        style = Stroke(width = 1.5f)
+                    )
 
                     // Top indicator arrow/pointer
                     val pointer = Path().apply {
@@ -280,6 +322,7 @@ fun LuckyWheelScreen(
                         lineTo(center.x + 24f, center.y - outer - 12f)
                         close()
                     }
+                    drawPath(pointer, Color(0xFF2A0008), topLeft = Offset(0f, 6f))
                     drawPath(pointer, Color(0xFFFF3D57))
                     drawPath(pointer, Color.White, style = Stroke(width = 4f))
                 }
@@ -290,6 +333,7 @@ fun LuckyWheelScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier
                         .fillMaxWidth()
+                        .threeDFrame(shape = RoundedCornerShape(18.dp), depth = 6.dp, base = Color(0xFF3A2400))
                         .shadow(8.dp, RoundedCornerShape(18.dp), clip = false)
                         .clip(RoundedCornerShape(18.dp))
                         .background(

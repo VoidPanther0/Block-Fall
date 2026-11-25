@@ -355,8 +355,9 @@ fun GameModeCard(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
                         .size(56.dp)
+                        .threeDFrame(shape = RoundedCornerShape(8.dp), depth = 4.dp, base = Color(0xFF03060E))
                         .clip(RoundedCornerShape(8.dp))
-                        .background(accent.copy(alpha = 0.12f))
+                        .background(Brush.verticalGradient(listOf(accent.copy(alpha = 0.22f), accent.copy(alpha = 0.06f))))
                         .border(1.dp, accent.copy(alpha = 0.35f), RoundedCornerShape(8.dp))
                 ) {
                     if (artwork != null) {
@@ -459,8 +460,9 @@ fun SkinCard(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
                     .size(56.dp)
+                    .threeDFrame(shape = RoundedCornerShape(12.dp), depth = 4.dp, base = Color(0xFF03060E))
                     .clip(RoundedCornerShape(12.dp))
-                    .background(boardWellColor)
+                    .background(Brush.verticalGradient(listOf(boardWellColor, Color(0xFF060A16))))
                     .border(1.dp, accent.copy(alpha = 0.45f), RoundedCornerShape(12.dp))
                     .padding(6.dp)
             ) {
@@ -583,8 +585,9 @@ fun BlockFallBottomNav(
         horizontalArrangement = Arrangement.SpaceEvenly,
         modifier = modifier
             .fillMaxWidth()
+            .threeDFrame(shape = shape, depth = 7.dp, base = Color(0xFF02040A))
             .clip(shape)
-            .background(SurfaceDarkElevated)
+            .background(Brush.verticalGradient(listOf(Color(0xFF1D1F24), SurfaceDarkElevated)))
             .border(1.dp, HairlineDark, shape)
             .padding(horizontal = 6.dp, vertical = 6.dp)
             .testTag("block_fall_bottom_nav")
@@ -595,10 +598,12 @@ fun BlockFallBottomNav(
                 targetValue = if (selected) Color.White else MuteDark,
                 label = "nav_tint"
             )
+            val tabShape = RoundedCornerShape(9999.dp)
             val bgModifier = if (selected) {
                 Modifier
-                    .clip(RoundedCornerShape(9999.dp))
-                    .background(com.example.ui.theme.PsBlue)
+                    .threeDFrame(shape = tabShape, depth = 4.dp, base = Color(0xFF002A52))
+                    .clip(tabShape)
+                    .background(Brush.verticalGradient(listOf(Color(0xFF2A90FF), com.example.ui.theme.PsBlue)))
             } else {
                 Modifier.clip(RoundedCornerShape(9999.dp))
             }

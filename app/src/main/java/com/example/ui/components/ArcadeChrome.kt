@@ -1,7 +1,13 @@
 package com.example.ui.components
 
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -123,6 +129,29 @@ enum class ArcadeButtonStyle {
  */
 @Composable
 fun RoyalSkyBackdrop(modifier: Modifier = Modifier) {
+    // GPU-only drift: the gradient layer is translated on the compositor, never recomposed.
+    val drift by rememberInfiniteTransition(label = "skyDrift").animateFloat(
+        initialValue = -16f,
+        targetValue = 16f,
+        animationSpec = infiniteRepeatable(
+            tween(8000, easing = LinearEasing),
+            RepeatMode.Reverse
+        ),
+        label = "skyDriftValue"
+    )
+    // Deterministic star field generated once — zero allocation in the draw loop.
+    val stars = remember {
+        var seed = 1337L
+        List(56) {
+            seed = (seed * 16807L) % 2147483647L
+            val sx = seed / 2147483647f
+            seed = (seed * 16807L) % 2147483647L
+            val sy = seed / 2147483647f
+            seed = (seed * 16807L) % 2147483647L
+            Triple(sx, sy, 0.6f + (seed / 2147483647f) * 1.6f)
+        }
+    }
+
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -136,9 +165,53 @@ fun RoyalSkyBackdrop(modifier: Modifier = Modifier) {
                 )
             )
     ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer { translationX = drift }
+                .background(
+                    Brush.linearGradient(
+                        colors = listOf(
+                            Color.Transparent,
+                            Color(0xFF0A1738).copy(alpha = 0.42f),
+                            Color.Transparent
+                        )
+                    )
+                )
+        )
         Canvas(modifier = Modifier.fillMaxSize()) {
             val w = size.width
             val h = size.height
+
+            // Parallax star dust with depth-scaled radius.
+            stars.forEach { (sx, sy, radius) ->
+                drawCircle(
+                    color = Color.White.copy(alpha = 0.10f + radius * 0.14f),
+                    radius = radius,
+                    center = Offset(sx * w, sy * h * 0.82f)
+                )
+            }
+
+            // Perspective floor grid: a cheap way to add a 3D stage to every screen.
+            for (i in 0..8) {
+                val t = i / 8f
+                val y = h * (0.72f + 0.28f * t * t)
+                drawLine(
+                    color = Color(0xFF1D3B7A).copy(alpha = 0.16f * (1f - t)),
+                    start = Offset(0f, y),
+                    end = Offset(w, y),
+                    strokeWidth = 1f
+                )
+            }
+            for (i in -4..4) {
+                val x = w / 2f + i * w * 0.13f
+                drawLine(
+                    color = Color(0xFF1D3B7A).copy(alpha = 0.10f),
+                    start = Offset(w / 2f + i * w * 0.028f, h * 0.72f),
+                    end = Offset(x, h),
+                    strokeWidth = 1f
+                )
+            }
 
             // Quiet, cinematic PlayStation Blue atmospheric ambient glow at top-right
             drawCircle(
@@ -212,7 +285,8 @@ fun ArcadeTitleLogo(
                 fontFamily = OutfitFontFamily,
                 fontWeight = FontWeight.Light,
                 fontSize = fontSize,
-                letterSpacing = 1.2.sp
+                letterSpacing = 1.2.sp,
+                shadow = Shadow(color = Color(0xFF00285C), offset = Offset(0f, 5f), blurRadius = 0f)
             ),
             color = Color.White,
             textAlign = TextAlign.Center
@@ -224,7 +298,8 @@ fun ArcadeTitleLogo(
                 fontFamily = OutfitFontFamily,
                 fontWeight = FontWeight.Bold,
                 fontSize = fontSize,
-                letterSpacing = 1.6.sp
+                letterSpacing = 1.6.sp,
+                shadow = Shadow(color = Color(0xFF001A3D), offset = Offset(0f, 5f), blurRadius = 0f)
             ),
             color = PsBlue,
             textAlign = TextAlign.Center
@@ -303,12 +378,27 @@ fun GlossyArcadeButton(
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val pressScale by animateFloatAsState(
-        targetValue = if (isPressed && enabled) 0.97f else 1f,
+        targetValue = if (isPressed && enabled) 0.985f else 1f,
         animationSpec = spring(dampingRatio = 0.78f, stiffness = 550f),
         label = "ps_btn_press"
     )
+    // Pressing sinks the button into its 3D base instead of only shrinking it.
+    val pressDrop by animateFloatAsState(
+        targetValue = if (isPressed && enabled) 4f else 0f,
+        animationSpec = spring(dampingRatio = 0.70f, stiffness = 520f),
+        label = "ps_btn_depth"
+    )
 
     val pillShape = RoundedCornerShape(9999.dp)
+    val depth = if (style == ArcadeButtonStyle.SLATE) 4.dp else 7.dp
+    val sideBase = when (style) {
+        ArcadeButtonStyle.COMMERCE -> Color(0xFF3D0E00)
+        ArcadeButtonStyle.GOLD, ArcadeButtonStyle.GOLD_BLUE, ArcadeButtonStyle.GOLD_PURPLE -> Color(0xFF5A3700)
+        ArcadeButtonStyle.GREEN -> Color(0xFF03331A)
+        ArcadeButtonStyle.RED -> Color(0xFF3A020E)
+        ArcadeButtonStyle.PURPLE -> Color(0xFF1E0846)
+        else -> Color(0xFF00315E)
+    }
 
     Box(
         contentAlignment = Alignment.Center,
@@ -317,9 +407,11 @@ fun GlossyArcadeButton(
             .graphicsLayer {
                 scaleX = pressScale
                 scaleY = pressScale
+                translationY = pressDrop
             }
             .then(if (testTag != null) Modifier.testTag(testTag) else Modifier)
             .alpha(if (enabled) 1f else 0.40f)
+            .threeDFrame(shape = pillShape, depth = depth, base = sideBase)
             .clip(pillShape)
             .background(if (enabled) bgBrush else Brush.verticalGradient(listOf(Charcoal, SurfaceDarkCard)))
             .then(
@@ -335,6 +427,21 @@ fun GlossyArcadeButton(
             )
             .padding(horizontal = 24.dp)
     ) {
+        // Curved specular sheen sells the glossy 3D face (pure draw, no recomposition).
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color.White.copy(alpha = 0.22f),
+                            Color.White.copy(alpha = 0.04f),
+                            Color.Transparent,
+                            Color.Black.copy(alpha = 0.16f)
+                        )
+                    )
+                )
+        )
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center
@@ -378,8 +485,9 @@ fun FrostedGlassCard(
     borderColor: Color = HairlineDark,
     backgroundBrush: Brush = Brush.verticalGradient(
         colors = listOf(
+            Color(0xFF24262B),
             SurfaceDarkCard,
-            SurfaceDarkCard
+            Color(0xFF111214)
         )
     ),
     content: @Composable ColumnScope.() -> Unit
@@ -387,6 +495,7 @@ fun FrostedGlassCard(
     val shape = RoundedCornerShape(cornerRadius)
     Column(
         modifier = modifier
+            .threeDFrame(shape = shape, depth = 8.dp)
             .clip(shape)
             .background(backgroundBrush)
             .border(1.dp, borderColor, shape),
@@ -455,7 +564,7 @@ fun CrystalCoinBadge(
     modifier: Modifier = Modifier,
     size: Dp = 22.dp
 ) {
-    Canvas(modifier = modifier.size(size)) {
+    Canvas(modifier = modifier.size(size).threeDFrame(shape = CircleShape, depth = 3.dp, base = Color(0xFF4A2B00))) {
         val r = this.size.minDimension / 2f
         val c = Offset(this.size.width / 2f, this.size.height / 2f)
         drawCircle(
@@ -485,7 +594,7 @@ fun CrystalDiamondBadge(
     modifier: Modifier = Modifier,
     size: Dp = 22.dp
 ) {
-    Canvas(modifier = modifier.size(size)) {
+    Canvas(modifier = modifier.size(size).threeDFrame(shape = CircleShape, depth = 3.dp, base = Color(0xFF06294A))) {
         val w = this.size.width
         val h = this.size.height
         val path = Path().apply {
@@ -531,7 +640,7 @@ fun CrystalMedalBadge(
         else -> Triple(Color(0xFFFFBC80), Color(0xFF9C4E19), Color(0xFF1CC95B))
     }
 
-    Canvas(modifier = modifier.size(size)) {
+    Canvas(modifier = modifier.size(size).threeDFrame(shape = CircleShape, depth = 4.dp, base = Color(0xFF050A1C))) {
         val w = this.size.width
         val h = this.size.height
         val cx = w * 0.5f
@@ -620,6 +729,7 @@ fun FloatingModalBadge(
         contentAlignment = Alignment.Center,
         modifier = modifier
             .size(size)
+            .threeDFrame(shape = CircleShape, depth = 5.dp, base = Color(0xFF03060F))
             .shadow(8.dp, CircleShape, clip = false)
             .clip(CircleShape)
             .background(backgroundBrush)

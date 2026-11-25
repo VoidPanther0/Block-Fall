@@ -103,6 +103,12 @@ fun GameBoard(
     Box(
         modifier = modifier
             .aspectRatio(1f)
+            .threeDFrame(
+                shape = boardShape,
+                depth = 10.dp,
+                base = Color(0xFF01030A),
+                glow = if (hasSelectedSlot) AccentCyan.copy(alpha = 0.5f) else Color.Transparent
+            )
             .shadow(10.dp, boardShape, clip = false)
             .clip(boardShape)
             .background(

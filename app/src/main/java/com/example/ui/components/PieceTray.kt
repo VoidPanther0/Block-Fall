@@ -33,6 +33,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -95,6 +96,7 @@ fun PieceTray(
     Box(
         modifier = modifier
             .fillMaxWidth()
+            .threeDFrame(shape = trayShape, depth = 7.dp, base = Color(0xFF02050E))
             .shadow(2.dp, trayShape, clip = false)
             .clip(trayShape)
             .background(Brush.verticalGradient(listOf(boardTheme.trayTop, boardTheme.trayBottom)))
@@ -175,9 +177,16 @@ private fun TraySlotCard(
             .graphicsLayer {
                 scaleX = selectionScale
                 scaleY = selectionScale
+                translationY = if (isSelected) -2f else 0f
             }
+            .threeDFrame(
+                shape = RoundedCornerShape(slotCorner),
+                depth = if (isSelected) 6.dp else 4.dp,
+                base = Color(0xFF03060E),
+                glow = if (isSelected) AccentCyan else Color.Transparent
+            )
             .clip(RoundedCornerShape(slotCorner))
-            .background(bgColor)
+            .background(Brush.verticalGradient(listOf(bgColor, Color(0xFF050912))))
             .border(if (isSelected) 2.dp else 1.dp, borderColor, RoundedCornerShape(slotCorner))
             .onGloballyPositioned { coords ->
                 slotRootPos = coords.positionInRoot()

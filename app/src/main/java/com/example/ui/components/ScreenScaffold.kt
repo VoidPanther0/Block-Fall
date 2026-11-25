@@ -111,8 +111,9 @@ fun ScreenTopBar(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
                     .size(48.dp)
+                    .threeDFrame(shape = CircleShape, depth = 4.dp, base = Color(0xFF02040A))
                     .clip(CircleShape)
-                    .background(Color(0xFF181818))
+                    .background(Brush.verticalGradient(listOf(Color(0xFF26282D), Color(0xFF141518))))
                     .border(1.dp, com.example.ui.theme.HairlineDark, CircleShape)
                     .clickable(onClick = onBack)
                     .testTag(backTestTag)
