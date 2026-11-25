@@ -80,9 +80,12 @@ import com.example.ui.theme.CascadeTextStyles
 import com.example.ui.theme.DividerSubtle
 import com.example.ui.theme.GlassBorder
 import com.example.ui.theme.GoldBtnText
+import com.example.ui.theme.HairlineDark
 import com.example.ui.theme.JetBrainsMonoFontFamily
+import com.example.ui.theme.MuteDark
 import com.example.ui.theme.OutfitFontFamily
 import com.example.ui.theme.SurfaceCard
+import com.example.ui.theme.SurfaceDarkElevated
 import com.example.ui.theme.SurfaceCardElevated
 import com.example.ui.theme.TextMuted
 import com.example.ui.theme.TextPrimary
