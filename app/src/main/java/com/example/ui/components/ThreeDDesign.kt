@@ -4,16 +4,22 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.DrawStyle
+import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.drawShape
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
@@ -21,7 +27,7 @@ import androidx.compose.ui.unit.dp
  * God-tier 3D design primitives.
  *
  * Everything here is plain Compose drawing — no 3D engine, no extra dependency, no extra layout
- * nodes. The extrusion is painted in [Modifier.drawBehind] so it stays *outside* the clipped
+ * nodes. The extrusion is painted in [Modifier.drawBehind] so it stays outside the clipped
  * surface and therefore reads as physical thickness instead of a flat shadow.
  *
  * Perf note: the draw lambdas allocate nothing (no paths/brushes created per frame), so they are
@@ -40,11 +46,10 @@ fun Modifier.threeDFrame(
 
     // Ambient bloom beneath the object (optional).
     if (glow != Color.Transparent && px > 0f) {
-        drawShape(
+        drawSurfaceShape(
             shape = shape,
             color = glow.copy(alpha = 0.16f),
-            topLeft = Offset(0f, px * 0.7f),
-            size = Size(size.width, size.height + px * 0.7f)
+            topLeft = Offset(0f, px * 0.7f)
         )
     }
 
@@ -52,21 +57,47 @@ fun Modifier.threeDFrame(
     val steps = 7
     for (i in steps downTo 1) {
         val t = i.toFloat() / steps
-        drawShape(
+        drawSurfaceShape(
             shape = shape,
             color = base.copy(alpha = (0.34f + 0.58f * t).coerceIn(0f, 1f)),
-            topLeft = Offset(0f, px * t),
-            size = size
+            topLeft = Offset(0f, px * t)
         )
     }
 
     // Crisp outer edge light where the top face meets the side wall.
     if (px > 0f) {
-        drawShape(
-            shape = shape,
-            color = rimLight,
-            style = Stroke(width = 1.4f)
+        drawSurfaceShape(shape = shape, color = rimLight, style = Stroke(width = 1.4f))
+    }
+}
+
+/** Draws the two shape kinds used by the design system without allocating a Path per frame. */
+private fun DrawScope.drawSurfaceShape(
+    shape: Shape,
+    color: Color,
+    topLeft: Offset = Offset.Zero,
+    style: DrawStyle = Fill,
+    alpha: Float = 1f
+) {
+    when (shape) {
+        CircleShape -> drawCircle(
+            color = color,
+            radius = minOf(size.width, size.height) / 2f,
+            center = Offset(topLeft.x + size.width / 2f, topLeft.y + size.height / 2f),
+            alpha = alpha,
+            style = style
         )
+        is RoundedCornerShape -> {
+            val radius = shape.topStart.toPx(Size(size.width, size.height), this)
+            drawRoundRect(
+                color = color,
+                topLeft = topLeft,
+                size = size,
+                cornerRadius = CornerRadius(radius, radius),
+                alpha = alpha,
+                style = style
+            )
+        }
+        else -> drawRect(color = color, topLeft = topLeft, size = size, alpha = alpha, style = style)
     }
 }
 

@@ -50,6 +50,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -322,7 +323,7 @@ fun LuckyWheelScreen(
                         lineTo(center.x + 24f, center.y - outer - 12f)
                         close()
                     }
-                    drawPath(pointer, Color(0xFF2A0008), topLeft = Offset(0f, 6f))
+                    translate(0f, 6f) { drawPath(pointer, Color(0xFF2A0008)) }
                     drawPath(pointer, Color(0xFFFF3D57))
                     drawPath(pointer, Color.White, style = Stroke(width = 4f))
                 }
