@@ -63,9 +63,12 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.annotation.DrawableRes
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.example.R
 import com.example.game.BlockColor
 import com.example.game.BlockStyle
 import com.example.game.BoardColorPalette
@@ -114,6 +117,7 @@ fun PlayerAvatarBadge(
         ProfileAvatar.AMBER_CROWN -> Color(0xFF332106)
         ProfileAvatar.CORAL_SPARK -> Color(0xFF380C1B)
         ProfileAvatar.VIOLET_ORB -> Color(0xFF27114F)
+        ProfileAvatar.GOLD_ROBOT -> Color(0xFF2B2006)
         ProfileAvatar.GOOGLE_PHOTO -> Color(0xFF122354)
     }
 
@@ -125,68 +129,31 @@ fun PlayerAvatarBadge(
             .background(bgColor)
             .border(effectiveBorderWidth, effectiveBorderColor, shape)
     ) {
-        when {
-            avatar == ProfileAvatar.GOOGLE_PHOTO && !googlePhotoUrl.isNullOrBlank() -> {
-                AsyncImage(
-                    model = googlePhotoUrl,
-                    contentDescription = "Google profile photo",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .size(size)
-                        .clip(shape)
-                )
-            }
-            avatar == ProfileAvatar.GOOGLE_PHOTO -> {
-                Icon(
-                    imageVector = Icons.Filled.Person,
-                    contentDescription = avatar.label,
-                    tint = AccentCyan,
-                    modifier = Modifier.size(size * 0.56f)
-                )
-            }
-            avatar == ProfileAvatar.CLASSIC_BLOCK -> {
-                ArcadeBlockEmblem(size = size * 0.6f)
-            }
-            avatar == ProfileAvatar.COBALT_SHIELD -> {
-                Icon(
-                    imageVector = Icons.Filled.Shield,
-                    contentDescription = avatar.label,
-                    tint = AccentCyan,
-                    modifier = Modifier.size(size * 0.56f)
-                )
-            }
-            avatar == ProfileAvatar.EMERALD_GEM -> {
-                Icon(
-                    imageVector = Icons.Filled.AutoAwesome,
-                    contentDescription = avatar.label,
-                    tint = AccentEmerald,
-                    modifier = Modifier.size(size * 0.56f)
-                )
-            }
-            avatar == ProfileAvatar.AMBER_CROWN -> {
-                Icon(
-                    imageVector = Icons.Filled.WorkspacePremium,
-                    contentDescription = avatar.label,
-                    tint = AccentGold,
-                    modifier = Modifier.size(size * 0.58f)
-                )
-            }
-            avatar == ProfileAvatar.CORAL_SPARK -> {
-                Icon(
-                    imageVector = Icons.Filled.Bolt,
-                    contentDescription = avatar.label,
-                    tint = Color(0xFFE11D48),
-                    modifier = Modifier.size(size * 0.58f)
-                )
-            }
-            avatar == ProfileAvatar.VIOLET_ORB -> {
-                Icon(
-                    imageVector = Icons.Filled.Star,
-                    contentDescription = avatar.label,
-                    tint = AccentPurple,
-                    modifier = Modifier.size(size * 0.56f)
-                )
-            }
+        if (avatar == ProfileAvatar.GOOGLE_PHOTO && !googlePhotoUrl.isNullOrBlank()) {
+            AsyncImage(
+                model = googlePhotoUrl,
+                contentDescription = "Google profile photo",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .size(size)
+                    .clip(shape)
+            )
+        } else {
+            GameAssetIcon(
+                resId = GameAssetCatalog.avatarRes(avatar),
+                contentDescription = avatar.label,
+                size = size * 0.88f
+            )
+        }
+        if (hasCrownCosmetic) {
+            GameAssetIcon(
+                resId = R.drawable.img_crown_gold,
+                contentDescription = null,
+                size = (size * 0.34f).coerceAtLeast(14.dp),
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(1.dp)
+            )
         }
     }
 }
@@ -252,8 +219,13 @@ fun PlayerProfileHeader(
                     )
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        horizontalArrangement = Arrangement.spacedBy(5.dp)
                     ) {
+                        GameAssetIcon(
+                            resId = GameAssetCatalog.rankCrestRes(rank.tierNumber),
+                            contentDescription = null,
+                            size = 16.dp
+                        )
                         Text(
                             text = "Tier ${rank.tierNumber} · ${rank.title}",
                             style = MaterialTheme.typography.labelSmall.copy(
@@ -277,22 +249,38 @@ fun PlayerProfileHeader(
                 if (trailingWalletAction != null) {
                     trailingWalletAction()
                 }
-                IconActionButton(
-                    icon = Icons.Filled.Leaderboard,
-                    contentDescription = "Leaderboard & Cloud",
-                    size = 42.dp,
-                    tint = if (isCloudSignedIn) AccentEmerald else AccentCyan,
-                    borderColor = GlassBorder,
-                    onClick = onOpenLeaderboard,
-                    testTag = "home_leaderboard_button"
-                )
-                IconActionButton(
-                    icon = Icons.Filled.Settings,
-                    contentDescription = "Settings",
-                    size = 42.dp,
-                    onClick = onOpenSettings,
-                    testTag = "home_top_settings_button"
-                )
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(SurfaceCardElevated)
+                        .border(1.dp, (if (isCloudSignedIn) AccentEmerald else GlassBorder).copy(alpha = 0.7f), RoundedCornerShape(14.dp))
+                        .clickable(role = Role.Button, onClick = onOpenLeaderboard)
+                        .testTag("home_leaderboard_button")
+                ) {
+                    GameAssetIcon(
+                        resId = R.drawable.img_nav_podium,
+                        contentDescription = "Leaderboard & Cloud",
+                        size = 28.dp
+                    )
+                }
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(SurfaceCardElevated)
+                        .border(1.dp, GlassBorder.copy(alpha = 0.7f), RoundedCornerShape(14.dp))
+                        .clickable(role = Role.Button, onClick = onOpenSettings)
+                        .testTag("home_top_settings_button")
+                ) {
+                    GameAssetIcon(
+                        resId = R.drawable.img_nav_settings,
+                        contentDescription = "Settings",
+                        size = 28.dp
+                    )
+                }
             }
         }
 
@@ -326,11 +314,10 @@ fun PlayerProfileHeader(
                     .border(1.dp, GlassBorder.copy(alpha = 0.45f), RoundedCornerShape(10.dp))
                     .padding(horizontal = 10.dp, vertical = 5.dp)
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(8.dp)
-                        .clip(CircleShape)
-                        .background(AccentGold)
+                GameAssetIcon(
+                    resId = R.drawable.img_xp_star,
+                    contentDescription = null,
+                    size = 15.dp
                 )
                 Text(
                     text = "${rank.xp} XP",
@@ -588,12 +575,17 @@ fun SkinCard(
     }
 }
 
-enum class BottomNavTab(val label: String, val icon: ImageVector, val tag: String) {
-    HOME("Home", Icons.Filled.Home, "bottom_nav_home"),
-    MODES("Play", Icons.Filled.GridView, "bottom_nav_modes"),
-    EVENTS("Events", Icons.Filled.AutoAwesome, "bottom_nav_events"),
-    SHOP("Shop", Icons.Filled.ShoppingBag, "bottom_nav_shop"),
-    PROFILE("Profile", Icons.Filled.Person, "bottom_nav_profile")
+enum class BottomNavTab(
+    val label: String,
+    val icon: ImageVector,
+    @DrawableRes val iconRes: Int,
+    val tag: String
+) {
+    HOME("Home", Icons.Filled.Home, R.drawable.img_ui_home, "bottom_nav_home"),
+    MODES("Play", Icons.Filled.GridView, R.drawable.img_ui_puzzle_grid, "bottom_nav_modes"),
+    EVENTS("Events", Icons.Filled.AutoAwesome, R.drawable.img_fx_sparkles, "bottom_nav_events"),
+    SHOP("Shop", Icons.Filled.ShoppingBag, R.drawable.img_nav_shop, "bottom_nav_shop"),
+    PROFILE("Profile", Icons.Filled.Person, R.drawable.img_avatar_block, "bottom_nav_profile")
 }
 
 @Composable
@@ -644,11 +636,16 @@ fun BlockFallBottomNav(
                     .padding(vertical = 6.dp, horizontal = 4.dp)
                     .testTag(tab.tag)
             ) {
-                Icon(
-                    imageVector = tab.icon,
+                GameAssetIcon(
+                    resId = tab.iconRes,
                     contentDescription = tab.label,
-                    tint = tint,
-                    modifier = Modifier.size(20.dp)
+                    size = 22.dp,
+                    alpha = if (selected) 1f else 0.72f,
+                    modifier = Modifier.graphicsLayer {
+                        val s = if (selected) 1.08f else 0.94f
+                        scaleX = s
+                        scaleY = s
+                    }
                 )
                 Spacer(Modifier.height(2.dp))
                 Text(

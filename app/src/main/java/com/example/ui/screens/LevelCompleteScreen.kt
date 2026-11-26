@@ -117,25 +117,20 @@ fun LevelCompleteScreen(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Winged celebration emblem
+            // Winged 3D trophy celebration emblem
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
-                    .size(80.dp)
+                    .size(84.dp)
                     .shadow(12.dp, CircleShape, clip = false)
                     .clip(CircleShape)
-                    .background(
-                        Brush.radialGradient(
-                            listOf(AccentGoldBright, AccentGold, AccentGoldDeep)
-                        )
-                    )
-                    .border(2.5.dp, Color.White, CircleShape)
+                    .background(BoardWellBg)
+                    .border(2.5.dp, AccentGoldBright, CircleShape)
             ) {
-                Icon(
-                    imageVector = Icons.Filled.EmojiEvents,
+                com.example.ui.components.GameAssetIcon(
+                    resId = R.drawable.img_trophy_pedestal,
                     contentDescription = "Victory Trophy",
-                    tint = Color(0xFF241300),
-                    modifier = Modifier.size(44.dp)
+                    size = 64.dp
                 )
             }
 

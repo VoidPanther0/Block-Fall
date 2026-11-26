@@ -36,6 +36,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.R
 import com.example.game.DailyChallengeGenerator
 import com.example.game.DailyMissionDefinition
 import com.example.game.DailyMissionsCatalog
@@ -45,8 +46,8 @@ import com.example.ui.components.CascadeScreenContainer
 import com.example.ui.components.CrystalCoinBadge
 import com.example.ui.components.CrystalDiamondBadge
 import com.example.ui.components.FrostedGlassCard
+import com.example.ui.components.GameAssetIcon
 import com.example.ui.components.GlossyArcadeButton
-import com.example.ui.components.GoldMetallicBanner
 import com.example.ui.components.ScreenTopBar
 import com.example.ui.theme.AccentCyan
 import com.example.ui.theme.AccentEmerald
@@ -93,12 +94,12 @@ fun DailyMissionsScreen(
                     Box(
                         contentAlignment = Alignment.Center,
                         modifier = Modifier
-                            .size(40.dp)
+                            .size(46.dp)
                             .clip(CircleShape)
-                            .background(AccentCyan.copy(alpha = 0.16f))
+                            .background(BoardWellBg)
                             .border(1.dp, AccentCyan.copy(alpha = 0.45f), CircleShape)
                     ) {
-                        Icon(Icons.Filled.Schedule, null, tint = AccentCyan, modifier = Modifier.size(20.dp))
+                        GameAssetIcon(R.drawable.img_fx_hourglass, null, size = 32.dp)
                     }
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
@@ -168,27 +169,28 @@ private fun MissionItemCard(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {
+            val missionIconRes = when {
+                mission.id.contains("cascade") || mission.id.contains("combo") -> R.drawable.img_fx_combo_flame
+                mission.id.contains("score") || mission.id.contains("point") -> R.drawable.img_xp_star
+                mission.id.contains("line") || mission.id.contains("clear") -> R.drawable.img_fx_lightning
+                else -> R.drawable.img_icon_target
+            }
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
-                    .size(46.dp)
+                    .size(50.dp)
                     .clip(RoundedCornerShape(14.dp))
-                    .background(
-                        if (canClaim) AccentGold.copy(alpha = 0.20f)
-                        else if (isClaimed) AccentEmerald.copy(alpha = 0.16f)
-                        else AccentCyan.copy(alpha = 0.14f)
-                    )
+                    .background(BoardWellBg)
                     .border(
                         1.dp,
                         if (canClaim) AccentGold else if (isClaimed) AccentEmerald else GlassBorder,
                         RoundedCornerShape(14.dp)
                     )
             ) {
-                Icon(
-                    imageVector = Icons.Filled.AutoAwesome,
+                GameAssetIcon(
+                    resId = missionIconRes,
                     contentDescription = null,
-                    tint = if (canClaim) AccentGold else if (isClaimed) AccentEmerald else AccentCyan,
-                    modifier = Modifier.size(22.dp)
+                    size = 36.dp
                 )
             }
 

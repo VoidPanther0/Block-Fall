@@ -47,15 +47,19 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.R
 import com.example.game.EconomyEngine
 import com.example.game.ProfileAvatar
 import com.example.ui.GameUiState
 import com.example.ui.components.ArcadeButtonStyle
+import com.example.ui.components.AssetVaultSheet
 import com.example.ui.components.BlockFallBottomNav
 import com.example.ui.components.BottomNavTab
 import com.example.ui.components.CascadeScreenContainer
 import com.example.ui.components.CurrencyWallet
 import com.example.ui.components.FrostedGlassCard
+import com.example.ui.components.GameAssetCatalog
+import com.example.ui.components.GameAssetIcon
 import com.example.ui.components.GlossyArcadeButton
 import com.example.ui.components.PlayerAvatarBadge
 import com.example.ui.components.ScreenTopBar
@@ -90,6 +94,7 @@ fun StatisticsScreen(
         ?: playerName?.takeIf { it.isNotBlank() }
         ?: "Player"
     var showRenameDialog by remember { mutableStateOf(false) }
+    var showAssetVault by remember { mutableStateOf(false) }
 
     CascadeScreenContainer(
         maxContentWidth = 760.dp,
@@ -130,6 +135,10 @@ fun StatisticsScreen(
                 totalLines = state.statistics.totalLinesCleared
             )
 
+            AssetVaultEntryCard(
+                onClick = { showAssetVault = true }
+            )
+
             cloudAccountContent()
 
             Spacer(Modifier.height(8.dp))
@@ -151,6 +160,10 @@ fun StatisticsScreen(
             },
             onDismiss = { showRenameDialog = false }
         )
+    }
+
+    if (showAssetVault) {
+        AssetVaultSheet(onDismiss = { showAssetVault = false })
     }
 }
 
@@ -206,6 +219,11 @@ private fun ProfileIdentityCard(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
+                        GameAssetIcon(
+                            resId = GameAssetCatalog.rankCrestRes(rank.tierNumber),
+                            contentDescription = rank.title,
+                            size = 22.dp
+                        )
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(8.dp))
@@ -422,16 +440,15 @@ private fun BestScoreCard(
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
-                        .size(52.dp)
+                        .size(56.dp)
                         .clip(RoundedCornerShape(16.dp))
-                        .background(AccentGold.copy(alpha = 0.16f))
+                        .background(BoardWellBg)
                         .border(1.2.dp, AccentGold.copy(alpha = 0.55f), RoundedCornerShape(16.dp))
                 ) {
-                    Icon(
-                        imageVector = Icons.Filled.EmojiEvents,
+                    GameAssetIcon(
+                        resId = R.drawable.img_ui_throne,
                         contentDescription = null,
-                        tint = AccentGold,
-                        modifier = Modifier.size(30.dp)
+                        size = 42.dp
                     )
                 }
                 Column {
@@ -505,6 +522,65 @@ private fun BestScoreCard(
                         color = TextPrimary
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AssetVaultEntryCard(
+    onClick: () -> Unit
+) {
+    FrostedGlassCard(
+        cornerRadius = 20.dp,
+        borderColor = AccentCyan.copy(alpha = 0.5f),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .testTag("profile_asset_vault_button")
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .size(52.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(BoardWellBg)
+                    .border(1.2.dp, AccentCyan.copy(alpha = 0.5f), RoundedCornerShape(14.dp))
+            ) {
+                GameAssetIcon(
+                    resId = R.drawable.img_chest_crystal_open,
+                    contentDescription = "3D Asset Vault",
+                    size = 40.dp
+                )
+            }
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    text = "3D Treasure & Asset Vault",
+                    style = MaterialTheme.typography.titleSmall.copy(
+                        fontFamily = OutfitFontFamily,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp
+                    ),
+                    color = TextPrimary
+                )
+                Text(
+                    text = "Explore ${GameAssetCatalog.allShowcaseAssets.size} custom 3D PNG assets & chest frames",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = AccentCyan,
+                    maxLines = 2
+                )
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                GameAssetIcon(R.drawable.img_booster_hammer, null, size = 20.dp)
+                GameAssetIcon(R.drawable.img_crown_gold, null, size = 20.dp)
+                GameAssetIcon(R.drawable.img_gem_cluster, null, size = 20.dp)
             }
         }
     }

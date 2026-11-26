@@ -64,9 +64,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.annotation.DrawableRes
+import androidx.compose.foundation.Image
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -89,6 +93,7 @@ import com.example.ui.components.ArcadeTitleLogo
 import com.example.ui.components.BlockFallBottomNav
 import com.example.ui.components.BottomNavTab
 import com.example.ui.components.CascadeScreenContainer
+import com.example.ui.components.GameAssetIcon
 import com.example.ui.components.PlayerProfileHeader
 import com.example.ui.components.PremiumCard
 import com.example.ui.components.PremiumModalSheet
@@ -296,11 +301,6 @@ fun HomeScreen(
     }
 }
 
-private val MiniWheelColors = listOf(
-    Color(0xFF7C4DFF), Color(0xFF00B8D4), Color(0xFFFFB300), Color(0xFF26C281),
-    Color(0xFFFF5252), Color(0xFFEC407A), Color(0xFF3D8BFF), Color(0xFFFF8F00)
-)
-
 @Composable
 private fun LuckyWheelHeaderButton(
     spinPoints: Int,
@@ -317,7 +317,7 @@ private fun LuckyWheelHeaderButton(
     val spinDeg by transition.animateFloat(
         initialValue = 0f,
         targetValue = 360f,
-        animationSpec = infiniteRepeatable(tween(9000, easing = LinearEasing)),
+        animationSpec = infiniteRepeatable(tween(11000, easing = LinearEasing)),
         label = "rotate"
     )
 
@@ -332,58 +332,16 @@ private fun LuckyWheelHeaderButton(
             .testTag("home_wheel_button")
             .clickable(onClick = onClick)
     ) {
-        Canvas(
-            modifier = Modifier
-                .size(44.dp)
-                .graphicsLayer { scaleX = pulse; scaleY = pulse }
-        ) {
-            val outer = size.minDimension / 2f
-            val center = Offset(size.width / 2f, size.height / 2f + 1.5f)
-            val rim = outer * 0.14f
-            val wheelRadius = outer - rim
-
-            drawCircle(
-                brush = Brush.linearGradient(listOf(Color(0xFFFFE57F), Color(0xFFFFA000))),
-                radius = outer,
-                center = center
-            )
-            drawCircle(color = Color(0xFF3A1B7A), radius = wheelRadius + 1.5f, center = center)
-
-            val sweep = 360f / MiniWheelColors.size
-            rotate(spinDeg, pivot = center) {
-                MiniWheelColors.forEachIndexed { idx, sliceColor ->
-                    drawArc(
-                        color = sliceColor,
-                        startAngle = -90f + idx * sweep,
-                        sweepAngle = sweep,
-                        useCenter = true,
-                        topLeft = Offset(center.x - wheelRadius, center.y - wheelRadius),
-                        size = Size(wheelRadius * 2f, wheelRadius * 2f)
-                    )
-                    drawArc(
-                        color = Color.White.copy(alpha = 0.7f),
-                        startAngle = -90f + idx * sweep,
-                        sweepAngle = sweep,
-                        useCenter = true,
-                        topLeft = Offset(center.x - wheelRadius, center.y - wheelRadius),
-                        size = Size(wheelRadius * 2f, wheelRadius * 2f),
-                        style = Stroke(width = 1.4f)
-                    )
-                }
+        GameAssetIcon(
+            resId = R.drawable.img_wheel_emblem,
+            contentDescription = null,
+            size = 44.dp,
+            modifier = Modifier.graphicsLayer {
+                scaleX = pulse
+                scaleY = pulse
+                rotationZ = spinDeg
             }
-
-            drawCircle(Color(0xFFFFD54F), radius = wheelRadius * 0.30f, center = center)
-            drawCircle(Color(0xFF3A1B7A), radius = wheelRadius * 0.16f, center = center)
-
-            val pointer = Path().apply {
-                moveTo(center.x, center.y - wheelRadius + 3f)
-                lineTo(center.x - 5.5f, center.y - outer - 2f)
-                lineTo(center.x + 5.5f, center.y - outer - 2f)
-                close()
-            }
-            drawPath(pointer, Color(0xFFFF3D57))
-            drawPath(pointer, Color.White, style = Stroke(width = 1.6f))
-        }
+        )
 
         Box(
             contentAlignment = Alignment.Center,
@@ -424,123 +382,142 @@ private fun HomeHeroSection(
         borderColor = GlassBorder.copy(alpha = 0.55f),
         modifier = modifier.fillMaxWidth()
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 16.dp)
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(14.dp),
-                modifier = Modifier.fillMaxWidth()
+        Box(modifier = Modifier.fillMaxWidth()) {
+            Image(
+                painter = painterResource(id = R.drawable.img_banner_home_hero),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.matchParentSize()
+            )
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                Color(0xA6060B1E),
+                                Color(0xDC080F26),
+                                Color(0xF20A122C)
+                            )
+                        )
+                    )
+            )
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 16.dp)
             ) {
-                HeroCascadeCluster(
-                    modifier = Modifier
-                        .size(62.dp)
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(boardWellColor)
-                        .border(1.dp, GlassBorder.copy(alpha = 0.5f), RoundedCornerShape(14.dp))
-                        .padding(6.dp)
-                )
-
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
-                    modifier = Modifier.weight(1f)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    ArcadeTitleLogo(fontSize = 24.sp)
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(5.dp),
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(com.example.ui.theme.SurfaceDarkElevated)
-                                .border(1.dp, com.example.ui.theme.HairlineDark, RoundedCornerShape(10.dp))
-                                .padding(horizontal = 9.dp, vertical = 4.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.EmojiEvents,
-                                contentDescription = null,
-                                tint = AccentGold,
-                                modifier = Modifier.size(13.dp)
-                            )
-                            Text(
-                                text = "Best: $bestScore",
-                                style = MaterialTheme.typography.labelMedium.copy(
-                                    fontFamily = JetBrainsMonoFontFamily,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 11.5.sp
-                                ),
-                                color = TextPrimary,
-                                maxLines = 1
-                            )
-                        }
+                    HeroCascadeCluster(
+                        modifier = Modifier
+                            .size(62.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(boardWellColor.copy(alpha = 0.92f))
+                            .border(1.dp, GlassBorder.copy(alpha = 0.55f), RoundedCornerShape(14.dp))
+                            .padding(6.dp)
+                    )
 
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        ArcadeTitleLogo(fontSize = 24.sp)
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(5.dp),
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(paletteColors.rim.copy(alpha = 0.16f))
-                                .border(1.dp, paletteColors.rim.copy(alpha = 0.55f), RoundedCornerShape(10.dp))
-                                .clickable(onClick = onOpenThemes)
-                                .padding(horizontal = 9.dp, vertical = 4.dp)
-                                .testTag("home_theme_button")
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth()
                         ) {
-                            Box(
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(5.dp),
                                 modifier = Modifier
-                                    .size(10.dp)
-                                    .clip(CircleShape)
-                                    .background(paletteColors.rim)
-                            )
-                            Text(
-                                text = currentPalette.displayName,
-                                style = MaterialTheme.typography.labelMedium.copy(
-                                    fontFamily = OutfitFontFamily,
-                                    fontWeight = FontWeight.SemiBold,
-                                    fontSize = 11.5.sp
-                                ),
-                                color = TextPrimary,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(com.example.ui.theme.SurfaceDarkElevated.copy(alpha = 0.9f))
+                                    .border(1.dp, com.example.ui.theme.HairlineDark, RoundedCornerShape(10.dp))
+                                    .padding(horizontal = 9.dp, vertical = 4.dp)
+                            ) {
+                                GameAssetIcon(
+                                    resId = R.drawable.img_medal_trophy_gold,
+                                    contentDescription = null,
+                                    size = 16.dp
+                                )
+                                Text(
+                                    text = "Best: $bestScore",
+                                    style = MaterialTheme.typography.labelMedium.copy(
+                                        fontFamily = JetBrainsMonoFontFamily,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 11.5.sp
+                                    ),
+                                    color = TextPrimary,
+                                    maxLines = 1
+                                )
+                            }
+
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(5.dp),
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(paletteColors.rim.copy(alpha = 0.22f))
+                                    .border(1.dp, paletteColors.rim.copy(alpha = 0.65f), RoundedCornerShape(10.dp))
+                                    .clickable(onClick = onOpenThemes)
+                                    .padding(horizontal = 9.dp, vertical = 4.dp)
+                                    .testTag("home_theme_button")
+                            ) {
+                                GameAssetIcon(
+                                    resId = R.drawable.img_ui_palette,
+                                    contentDescription = null,
+                                    size = 14.dp
+                                )
+                                Text(
+                                    text = currentPalette.displayName,
+                                    style = MaterialTheme.typography.labelMedium.copy(
+                                        fontFamily = OutfitFontFamily,
+                                        fontWeight = FontWeight.SemiBold,
+                                        fontSize = 11.5.sp
+                                    ),
+                                    color = TextPrimary,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
                         }
                     }
                 }
-            }
 
-            // Primary Play CTA button with tactile 16dp rounded rectangle
-            PremiumPrimaryButton(
-                text = stringResource(R.string.nav_play),
-                icon = Icons.Filled.PlayArrow,
-                style = ArcadeButtonStyle.BLUE,
-                onClick = onPlayNewClassic,
-                height = 52.dp,
-                cornerRadius = 16.dp,
-                fontSize = 16.5.sp,
-                testTag = "home_play_button",
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            if (canContinue) {
-                // Secondary Continue button
+                // Primary Play CTA button with tactile 16dp rounded rectangle
                 PremiumPrimaryButton(
-                    text = "Continue · ${savedScore ?: 0} pts (${savedMoves ?: 0} moves)",
-                    icon = Icons.Filled.Replay,
-                    style = ArcadeButtonStyle.SLATE,
-                    onClick = onContinueClassic,
-                    height = 48.dp,
+                    text = stringResource(R.string.nav_play),
+                    icon = Icons.Filled.PlayArrow,
+                    style = ArcadeButtonStyle.BLUE,
+                    onClick = onPlayNewClassic,
+                    height = 52.dp,
                     cornerRadius = 16.dp,
-                    fontSize = 14.sp,
-                    testTag = "home_continue_button",
+                    fontSize = 16.5.sp,
+                    testTag = "home_play_button",
                     modifier = Modifier.fillMaxWidth()
                 )
+
+                if (canContinue) {
+                    // Secondary Continue button
+                    PremiumPrimaryButton(
+                        text = "Continue · ${savedScore ?: 0} pts (${savedMoves ?: 0} moves)",
+                        icon = Icons.Filled.Replay,
+                        style = ArcadeButtonStyle.SLATE,
+                        onClick = onContinueClassic,
+                        height = 48.dp,
+                        cornerRadius = 16.dp,
+                        fontSize = 14.sp,
+                        testTag = "home_continue_button",
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
             }
         }
     }
@@ -612,16 +589,15 @@ private fun DailyRewardStrip(
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
-                    .size(40.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(com.example.ui.theme.PsGoldStart.copy(alpha = 0.14f))
-                    .border(1.dp, com.example.ui.theme.PsGoldStart.copy(alpha = 0.4f), RoundedCornerShape(10.dp))
+                    .size(44.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(BoardWellBg)
+                    .border(1.dp, com.example.ui.theme.PsGoldStart.copy(alpha = 0.45f), RoundedCornerShape(12.dp))
             ) {
-                Icon(
-                    imageVector = Icons.Filled.CalendarToday,
+                GameAssetIcon(
+                    resId = R.drawable.img_daily_sunrise,
                     contentDescription = null,
-                    tint = AccentGold,
-                    modifier = Modifier.size(20.dp)
+                    size = 32.dp
                 )
             }
             Column(modifier = Modifier.weight(1f)) {
@@ -644,11 +620,10 @@ private fun DailyRewardStrip(
                     overflow = TextOverflow.Ellipsis
                 )
             }
-            Icon(
-                imageVector = Icons.Filled.PlayArrow,
+            GameAssetIcon(
+                resId = R.drawable.img_ui_play_gem,
                 contentDescription = "Play Daily Puzzle",
-                tint = AccentGold,
-                modifier = Modifier.size(22.dp)
+                size = 28.dp
             )
         }
     }
@@ -677,7 +652,7 @@ private fun HomeActionHub(
             HomeHubTile(
                 title = "Daily Rewards",
                 subtitle = if (canClaimDailyReward) "Reward ready!" else "7-day calendar",
-                icon = Icons.Filled.WorkspacePremium,
+                iconRes = if (canClaimDailyReward) R.drawable.img_chest_gold_closed else R.drawable.img_gift_box_royal,
                 accent = AccentGold,
                 badgeCount = if (canClaimDailyReward) 1 else 0,
                 onClick = onOpenDailyRewards,
@@ -687,7 +662,7 @@ private fun HomeActionHub(
             HomeHubTile(
                 title = "Challenges",
                 subtitle = "8 tactical boards",
-                icon = Icons.Filled.Star,
+                iconRes = R.drawable.img_mode_challenge,
                 accent = AccentCyan,
                 onClick = onOpenChallenges,
                 testTag = "home_challenges_button",
@@ -702,7 +677,7 @@ private fun HomeActionHub(
             HomeHubTile(
                 title = "Missions",
                 subtitle = "Daily goals & gems",
-                icon = Icons.Filled.Flag,
+                iconRes = R.drawable.img_icon_target,
                 accent = AccentEmerald,
                 badgeCount = claimableMissions,
                 onClick = onOpenDailyMissions,
@@ -712,7 +687,7 @@ private fun HomeActionHub(
             HomeHubTile(
                 title = "Achievements",
                 subtitle = "Trophies & medals",
-                icon = Icons.Filled.EmojiEvents,
+                iconRes = R.drawable.img_medal_trophy_gold,
                 accent = AccentPurple,
                 badgeCount = claimableAchievements,
                 onClick = onOpenAchievements,
@@ -728,32 +703,28 @@ private fun HomeActionHub(
         ) {
             HomeQuickUtilityChip(
                 label = "Modes",
-                icon = Icons.Filled.GridView,
-                accent = AccentCyan,
+                iconRes = R.drawable.img_ui_puzzle_grid,
                 onClick = onOpenModes,
                 testTag = "home_modes_button",
                 modifier = Modifier.weight(1f)
             )
             HomeQuickUtilityChip(
                 label = "Shop",
-                icon = Icons.Filled.ShoppingBag,
-                accent = AccentEmerald,
+                iconRes = R.drawable.img_nav_shop,
                 onClick = onOpenShop,
                 testTag = "home_shop_button",
                 modifier = Modifier.weight(1f)
             )
             HomeQuickUtilityChip(
                 label = "Profile",
-                icon = Icons.Filled.Person,
-                accent = AccentGold,
+                iconRes = R.drawable.img_ui_stats_chart,
                 onClick = onOpenStatistics,
                 testTag = "home_statistics_button",
                 modifier = Modifier.weight(1f)
             )
             HomeQuickUtilityChip(
                 label = "Settings",
-                icon = Icons.Filled.Settings,
-                accent = AccentPurple,
+                iconRes = R.drawable.img_nav_settings,
                 onClick = onOpenSettings,
                 testTag = "home_settings_button",
                 modifier = Modifier.weight(1f)
@@ -766,7 +737,7 @@ private fun HomeActionHub(
 private fun HomeHubTile(
     title: String,
     subtitle: String,
-    icon: ImageVector,
+    @DrawableRes iconRes: Int,
     accent: Color,
     onClick: () -> Unit,
     testTag: String,
@@ -792,16 +763,15 @@ private fun HomeHubTile(
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
-                    .size(32.dp)
-                    .clip(RoundedCornerShape(9.dp))
-                    .background(accent.copy(alpha = 0.14f))
-                    .border(1.dp, accent.copy(alpha = 0.35f), RoundedCornerShape(9.dp))
+                    .size(38.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(BoardWellBg)
+                    .border(1.dp, accent.copy(alpha = 0.4f), RoundedCornerShape(10.dp))
             ) {
-                Icon(
-                    imageVector = icon,
+                GameAssetIcon(
+                    resId = iconRes,
                     contentDescription = null,
-                    tint = accent,
-                    modifier = Modifier.size(18.dp)
+                    size = 30.dp
                 )
             }
             if (badgeCount > 0) {
@@ -847,8 +817,7 @@ private fun HomeHubTile(
 @Composable
 private fun HomeQuickUtilityChip(
     label: String,
-    icon: ImageVector,
-    accent: Color,
+    @DrawableRes iconRes: Int,
     onClick: () -> Unit,
     testTag: String,
     modifier: Modifier = Modifier
@@ -866,11 +835,10 @@ private fun HomeQuickUtilityChip(
             .padding(horizontal = 6.dp, vertical = 10.dp)
             .testTag(testTag)
     ) {
-        Icon(
-            imageVector = icon,
+        GameAssetIcon(
+            resId = iconRes,
             contentDescription = null,
-            tint = accent,
-            modifier = Modifier.size(16.dp)
+            size = 18.dp
         )
         Spacer(Modifier.width(5.dp))
         Text(
@@ -908,11 +876,10 @@ private fun HomeThemePickerSheet(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Filled.Palette,
+                GameAssetIcon(
+                    resId = R.drawable.img_ui_palette,
                     contentDescription = null,
-                    tint = AccentCyan,
-                    modifier = Modifier.size(24.dp)
+                    size = 28.dp
                 )
                 Column {
                     Text(

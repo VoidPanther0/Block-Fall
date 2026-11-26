@@ -26,11 +26,13 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -38,29 +40,28 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.R
 import com.example.game.DailyChallengeGenerator
 import com.example.game.DailyRewardTier
 import com.example.game.DailyRewardsCatalog
 import com.example.ui.GameUiState
+import com.example.ui.components.AnimatedTreasureChest3D
 import com.example.ui.components.ArcadeButtonStyle
 import com.example.ui.components.CascadeScreenContainer
-import com.example.ui.components.CrystalCoinBadge
-import com.example.ui.components.CrystalDiamondBadge
+import com.example.ui.components.ChestOpenCelebrationDialog
 import com.example.ui.components.FrostedGlassCard
+import com.example.ui.components.GameAssetCatalog
+import com.example.ui.components.GameAssetIcon
 import com.example.ui.components.GlossyArcadeButton
 import com.example.ui.components.GoldMetallicBanner
 import com.example.ui.components.ScreenTopBar
-import com.example.ui.components.SectionHeader
 import com.example.ui.theme.AccentCyan
 import com.example.ui.theme.AccentEmerald
 import com.example.ui.theme.AccentGold
 import com.example.ui.theme.AccentGoldBright
-import com.example.ui.theme.AccentGoldDeep
-import com.example.ui.theme.AccentPurple
 import com.example.ui.theme.BoardWellBg
 import com.example.ui.theme.GlassBorder
 import com.example.ui.theme.OutfitFontFamily
-import com.example.ui.theme.TextMuted
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
 
@@ -75,6 +76,8 @@ fun DailyRewardsScreen(
     val canClaim = progress.canClaimToday(todayKey)
     val daysClaimedInCycle = progress.daysClaimedInCycle(todayKey)
     val nextRewardDay = progress.nextRewardDay(todayKey)
+    var claimedDialogTier by remember { mutableStateOf<DailyRewardTier?>(null) }
+    var showChestPreview by remember { mutableStateOf(false) }
 
     CascadeScreenContainer(
         maxContentWidth = 640.dp,
@@ -101,7 +104,7 @@ fun DailyRewardsScreen(
             )
 
             Text(
-                text = if (canClaim) "Log in daily to claim crystals, gold, and power-up chests!"
+                text = if (canClaim) "Log in daily to claim crystals, gold, and 3D treasure chests!"
                 else "Today's reward is claimed! Return tomorrow for Day $nextRewardDay.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = TextSecondary,
@@ -143,25 +146,32 @@ fun DailyRewardsScreen(
                 }
             }
 
-            // Day 7: Grand Crystal Chest Card
+            // Day 7: Grand Crystal Chest Card with live looping 3D chest preview
             val grandTier = DailyRewardsCatalog.tiers.firstOrNull { it.isGrandPrize }
             if (grandTier != null) {
                 GrandPrizeCard(
                     tier = grandTier,
                     isClaimed = grandTier.day <= daysClaimedInCycle,
-                    isReadyToday = canClaim && grandTier.day == nextRewardDay
+                    isReadyToday = canClaim && grandTier.day == nextRewardDay,
+                    onPreviewChest = { showChestPreview = true }
                 )
             }
 
             Spacer(Modifier.height(4.dp))
 
-            // Claim Button
+            // Claim Button — launches 3D Open Chest Celebration Dialog!
             GlossyArcadeButton(
                 text = if (canClaim) "CLAIM DAY $nextRewardDay REWARD" else "COME BACK TOMORROW",
                 icon = if (canClaim) Icons.Filled.CardGiftcard else Icons.Filled.Check,
                 style = if (canClaim) ArcadeButtonStyle.GOLD else ArcadeButtonStyle.SLATE,
                 enabled = canClaim,
-                onClick = onClaimReward,
+                onClick = {
+                    val targetTier = DailyRewardsCatalog.tiers.firstOrNull { it.day == nextRewardDay }
+                    onClaimReward()
+                    if (targetTier != null) {
+                        claimedDialogTier = targetTier
+                    }
+                },
                 height = 54.dp,
                 cornerRadius = 16.dp,
                 fontSize = 16.sp,
@@ -171,6 +181,28 @@ fun DailyRewardsScreen(
 
             Spacer(Modifier.height(10.dp))
         }
+    }
+
+    val activeClaimTier = claimedDialogTier
+    if (activeClaimTier != null) {
+        ChestOpenCelebrationDialog(
+            title = "Day ${activeClaimTier.day} Chest Opened!",
+            subtitle = activeClaimTier.title,
+            goldEarned = activeClaimTier.gold,
+            diamondsEarned = activeClaimTier.diamonds,
+            bonusLabel = if (activeClaimTier.shuffleBoosters > 0) "Shuffle ×${activeClaimTier.shuffleBoosters}" else null,
+            onDismiss = { claimedDialogTier = null }
+        )
+    } else if (showChestPreview) {
+        val grand = DailyRewardsCatalog.tiers.firstOrNull { it.isGrandPrize }
+        ChestOpenCelebrationDialog(
+            title = "Day 7 Grand Crystal Chest",
+            subtitle = "Complete 7 daily check-ins to unlock all treasures!",
+            goldEarned = grand?.gold ?: 1000,
+            diamondsEarned = grand?.diamonds ?: 50,
+            bonusLabel = if ((grand?.shuffleBoosters ?: 0) > 0) "Shuffle ×${grand?.shuffleBoosters}" else "Shuffle ×2",
+            onDismiss = { showChestPreview = false }
+        )
     }
 }
 
@@ -215,16 +247,35 @@ private fun DailyRewardTile(
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
-                    .size(42.dp)
+                    .size(48.dp)
                     .clip(CircleShape)
                     .background(BoardWellBg)
                     .border(1.dp, borderColor, CircleShape)
             ) {
-                when {
-                    isClaimed -> Icon(Icons.Filled.Check, null, tint = AccentEmerald, modifier = Modifier.size(22.dp))
-                    isLocked -> Icon(Icons.Filled.Lock, null, tint = TextMuted, modifier = Modifier.size(18.dp))
-                    tier.diamonds > 0 -> CrystalDiamondBadge(size = 24.dp)
-                    else -> CrystalCoinBadge(size = 24.dp)
+                GameAssetIcon(
+                    resId = GameAssetCatalog.dailyRewardRes(tier.day),
+                    contentDescription = tier.title,
+                    size = 34.dp,
+                    alpha = when {
+                        isLocked -> 0.42f
+                        isClaimed -> 0.72f
+                        else -> 1f
+                    }
+                )
+                if (isClaimed) {
+                    GameAssetIcon(
+                        resId = R.drawable.img_status_check_shield,
+                        contentDescription = "Claimed",
+                        size = 18.dp,
+                        modifier = Modifier.align(Alignment.BottomEnd)
+                    )
+                } else if (isLocked) {
+                    GameAssetIcon(
+                        resId = R.drawable.img_status_padlock,
+                        contentDescription = "Locked",
+                        size = 16.dp,
+                        modifier = Modifier.align(Alignment.BottomEnd)
+                    )
                 }
             }
 
@@ -257,56 +308,49 @@ private fun DailyRewardTile(
 private fun GrandPrizeCard(
     tier: DailyRewardTier,
     isClaimed: Boolean,
-    isReadyToday: Boolean
+    isReadyToday: Boolean,
+    onPreviewChest: () -> Unit
 ) {
     FrostedGlassCard(
         cornerRadius = 20.dp,
         borderColor = if (isReadyToday) AccentGoldBright else AccentGold.copy(alpha = 0.55f),
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onPreviewChest)
+            .testTag("daily_chest_preview_button")
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(14.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(14.dp)
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
-                    .size(56.dp)
-                    .shadow(6.dp, RoundedCornerShape(16.dp), clip = false)
+                    .size(72.dp)
                     .clip(RoundedCornerShape(16.dp))
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(AccentGoldBright, AccentGold, AccentGoldDeep)
-                        )
-                    )
-                    .border(1.5.dp, Color.White, RoundedCornerShape(16.dp))
+                    .background(BoardWellBg)
+                    .border(1.2.dp, AccentGold.copy(alpha = 0.6f), RoundedCornerShape(16.dp))
             ) {
-                Icon(
-                    imageVector = Icons.Filled.WorkspacePremium,
-                    contentDescription = null,
-                    tint = Color(0xFF241300),
-                    modifier = Modifier.size(32.dp)
+                AnimatedTreasureChest3D(
+                    size = 68.dp,
+                    autoPlay = true,
+                    loopingPreview = true
                 )
             }
 
             Column(modifier = Modifier.weight(1f)) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Text(
-                        text = "DAY 7 GRAND CHEST",
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            fontFamily = OutfitFontFamily,
-                            fontWeight = FontWeight.Black,
-                            letterSpacing = 1.sp
-                        ),
-                        color = AccentGold
-                    )
-                }
+                Text(
+                    text = "DAY 7 GRAND CHEST · TAP TO OPEN",
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        fontFamily = OutfitFontFamily,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 0.8.sp
+                    ),
+                    color = AccentGold
+                )
                 Text(
                     text = "1,000 Gold · 50 Gems · Shuffle ×2",
                     style = MaterialTheme.typography.titleMedium.copy(

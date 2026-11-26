@@ -57,11 +57,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.R
 import com.example.ads.AdState
 import com.example.ui.components.ArcadeButtonStyle
 import com.example.ui.components.CascadeScreenContainer
+import com.example.ui.components.GameAssetIcon
 import com.example.ui.components.GlossyArcadeButton
-import com.example.ui.components.GoldMetallicBanner
 import com.example.ui.components.RoyalSkyBackdrop
 import com.example.ui.components.threeDFrame
 import com.example.ui.components.ScreenTopBar
@@ -163,11 +164,10 @@ fun LuckyWheelScreen(
                     .border(1.5.dp, AccentGold.copy(alpha = 0.85f), CircleShape)
                     .padding(horizontal = 20.dp, vertical = 9.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Filled.AutoAwesome,
+                GameAssetIcon(
+                    resId = R.drawable.img_spin_token,
                     contentDescription = null,
-                    tint = AccentGold,
-                    modifier = Modifier.padding(end = 2.dp)
+                    size = 24.dp
                 )
                 Text(
                     text = "Spins: $spinPoints",
@@ -330,8 +330,9 @@ fun LuckyWheelScreen(
             }
 
             resultText?.let {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
                     modifier = Modifier
                         .fillMaxWidth()
                         .threeDFrame(shape = RoundedCornerShape(18.dp), depth = 6.dp, base = Color(0xFF3A2400))
@@ -345,20 +346,27 @@ fun LuckyWheelScreen(
                         .border(1.2.dp, Color.White.copy(alpha = 0.5f), RoundedCornerShape(18.dp))
                         .padding(vertical = 12.dp, horizontal = 16.dp)
                 ) {
-                    Text(
-                        "PRIZE WON!",
-                        color = Color(0xFF241300),
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Black,
-                        letterSpacing = 1.sp
-                    )
-                    Text(
-                        it,
-                        color = Color.White,
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        textAlign = TextAlign.Center
-                    )
+                    GameAssetIcon(resId = R.drawable.img_fx_confetti, contentDescription = null, size = 36.dp)
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(
+                            "PRIZE WON!",
+                            color = Color(0xFF241300),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = 1.sp
+                        )
+                        Text(
+                            it,
+                            color = Color.White,
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                    GameAssetIcon(resId = R.drawable.img_fx_coin_burst, contentDescription = null, size = 36.dp)
                 }
             }
 

@@ -50,6 +50,7 @@ import com.example.ui.components.CrystalCoinBadge
 import com.example.ui.components.CrystalDiamondBadge
 import com.example.ui.components.CrystalMedalBadge
 import com.example.ui.components.FrostedGlassCard
+import com.example.ui.components.GameAssetCatalog
 import com.example.ui.components.GlossyArcadeButton
 import com.example.ui.components.ScreenTopBar
 import com.example.ui.theme.AccentCyan
@@ -188,7 +189,8 @@ private fun AchievementCard(
             CrystalMedalBadge(
                 tier = achievement.tier,
                 unlocked = isCompleted || isClaimed,
-                size = 54.dp
+                size = 54.dp,
+                customResId = GameAssetCatalog.achievementMedalRes(achievement.category, achievement.tier)
             )
 
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {

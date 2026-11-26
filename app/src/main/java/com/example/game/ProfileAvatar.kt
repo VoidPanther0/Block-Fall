@@ -13,6 +13,7 @@ enum class ProfileAvatar(
     AMBER_CROWN("amber_crown", "Crown", BlockColor.AMBER, BlockColor.TANGERINE),
     CORAL_SPARK("coral_spark", "Coral", BlockColor.CORAL, BlockColor.AMBER),
     VIOLET_ORB("violet_orb", "Prism", BlockColor.VIOLET, BlockColor.CYAN),
+    GOLD_ROBOT("gold_robot", "Mecha", BlockColor.AMBER, BlockColor.CYAN),
     GOOGLE_PHOTO("google_photo", "Google", BlockColor.COBALT, BlockColor.EMERALD, isGooglePhoto = true);
 
     companion object {

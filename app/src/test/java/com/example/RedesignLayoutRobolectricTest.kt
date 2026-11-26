@@ -95,4 +95,41 @@ class RedesignLayoutRobolectricTest {
         assertEquals(0, composeRule.onAllNodesWithText("Drag or tap", substring = true).fetchSemanticsNodes().size)
         assertEquals(0, composeRule.onAllNodesWithText("NO FIT", substring = true).fetchSemanticsNodes().size)
     }
+
+    @Test
+    fun `19_daily_chest_dialog_and_profile_asset_vault_work`() {
+        composeRule.waitForIdle()
+        if (composeRule.onAllNodesWithTag("onboarding_skip_button").fetchSemanticsNodes().isNotEmpty()) {
+            composeRule.onNodeWithTag("onboarding_skip_button").performClick()
+            composeRule.waitForIdle()
+        }
+        if (composeRule.onAllNodesWithTag("splash_screen").fetchSemanticsNodes().isNotEmpty()) {
+            composeRule.onNodeWithTag("splash_screen").performClick()
+            composeRule.waitForIdle()
+        }
+
+        // Open Daily Rewards and claim Day 1 reward -> opens 3D Chest celebration dialog
+        composeRule.onNodeWithTag("home_daily_rewards_button").performScrollTo().performClick()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag("daily_rewards_screen").assertIsDisplayed()
+        composeRule.onNodeWithTag("daily_reward_claim_button").performScrollTo().performClick()
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag("chest_celebration_dialog").assertIsDisplayed()
+        composeRule.onNodeWithTag("chest_claim_collect_button").assertIsDisplayed().performClick()
+        composeRule.waitForIdle()
+        assertEquals(0, composeRule.onAllNodesWithTag("chest_celebration_dialog").fetchSemanticsNodes().size)
+
+        // Return Home -> Profile -> select Gold Robot avatar & open 3D Asset Vault
+        composeRule.onNodeWithTag("daily_rewards_back_button").performClick()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag("home_statistics_button").performScrollTo().performClick()
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag("avatar_option_gold_robot").performScrollTo().performClick()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag("profile_asset_vault_button").performScrollTo().performClick()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag("asset_vault_sheet").assertIsDisplayed()
+    }
 }

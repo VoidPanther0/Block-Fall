@@ -44,6 +44,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.R
 import com.example.game.BoosterType
 import com.example.game.ShopCatalog
 import com.example.game.ShopItem
@@ -52,11 +53,10 @@ import com.example.ui.components.ArcadeButtonStyle
 import com.example.ui.components.BlockFallBottomNav
 import com.example.ui.components.BottomNavTab
 import com.example.ui.components.CascadeScreenContainer
-import com.example.ui.components.CrystalCoinBadge
-import com.example.ui.components.CrystalDiamondBadge
 import com.example.ui.components.FrostedGlassCard
+import com.example.ui.components.GameAssetCatalog
+import com.example.ui.components.GameAssetIcon
 import com.example.ui.components.GlossyArcadeButton
-import com.example.ui.components.PremiumCard
 import com.example.ui.components.ScreenTopBar
 import com.example.ui.components.SectionHeader
 import com.example.ui.theme.AccentCyan
@@ -121,7 +121,7 @@ fun ShopScreen(
             WalletTile(
                 label = "GOLD",
                 amount = state.wallet.goldCoins,
-                badge = { CrystalCoinBadge(size = 28.dp) },
+                badge = { GameAssetIcon(R.drawable.img_coin_pouch, null, size = 34.dp) },
                 accent = AccentGold,
                 tag = "shop_gold_balance",
                 modifier = Modifier.weight(1f)
@@ -129,7 +129,7 @@ fun ShopScreen(
             WalletTile(
                 label = "DIAMONDS",
                 amount = state.wallet.diamonds,
-                badge = { CrystalDiamondBadge(size = 28.dp) },
+                badge = { GameAssetIcon(R.drawable.img_gem_pouch, null, size = 34.dp) },
                 accent = AccentDiamond,
                 tag = "shop_diamond_balance",
                 modifier = Modifier.weight(1f)
@@ -170,7 +170,12 @@ fun ShopScreen(
             // Free Rewards (Ad Watch)
             SectionHeader(kicker = "Free Daily Rewards", title = "Watch Videos", accent = AccentEmerald)
             AdRewardCard(
-                badge = { CrystalDiamondBadge(size = 26.dp) },
+                badge = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        GameAssetIcon(R.drawable.img_ad_clapper, null, size = 26.dp)
+                        GameAssetIcon(R.drawable.img_gem_cluster, null, size = 24.dp)
+                    }
+                },
                 accent = AccentDiamond,
                 title = "Free Diamonds",
                 subtitle = "Watch a short ad to earn +5 Diamonds",
@@ -185,7 +190,12 @@ fun ShopScreen(
                 tag = "shop_watch_diamond_ad_button"
             )
             AdRewardCard(
-                badge = { CrystalCoinBadge(size = 26.dp) },
+                badge = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        GameAssetIcon(R.drawable.img_ad_clapper, null, size = 26.dp)
+                        GameAssetIcon(R.drawable.img_coin_pile, null, size = 24.dp)
+                    }
+                },
                 accent = AccentGold,
                 title = "Free Gold",
                 subtitle = "Watch a short ad to earn +50 Gold",
@@ -214,13 +224,23 @@ fun ShopScreen(
 
             // Real-Money Store Packs (Placeholder priced Coming Soon for IAP)
             SectionHeader(kicker = "Premium Bundles", title = "Diamond Packages", accent = AccentDiamond)
-            DiamondPacks.forEach { pack ->
-                ComingSoonPackCard(badge = { CrystalDiamondBadge(size = 24.dp) }, accent = AccentDiamond, pack = pack)
+            DiamondPacks.forEachIndexed { idx, pack ->
+                val res = when (idx) {
+                    0 -> R.drawable.img_gem_cluster
+                    1 -> R.drawable.img_gem_pouch
+                    else -> R.drawable.img_pedestal_diamond
+                }
+                ComingSoonPackCard(badge = { GameAssetIcon(res, null, size = 34.dp) }, accent = AccentDiamond, pack = pack)
             }
 
             SectionHeader(kicker = "Gold Vault", title = "Gold Packages", accent = AccentGold)
-            GoldPacks.forEach { pack ->
-                ComingSoonPackCard(badge = { CrystalCoinBadge(size = 24.dp) }, accent = AccentGold, pack = pack)
+            GoldPacks.forEachIndexed { idx, pack ->
+                val res = when (idx) {
+                    0 -> R.drawable.img_coin_pile
+                    1 -> R.drawable.img_coin_pouch
+                    else -> R.drawable.img_vault_gold
+                }
+                ComingSoonPackCard(badge = { GameAssetIcon(res, null, size = 34.dp) }, accent = AccentGold, pack = pack)
             }
 
             Spacer(Modifier.height(10.dp))
@@ -244,15 +264,7 @@ private fun ShopCatalogCard(
         else -> true
     }
 
-    val icon: ImageVector = when {
-        item.rewardBooster == BoosterType.HAMMER -> Icons.Filled.Build
-        item.rewardBooster == BoosterType.REFRESH -> Icons.Filled.Refresh
-        item.rewardBooster == BoosterType.SHUFFLE -> Icons.Filled.Shuffle
-        item.id == "booster_trio_bundle" -> Icons.Filled.AutoAwesome
-        item.rewardGold > 0 -> Icons.Filled.MonetizationOn
-        item.grantEntitlementId == "cosmetic_prism_crown" -> Icons.Filled.WorkspacePremium
-        else -> Icons.Filled.AutoAwesome
-    }
+    val itemRes = GameAssetCatalog.shopItemRes(item.id, item.rewardBooster)
     val accent = if (item.diamondCost > 0) AccentDiamond else AccentGold
 
     FrostedGlassCard(
@@ -268,12 +280,12 @@ private fun ShopCatalogCard(
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
-                    .size(46.dp)
+                    .size(50.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(accent.copy(alpha = 0.16f))
+                    .background(BoardWellBg)
                     .border(1.dp, accent.copy(alpha = 0.45f), RoundedCornerShape(12.dp))
             ) {
-                Icon(icon, null, tint = accent, modifier = Modifier.size(24.dp))
+                GameAssetIcon(resId = itemRes, contentDescription = item.title, size = 38.dp)
             }
             Column(Modifier.weight(1f)) {
                 Row(

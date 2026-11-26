@@ -57,8 +57,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
+import androidx.annotation.DrawableRes
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.R
 import com.example.game.BlockColor
 import com.example.ui.theme.AccentCyan
 import com.example.ui.theme.AccentGold
@@ -603,143 +605,84 @@ fun GoldMetallicBanner(
 }
 
 /**
- * Glossy 3D Gold Coin drawn with Compose Canvas (matching the style reference).
+ * Glossy 3D Gold Coin powered by pre-bundled Gemini 3D PNG asset.
  */
 @Composable
 fun CrystalCoinBadge(
     modifier: Modifier = Modifier,
     size: Dp = 22.dp
 ) {
-    Canvas(modifier = modifier.size(size).threeDFrame(shape = CircleShape, depth = 3.dp, base = Color(0xFF4A2B00))) {
-        val r = this.size.minDimension / 2f
-        val c = Offset(this.size.width / 2f, this.size.height / 2f)
-        drawCircle(
-            brush = Brush.verticalGradient(listOf(AccentGoldBright, AccentGold, AccentGoldDeep)),
-            radius = r,
-            center = c
-        )
-        drawCircle(
-            color = AccentGoldDeep,
-            radius = r * 0.72f,
-            center = c,
-            style = Stroke(width = (r * 0.14f).coerceAtLeast(1.2f))
-        )
-        drawCircle(
-            color = Color.White.copy(alpha = 0.55f),
-            radius = r * 0.25f,
-            center = Offset(c.x - r * 0.28f, c.y - r * 0.28f)
-        )
-    }
+    GameAssetIcon(
+        resId = R.drawable.img_coin_single,
+        contentDescription = null,
+        size = size,
+        modifier = modifier
+    )
 }
 
 /**
- * Faceted cyan Diamond drawn with Compose Canvas (matching the style reference).
+ * Faceted 3D Cyan Diamond powered by pre-bundled Gemini 3D PNG asset.
  */
 @Composable
 fun CrystalDiamondBadge(
     modifier: Modifier = Modifier,
     size: Dp = 22.dp
 ) {
-    Canvas(modifier = modifier.size(size).threeDFrame(shape = CircleShape, depth = 3.dp, base = Color(0xFF06294A))) {
-        val w = this.size.width
-        val h = this.size.height
-        val path = Path().apply {
-            moveTo(w * 0.22f, h * 0.14f)
-            lineTo(w * 0.78f, h * 0.14f)
-            lineTo(w * 0.96f, h * 0.42f)
-            lineTo(w * 0.50f, h * 0.92f)
-            lineTo(w * 0.04f, h * 0.42f)
-            close()
-        }
-        drawPath(
-            path = path,
-            brush = Brush.verticalGradient(
-                listOf(Color(0xFFA8F3FF), AccentCyan, Color(0xFF0A6BFF))
-            )
-        )
-        val topFacet = Path().apply {
-            moveTo(w * 0.22f, h * 0.14f)
-            lineTo(w * 0.78f, h * 0.14f)
-            lineTo(w * 0.65f, h * 0.42f)
-            lineTo(w * 0.35f, h * 0.42f)
-            close()
-        }
-        drawPath(path = topFacet, color = Color.White.copy(alpha = 0.45f))
-        drawPath(path = path, color = Color.White.copy(alpha = 0.55f), style = Stroke(width = 1.2f))
-    }
+    GameAssetIcon(
+        resId = R.drawable.img_gem_single,
+        contentDescription = null,
+        size = size,
+        modifier = modifier
+    )
 }
 
 /**
- * Gold/Silver/Bronze ribbon medal Canvas art matching the style reference.
+ * 3D Trophy / Medal badge powered by Gemini-generated PNG assets with locked padlock overlay.
  */
 @Composable
 fun CrystalMedalBadge(
     tier: Int,
     unlocked: Boolean,
     modifier: Modifier = Modifier,
-    size: Dp = 54.dp
+    size: Dp = 54.dp,
+    @DrawableRes customResId: Int? = null
 ) {
-    val (rimLight, rimDark, ribbonColor) = when {
-        !unlocked -> Triple(Color(0xFF475B94), Color(0xFF23305C), Color(0xFF2C3E73))
-        tier >= 3 -> Triple(AccentGoldBright, AccentGoldDeep, Color(0xFFE52445))
-        tier == 2 -> Triple(Color(0xFF9DF0FF), Color(0xFF1A84E8), Color(0xFF1995FF))
-        else -> Triple(Color(0xFFFFBC80), Color(0xFF9C4E19), Color(0xFF1CC95B))
+    val resId = customResId ?: when {
+        tier >= 3 -> R.drawable.img_medal_trophy_gold
+        tier == 2 -> R.drawable.img_medal_lightning
+        else -> R.drawable.img_medal_ribbon_star
+    }
+    val rimColor = when {
+        !unlocked -> GlassBorder.copy(alpha = 0.35f)
+        tier >= 3 -> AccentGoldBright.copy(alpha = 0.7f)
+        tier == 2 -> AccentCyan.copy(alpha = 0.6f)
+        else -> Color(0xFFFFB74D).copy(alpha = 0.55f)
     }
 
-    Canvas(modifier = modifier.size(size).threeDFrame(shape = CircleShape, depth = 4.dp, base = Color(0xFF050A1C))) {
-        val w = this.size.width
-        val h = this.size.height
-        val cx = w * 0.5f
-        val cy = h * 0.40f
-        val radius = w * 0.32f
-
-        // Ribbons
-        val leftRibbon = Path().apply {
-            moveTo(cx - radius * 0.55f, cy + radius * 0.5f)
-            lineTo(cx - radius * 0.85f, h * 0.96f)
-            lineTo(cx - radius * 0.32f, h * 0.84f)
-            lineTo(cx - radius * 0.05f, h * 0.96f)
-            lineTo(cx - radius * 0.05f, cy + radius * 0.5f)
-            close()
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = modifier
+            .size(size)
+            .clip(CircleShape)
+            .background(Color(0xFF0A1128))
+            .border(1.2.dp, rimColor, CircleShape)
+    ) {
+        GameAssetIcon(
+            resId = resId,
+            contentDescription = null,
+            size = size * 0.86f,
+            alpha = if (unlocked) 1f else 0.36f
+        )
+        if (!unlocked) {
+            GameAssetIcon(
+                resId = R.drawable.img_status_padlock,
+                contentDescription = null,
+                size = size * 0.38f,
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(2.dp)
+            )
         }
-        val rightRibbon = Path().apply {
-            moveTo(cx + radius * 0.55f, cy + radius * 0.5f)
-            lineTo(cx + radius * 0.85f, h * 0.96f)
-            lineTo(cx + radius * 0.32f, h * 0.84f)
-            lineTo(cx + radius * 0.05f, h * 0.96f)
-            lineTo(cx + radius * 0.05f, cy + radius * 0.5f)
-            close()
-        }
-        drawPath(leftRibbon, ribbonColor)
-        drawPath(rightRibbon, ribbonColor)
-
-        // Outer medal ring
-        drawCircle(
-            brush = Brush.verticalGradient(listOf(rimLight, rimDark)),
-            radius = radius,
-            center = Offset(cx, cy)
-        )
-        drawCircle(
-            color = Color.White.copy(alpha = 0.45f),
-            radius = radius,
-            center = Offset(cx, cy),
-            style = Stroke(width = 1.5f)
-        )
-
-        // Inner medallion center
-        drawCircle(
-            color = if (unlocked) Color(0xFF0E1D4B) else Color(0xFF141E40),
-            radius = radius * 0.70f,
-            center = Offset(cx, cy)
-        )
-
-        // Center star
-        drawStarPolygon(
-            center = Offset(cx, cy),
-            outerRadius = radius * 0.48f,
-            innerRadius = radius * 0.22f,
-            color = if (unlocked) rimLight else Color(0xFF5D72AB)
-        )
     }
 }
 

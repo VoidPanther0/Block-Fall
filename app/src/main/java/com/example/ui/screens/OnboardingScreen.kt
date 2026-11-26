@@ -37,8 +37,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.annotation.DrawableRes
+import com.example.R
 import com.example.ui.components.ArcadeBlockEmblem
 import com.example.ui.components.ArcadeTitleLogo
+import com.example.ui.components.GameAssetIcon
 import com.example.ui.components.GoogleSignInCard
 import com.example.ui.components.RoyalSkyBackdrop
 import com.example.ui.theme.AccentCyan
@@ -104,19 +107,19 @@ fun OnboardingScreen(
                 Spacer(Modifier.height(8.dp))
 
                 OnboardingBenefit(
-                    icon = Icons.Filled.CloudDone,
+                    iconRes = R.drawable.img_fx_portal_ring,
                     accent = AccentCyan,
                     title = "Cloud saves",
                     description = "Your progress follows you across devices."
                 )
                 OnboardingBenefit(
-                    icon = Icons.Filled.EmojiEvents,
+                    iconRes = R.drawable.img_medal_trophy_gold,
                     accent = AccentGold,
                     title = "Global leaderboard",
                     description = "Post your verified Classic high score."
                 )
                 OnboardingBenefit(
-                    icon = Icons.Filled.Shield,
+                    iconRes = R.drawable.img_ui_shield_star,
                     accent = AccentEmerald,
                     title = "Play your way",
                     description = "Skipping is fine — every mode stays available offline."
@@ -158,7 +161,7 @@ fun OnboardingScreen(
 
 @Composable
 private fun OnboardingBenefit(
-    icon: ImageVector,
+    @DrawableRes iconRes: Int,
     accent: androidx.compose.ui.graphics.Color,
     title: String,
     description: String
@@ -176,12 +179,12 @@ private fun OnboardingBenefit(
         Box(
             contentAlignment = Alignment.Center,
             modifier = Modifier
-                .size(36.dp)
+                .size(40.dp)
                 .clip(RoundedCornerShape(10.dp))
-                .background(accent.copy(alpha = 0.14f))
-                .border(1.dp, accent.copy(alpha = 0.35f), RoundedCornerShape(10.dp))
+                .background(com.example.ui.theme.BoardWellBg)
+                .border(1.dp, accent.copy(alpha = 0.4f), RoundedCornerShape(10.dp))
         ) {
-            Icon(imageVector = icon, contentDescription = null, tint = accent, modifier = Modifier.size(19.dp))
+            GameAssetIcon(resId = iconRes, contentDescription = null, size = 28.dp)
         }
         Column(modifier = Modifier.weight(1f)) {
             Text(

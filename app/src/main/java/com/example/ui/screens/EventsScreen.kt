@@ -27,38 +27,44 @@ import androidx.compose.material.icons.filled.WorkspacePremium
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.R
 import com.example.game.DailyChallengeGenerator
 import com.example.ui.GameUiState
+import com.example.ui.components.AnimatedTreasureChest3D
 import com.example.ui.components.ArcadeButtonStyle
 import com.example.ui.components.BlockFallBottomNav
 import com.example.ui.components.BottomNavTab
 import com.example.ui.components.CascadeScreenContainer
+import com.example.ui.components.ChestOpenCelebrationDialog
 import com.example.ui.components.CrystalCoinBadge
 import com.example.ui.components.CrystalDiamondBadge
 import com.example.ui.components.CrystalMedalBadge
 import com.example.ui.components.FrostedGlassCard
+import com.example.ui.components.GameAssetIcon
 import com.example.ui.components.GlossyArcadeButton
-import com.example.ui.components.GoldMetallicBanner
 import com.example.ui.components.ScreenTopBar
 import com.example.ui.components.SectionHeader
 import com.example.ui.theme.AccentCyan
 import com.example.ui.theme.AccentEmerald
 import com.example.ui.theme.AccentGold
-import com.example.ui.theme.AccentGoldBright
-import com.example.ui.theme.AccentGoldDeep
 import com.example.ui.theme.AccentPurple
 import com.example.ui.theme.BoardWellBg
 import com.example.ui.theme.GlassBorder
@@ -89,7 +95,7 @@ fun EventsScreen(
     onOpenTab: ((BottomNavTab) -> Unit)? = null
 ) {
     val dailyCompleted = state.statistics.dailyCompletedCount
-    val streak = state.statistics.dailyStreak
+    var showFestivalChestDialog by remember { mutableStateOf(false) }
 
     CascadeScreenContainer(
         maxContentWidth = 720.dp,
@@ -110,52 +116,90 @@ fun EventsScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Event Hero Banner
-            GoldMetallicBanner(
-                text = "CRYSTAL CASCADE FESTIVAL",
-                isPurple = true,
-                modifier = Modifier.fillMaxWidth()
-            )
+            // Event Festival Hero Banner Artwork
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(142.dp)
+                    .clip(RoundedCornerShape(20.dp))
+                    .border(1.2.dp, AccentPurple.copy(alpha = 0.6f), RoundedCornerShape(20.dp))
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.img_banner_festival_events),
+                    contentDescription = "Crystal Cascade Festival",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(Color(0x33050918), Color(0xCC060B21))
+                            )
+                        )
+                )
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(14.dp)
+                ) {
+                    Text(
+                        text = "SEASON 1 · LIVE EVENT",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontFamily = OutfitFontFamily,
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = 1.2.sp
+                        ),
+                        color = AccentGold
+                    )
+                    Text(
+                        text = "CRYSTAL CASCADE FESTIVAL",
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            fontFamily = OutfitFontFamily,
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 19.sp
+                        ),
+                        color = Color.White
+                    )
+                }
+            }
 
-            // Season & Timer Card
+            // Season & Animated 3D Chest Card
             FrostedGlassCard(
                 cornerRadius = 20.dp,
                 borderColor = AccentGold.copy(alpha = 0.5f),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { showFestivalChestDialog = true }
             ) {
                 Row(
-                    modifier = Modifier.padding(16.dp),
+                    modifier = Modifier.padding(14.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Box(
                         contentAlignment = Alignment.Center,
                         modifier = Modifier
-                            .size(54.dp)
-                            .shadow(6.dp, RoundedCornerShape(16.dp), clip = false)
+                            .size(66.dp)
                             .clip(RoundedCornerShape(16.dp))
-                            .background(
-                                Brush.verticalGradient(
-                                    listOf(AccentGoldBright, AccentGold, AccentGoldDeep)
-                                )
-                            )
-                            .border(1.5.dp, Color.White, RoundedCornerShape(16.dp))
+                            .background(BoardWellBg)
+                            .border(1.2.dp, AccentGold.copy(alpha = 0.55f), RoundedCornerShape(16.dp))
                     ) {
-                        Icon(
-                            imageVector = Icons.Filled.WorkspacePremium,
-                            contentDescription = null,
-                            tint = Color(0xFF241300),
-                            modifier = Modifier.size(32.dp)
+                        AnimatedTreasureChest3D(
+                            size = 62.dp,
+                            autoPlay = true,
+                            loopingPreview = true
                         )
                     }
 
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "SEASON 1 · LIVE EVENT",
+                            text = "SEASON TREASURY · TAP TO INSPECT",
                             style = MaterialTheme.typography.labelSmall.copy(
                                 fontFamily = OutfitFontFamily,
                                 fontWeight = FontWeight.Black,
-                                letterSpacing = 1.sp
+                                letterSpacing = 0.9.sp
                             ),
                             color = AccentGold
                         )
@@ -196,12 +240,12 @@ fun EventsScreen(
                         Box(
                             contentAlignment = Alignment.Center,
                             modifier = Modifier
-                                .size(48.dp)
+                                .size(52.dp)
                                 .clip(RoundedCornerShape(14.dp))
-                                .background(AccentPurple.copy(alpha = 0.18f))
-                                .border(1.dp, AccentPurple.copy(alpha = 0.5f), RoundedCornerShape(14.dp))
+                                .background(BoardWellBg)
+                                .border(1.dp, AccentPurple.copy(alpha = 0.55f), RoundedCornerShape(14.dp))
                         ) {
-                            Icon(Icons.Filled.CalendarToday, null, tint = AccentCyan, modifier = Modifier.size(24.dp))
+                            GameAssetIcon(R.drawable.img_planet_gravity, null, size = 38.dp)
                         }
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
@@ -341,5 +385,15 @@ fun EventsScreen(
 
             Spacer(Modifier.height(10.dp))
         }
+    }
+
+    if (showFestivalChestDialog) {
+        ChestOpenCelebrationDialog(
+            title = "Festival Sovereign Chest",
+            subtitle = "Complete 7 Daily Gravity puzzles during Season 1 to unlock the sovereign treasury!",
+            goldEarned = 1200,
+            diamondsEarned = 60,
+            onDismiss = { showFestivalChestDialog = false }
+        )
     }
 }

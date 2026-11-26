@@ -99,7 +99,11 @@ fun GameOverScreen(
                                 .background(ObsidianBg)
                                 .border(1.dp, HairlineDark, RoundedCornerShape(8.dp))
                         ) {
-                            ArcadeBlockEmblem(size = 28.dp)
+                            com.example.ui.components.GameAssetIcon(
+                                resId = R.drawable.img_badge_cracked_crystal,
+                                contentDescription = null,
+                                size = 34.dp
+                            )
                         }
                         GoldMetallicBanner(
                             text = stringResource(R.string.game_over_title).uppercase(),
@@ -173,11 +177,10 @@ fun GameOverScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
-                                Icon(
-                                    imageVector = Icons.Filled.EmojiEvents,
+                                com.example.ui.components.GameAssetIcon(
+                                    resId = R.drawable.img_medal_trophy_gold,
                                     contentDescription = null,
-                                    tint = AccentGold,
-                                    modifier = Modifier.size(18.dp)
+                                    size = 18.dp
                                 )
                                 Text(
                                     text = "$bestOrTarget",

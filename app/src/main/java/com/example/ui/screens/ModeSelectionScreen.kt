@@ -22,22 +22,20 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
-import com.example.game.BlockColor
+import com.example.R
 import com.example.game.DailyChallengeGenerator
 import com.example.ui.GameUiState
 import com.example.ui.components.ArcadeButtonStyle
 import com.example.ui.components.BlockFallBottomNav
 import com.example.ui.components.BottomNavTab
 import com.example.ui.components.CascadeScreenContainer
+import com.example.ui.components.GameAssetIcon
 import com.example.ui.components.GameModeCard
 import com.example.ui.components.ScreenTopBar
 import com.example.ui.components.SectionHeader
-import com.example.ui.components.drawBevelBlock
 import com.example.ui.theme.AccentCyan
 import com.example.ui.theme.AccentGold
 import com.example.ui.theme.AccentPurple
-import com.example.ui.theme.LocalBlockStyle
-import com.example.ui.theme.LocalBoardPalette
 import com.example.ui.theme.TextMuted
 
 @Composable
@@ -96,7 +94,7 @@ fun ModeSelectionScreen(
                             buttonTag = "mode_play_classic_button",
                             onAction = onPlayNewClassic,
                             secondaryStat = classicStat,
-                            artwork = { MiniModeBlocksArtwork(isClassic = true) },
+                            artwork = { GameAssetIcon(R.drawable.img_mode_classic, null, size = 40.dp) },
                             modifier = Modifier.weight(1f)
                         )
                         GameModeCard(
@@ -110,7 +108,7 @@ fun ModeSelectionScreen(
                             buttonTag = "mode_browse_challenges_button",
                             onAction = onSelectChallengeLevels,
                             secondaryStat = challengeStat,
-                            artwork = { MiniModeBlocksArtwork(isClassic = false) },
+                            artwork = { GameAssetIcon(R.drawable.img_mode_challenge, null, size = 40.dp) },
                             modifier = Modifier.weight(1f)
                         )
                     }
@@ -126,7 +124,7 @@ fun ModeSelectionScreen(
                         buttonTag = "mode_play_classic_button",
                         onAction = onPlayNewClassic,
                         secondaryStat = classicStat,
-                        artwork = { MiniModeBlocksArtwork(isClassic = true) }
+                        artwork = { GameAssetIcon(R.drawable.img_mode_classic, null, size = 40.dp) }
                     )
                     GameModeCard(
                         title = "Challenge Campaign",
@@ -139,7 +137,7 @@ fun ModeSelectionScreen(
                         buttonTag = "mode_browse_challenges_button",
                         onAction = onSelectChallengeLevels,
                         secondaryStat = challengeStat,
-                        artwork = { MiniModeBlocksArtwork(isClassic = false) }
+                        artwork = { GameAssetIcon(R.drawable.img_mode_challenge, null, size = 40.dp) }
                     )
                 }
 
@@ -170,6 +168,7 @@ fun ModeSelectionScreen(
                             buttonTag = "mode_play_daily_button",
                             onAction = onPlayDaily,
                             secondaryStat = dailyStat,
+                            artwork = { GameAssetIcon(R.drawable.img_planet_gravity, null, size = 40.dp) },
                             modifier = Modifier.weight(1f)
                         )
                         GameModeCard(
@@ -183,6 +182,7 @@ fun ModeSelectionScreen(
                             buttonTag = "mode_blitz_upcoming_button",
                             onAction = {},
                             enabled = false,
+                            artwork = { GameAssetIcon(R.drawable.img_mode_blitz, null, size = 40.dp, alpha = 0.72f) },
                             modifier = Modifier.weight(1f)
                         )
                     }
@@ -197,7 +197,8 @@ fun ModeSelectionScreen(
                         buttonStyle = ArcadeButtonStyle.BLUE,
                         buttonTag = "mode_play_daily_button",
                         onAction = onPlayDaily,
-                        secondaryStat = dailyStat
+                        secondaryStat = dailyStat,
+                        artwork = { GameAssetIcon(R.drawable.img_planet_gravity, null, size = 40.dp) }
                     )
                     GameModeCard(
                         title = "Blitz 180",
@@ -209,51 +210,13 @@ fun ModeSelectionScreen(
                         buttonStyle = ArcadeButtonStyle.SLATE,
                         buttonTag = "mode_blitz_upcoming_button",
                         onAction = {},
-                        enabled = false
+                        enabled = false,
+                        artwork = { GameAssetIcon(R.drawable.img_mode_blitz, null, size = 40.dp, alpha = 0.72f) }
                     )
                 }
 
                 Spacer(Modifier.height(6.dp))
             }
-        }
-    }
-}
-
-@Composable
-private fun MiniModeBlocksArtwork(isClassic: Boolean) {
-    val blockStyle = LocalBlockStyle.current
-    val boardPalette = LocalBoardPalette.current
-    Canvas(modifier = Modifier.size(38.dp)) {
-        val cell = size.width / 3f
-        val gap = cell * 0.14f
-        val tile = cell - gap
-        val pattern = if (isClassic) {
-            listOf(
-                Triple(0, 1, BlockColor.CYAN),
-                Triple(1, 1, BlockColor.CYAN),
-                Triple(2, 0, BlockColor.AMBER),
-                Triple(2, 1, BlockColor.CYAN),
-                Triple(2, 2, BlockColor.EMERALD)
-            )
-        } else {
-            listOf(
-                Triple(0, 0, BlockColor.CORAL),
-                Triple(0, 2, BlockColor.VIOLET),
-                Triple(1, 0, BlockColor.CORAL),
-                Triple(1, 1, BlockColor.AMBER),
-                Triple(1, 2, BlockColor.VIOLET),
-                Triple(2, 1, BlockColor.AMBER)
-            )
-        }
-        for ((r, c, color) in pattern) {
-            drawBevelBlock(
-                left = c * cell + gap / 2f,
-                top = r * cell + gap / 2f,
-                cellSize = tile,
-                color = color,
-                blockStyle = blockStyle,
-                boardPalette = boardPalette
-            )
         }
     }
 }

@@ -560,7 +560,7 @@ private fun PowerUpToolbar(
         PowerUpActionButton(
             label = "Shuffle",
             count = shuffleCount,
-            icon = Icons.Filled.Shuffle,
+            iconRes = com.example.R.drawable.img_booster_shuffle,
             accent = Color(0xFFA855F7),
             enabled = shuffleEnabled,
             active = false,
@@ -571,7 +571,7 @@ private fun PowerUpToolbar(
         PowerUpActionButton(
             label = if (hammerActive) "Cancel" else "Hammer",
             count = hammerCount,
-            icon = Icons.Filled.Build,
+            iconRes = com.example.R.drawable.img_booster_hammer,
             accent = AccentGold,
             enabled = hammerEnabled,
             active = hammerActive,
@@ -582,7 +582,7 @@ private fun PowerUpToolbar(
         PowerUpActionButton(
             label = "Refresh",
             count = refreshCount,
-            icon = Icons.Filled.Refresh,
+            iconRes = com.example.R.drawable.img_booster_refresh,
             accent = AccentCyan,
             enabled = refreshEnabled,
             active = false,
@@ -597,7 +597,7 @@ private fun PowerUpToolbar(
 private fun PowerUpActionButton(
     label: String,
     count: Int,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    @androidx.annotation.DrawableRes iconRes: Int,
     accent: Color,
     enabled: Boolean,
     active: Boolean,
@@ -640,11 +640,11 @@ private fun PowerUpActionButton(
             .padding(horizontal = 6.dp)
             .testTag(testTag)
     ) {
-        Icon(
-            imageVector = icon,
+        com.example.ui.components.GameAssetIcon(
+            resId = iconRes,
             contentDescription = "$label ($count)",
-            tint = if (enabled || active) accent else TextSecondary.copy(alpha = 0.5f),
-            modifier = Modifier.size(15.dp)
+            size = 22.dp,
+            alpha = if (enabled || active) 1f else 0.48f
         )
         Spacer(Modifier.width(4.dp))
         Text(
