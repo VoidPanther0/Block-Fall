@@ -32,5 +32,6 @@
     <string name="confirm_restart_title">Restart Game?</string>
     <string name="confirm_restart_body">Your current board progress will be cleared and a fresh game will start.</string>
     <string name="confirm_reset_title">Reset All Progress?</string>
-    <string name="confirm_reset_body">This will erase your high scores, statistics, saved game, and unlocked challenge progress. This action cannot be undone.</string>
+    <string name="confirm_reset_body">This will erase your local high scores, statistics, saved game, wallet, rewards, and unlocked challenge progress. This action cannot be undone.</string>
+    <string name="confirm_reset_body_signed_in">This will sign out of Google Cloud Sync and erase all local high scores, statistics, saved game, wallet, rewards, and unlocked challenge progress. This action cannot be undone.</string>
 </resources>

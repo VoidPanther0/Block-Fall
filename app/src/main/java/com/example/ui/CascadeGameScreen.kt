@@ -5,6 +5,8 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -26,7 +28,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
-import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Shuffle
@@ -178,6 +179,7 @@ fun CascadeGameScreen(
                             particleTriggerId = state.particleTriggerId,
                             latestParticles = state.latestParticles,
                             hasSelectedSlot = state.selectedSlotIndex != null,
+                            isHammerMode = state.isHammerMode,
                             visualEffectsEnabled = state.settings.visualEffectsEnabled,
                             placementPreviewEnabled = state.settings.placementPreviewEnabled,
                             onCellTapped = { r, c ->
@@ -247,9 +249,23 @@ fun CascadeGameScreen(
                             shuffleCount = state.wallet.shuffleCount,
                             shuffleEnabled = state.status == GameStatus.PLAYING &&
                                 state.dragState == null &&
+                                !state.showContinueOffer &&
                                 state.wallet.shuffleCount > 0 &&
                                 state.traySlots.any { it.piece != null },
-                            onShuffleClick = viewModel::useShuffleBooster
+                            onShuffleClick = viewModel::useShuffleBooster,
+                            hammerCount = state.wallet.hammerCount,
+                            hammerActive = state.isHammerMode,
+                            hammerEnabled = state.status == GameStatus.PLAYING &&
+                                state.dragState == null &&
+                                !state.showContinueOffer &&
+                                (state.isHammerMode || (state.wallet.hammerCount > 0 && !state.board.isEmpty())),
+                            onHammerClick = viewModel::toggleHammerMode,
+                            refreshCount = state.wallet.refreshCount,
+                            refreshEnabled = state.status == GameStatus.PLAYING &&
+                                state.dragState == null &&
+                                !state.showContinueOffer &&
+                                state.wallet.refreshCount > 0,
+                            onRefreshClick = viewModel::useRefreshBooster
                         )
                         BannerAdBar()
                     }
@@ -302,6 +318,7 @@ fun CascadeGameScreen(
                             particleTriggerId = state.particleTriggerId,
                             latestParticles = state.latestParticles,
                             hasSelectedSlot = state.selectedSlotIndex != null,
+                            isHammerMode = state.isHammerMode,
                             visualEffectsEnabled = state.settings.visualEffectsEnabled,
                             placementPreviewEnabled = state.settings.placementPreviewEnabled,
                             onCellTapped = { r, c ->
@@ -361,9 +378,23 @@ fun CascadeGameScreen(
                             shuffleCount = state.wallet.shuffleCount,
                             shuffleEnabled = state.status == GameStatus.PLAYING &&
                                 state.dragState == null &&
+                                !state.showContinueOffer &&
                                 state.wallet.shuffleCount > 0 &&
                                 state.traySlots.any { it.piece != null },
-                            onShuffleClick = viewModel::useShuffleBooster
+                            onShuffleClick = viewModel::useShuffleBooster,
+                            hammerCount = state.wallet.hammerCount,
+                            hammerActive = state.isHammerMode,
+                            hammerEnabled = state.status == GameStatus.PLAYING &&
+                                state.dragState == null &&
+                                !state.showContinueOffer &&
+                                (state.isHammerMode || (state.wallet.hammerCount > 0 && !state.board.isEmpty())),
+                            onHammerClick = viewModel::toggleHammerMode,
+                            refreshCount = state.wallet.refreshCount,
+                            refreshEnabled = state.status == GameStatus.PLAYING &&
+                                state.dragState == null &&
+                                !state.showContinueOffer &&
+                                state.wallet.refreshCount > 0,
+                            onRefreshClick = viewModel::useRefreshBooster
                         )
                         BannerAdBar()
                         Spacer(Modifier.height(2.dp))
@@ -512,91 +543,139 @@ private fun ContinueCountdownOverlay(
 private fun PowerUpToolbar(
     shuffleCount: Int,
     shuffleEnabled: Boolean,
-    onShuffleClick: () -> Unit
+    onShuffleClick: () -> Unit,
+    hammerCount: Int,
+    hammerActive: Boolean,
+    hammerEnabled: Boolean,
+    onHammerClick: () -> Unit,
+    refreshCount: Int,
+    refreshEnabled: Boolean,
+    onRefreshClick: () -> Unit
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        PremiumPrimaryButton(
-            text = "Shuffle ($shuffleCount)",
+        PowerUpActionButton(
+            label = "Shuffle",
+            count = shuffleCount,
             icon = Icons.Filled.Shuffle,
-            style = ArcadeButtonStyle.PURPLE,
+            accent = Color(0xFFA855F7),
             enabled = shuffleEnabled,
-            height = 48.dp,
-            cornerRadius = 14.dp,
-            fontSize = 13.5.sp,
+            active = false,
             onClick = onShuffleClick,
             testTag = "shuffle_booster_button",
-            modifier = Modifier.weight(1.35f)
-        )
-        LockedBoosterSlot(
-            label = "Hammer",
-            icon = Icons.Filled.Build,
             modifier = Modifier.weight(1f)
         )
-        LockedBoosterSlot(
+        PowerUpActionButton(
+            label = if (hammerActive) "Cancel" else "Hammer",
+            count = hammerCount,
+            icon = Icons.Filled.Build,
+            accent = AccentGold,
+            enabled = hammerEnabled,
+            active = hammerActive,
+            onClick = onHammerClick,
+            testTag = "hammer_booster_button",
+            modifier = Modifier.weight(1f)
+        )
+        PowerUpActionButton(
             label = "Refresh",
+            count = refreshCount,
             icon = Icons.Filled.Refresh,
+            accent = AccentCyan,
+            enabled = refreshEnabled,
+            active = false,
+            onClick = onRefreshClick,
+            testTag = "refresh_booster_button",
             modifier = Modifier.weight(1f)
         )
     }
 }
 
 @Composable
-private fun LockedBoosterSlot(
+private fun PowerUpActionButton(
     label: String,
+    count: Int,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
+    accent: Color,
+    enabled: Boolean,
+    active: Boolean,
+    onClick: () -> Unit,
+    testTag: String,
     modifier: Modifier = Modifier
 ) {
     val shape = RoundedCornerShape(14.dp)
+    val interactionSource = remember { MutableInteractionSource() }
+    val bgColor = when {
+        active -> accent.copy(alpha = 0.28f)
+        enabled -> accent.copy(alpha = 0.16f)
+        else -> com.example.ui.theme.SurfaceCard.copy(alpha = 0.55f)
+    }
+    val borderColor = when {
+        active -> accent
+        enabled -> accent.copy(alpha = 0.65f)
+        else -> GlassBorder.copy(alpha = 0.45f)
+    }
+    val contentTint = when {
+        active -> accent
+        enabled -> TextPrimary
+        else -> TextSecondary.copy(alpha = 0.55f)
+    }
+
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
         modifier = modifier
             .height(48.dp)
             .clip(shape)
-            .background(com.example.ui.theme.SurfaceCard.copy(alpha = 0.72f))
-            .border(1.dp, GlassBorder.copy(alpha = 0.55f), shape)
+            .background(bgColor)
+            .border(if (active) 2.dp else 1.2.dp, borderColor, shape)
+            .clickable(
+                enabled = enabled,
+                interactionSource = interactionSource,
+                indication = androidx.compose.material3.ripple(color = accent),
+                onClick = onClick
+            )
             .padding(horizontal = 6.dp)
+            .testTag(testTag)
     ) {
         Icon(
             imageVector = icon,
-            contentDescription = "$label coming soon",
-            tint = TextSecondary.copy(alpha = 0.65f),
-            modifier = Modifier.size(16.dp)
+            contentDescription = "$label ($count)",
+            tint = if (enabled || active) accent else TextSecondary.copy(alpha = 0.5f),
+            modifier = Modifier.size(15.dp)
         )
         Spacer(Modifier.width(4.dp))
-        Column {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall.copy(
+                fontFamily = OutfitFontFamily,
+                fontWeight = FontWeight.Bold,
+                fontSize = 11.5.sp
+            ),
+            color = contentTint,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        Spacer(Modifier.width(4.dp))
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .clip(RoundedCornerShape(6.dp))
+                .background(if (enabled || active) accent.copy(alpha = 0.28f) else GlassBorder.copy(alpha = 0.25f))
+                .padding(horizontal = 5.dp, vertical = 1.dp)
+        ) {
             Text(
-                text = label,
+                text = "$count",
                 style = MaterialTheme.typography.labelSmall.copy(
-                    fontFamily = OutfitFontFamily,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 11.sp
+                    fontFamily = JetBrainsMonoFontFamily,
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = 10.sp
                 ),
-                color = TextSecondary.copy(alpha = 0.75f),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                color = if (enabled || active) accent else TextSecondary.copy(alpha = 0.65f),
+                maxLines = 1
             )
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(2.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Lock,
-                    contentDescription = null,
-                    tint = AccentGold.copy(alpha = 0.75f),
-                    modifier = Modifier.size(9.dp)
-                )
-                Text(
-                    text = "Soon",
-                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
-                    color = AccentGold.copy(alpha = 0.85f),
-                    maxLines = 1
-                )
-            }
         }
     }
 }

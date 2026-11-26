@@ -9,11 +9,20 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Build
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -63,6 +72,7 @@ fun GameBoard(
     particleTriggerId: Long,
     latestParticles: List<ParticleBurst>,
     hasSelectedSlot: Boolean,
+    isHammerMode: Boolean = false,
     onCellTapped: (Int, Int) -> Unit,
     onBoardBoundsChanged: (Rect) -> Unit,
     modifier: Modifier = Modifier,
@@ -95,6 +105,7 @@ fun GameBoard(
 
     val isInvalidHover = dragState != null && dragState.hoverAnchor != null && !dragState.isHoverValid
     val rimColor = when {
+        isHammerMode -> AccentGold.copy(alpha = 0.95f)
         isInvalidHover -> InvalidTint.copy(alpha = 0.92f)
         hasSelectedSlot && dragState == null -> AccentCyan.copy(alpha = 0.9f)
         else -> boardTheme.rim
@@ -107,7 +118,11 @@ fun GameBoard(
                 shape = boardShape,
                 depth = 10.dp,
                 base = Color(0xFF01030A),
-                glow = if (hasSelectedSlot) AccentCyan.copy(alpha = 0.5f) else Color.Transparent
+                glow = when {
+                    isHammerMode -> AccentGold.copy(alpha = 0.55f)
+                    hasSelectedSlot -> AccentCyan.copy(alpha = 0.5f)
+                    else -> Color.Transparent
+                }
             )
             .shadow(10.dp, boardShape, clip = false)
             .clip(boardShape)
@@ -132,6 +147,7 @@ fun GameBoard(
             }
     ) {
         val currentHasSelectedSlot by rememberUpdatedState(hasSelectedSlot)
+        val currentIsHammerMode by rememberUpdatedState(isHammerMode)
         val currentOnCellTapped by rememberUpdatedState(onCellTapped)
         val currentOnBoardTouchStart by rememberUpdatedState(onBoardTouchStart)
         val currentOnBoardTouchMove by rememberUpdatedState(onBoardTouchMove)
@@ -147,8 +163,30 @@ fun GameBoard(
                 .pointerInput(Unit) {
                     awaitEachGesture {
                         val down = awaitFirstDown(requireUnconsumed = false)
-                        if (!currentHasSelectedSlot) return@awaitEachGesture
+                        if (!currentHasSelectedSlot && !currentIsHammerMode) return@awaitEachGesture
                         down.consume()
+                        if (currentIsHammerMode) {
+                            var lastPos = down.position
+                            while (true) {
+                                val event = awaitPointerEvent()
+                                val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                                lastPos = change.position
+                                if (!change.pressed) {
+                                    change.consume()
+                                    val cellSize = size.width / Board.SIZE.toFloat()
+                                    if (cellSize > 0f &&
+                                        lastPos.x in 0f..size.width.toFloat() &&
+                                        lastPos.y in 0f..size.height.toFloat()
+                                    ) {
+                                        val col = (lastPos.x / cellSize).toInt().coerceIn(0, Board.SIZE - 1)
+                                        val row = (lastPos.y / cellSize).toInt().coerceIn(0, Board.SIZE - 1)
+                                        currentOnCellTapped(row, col)
+                                    }
+                                    break
+                                }
+                            }
+                            return@awaitEachGesture
+                        }
                         val touchStart = currentOnBoardTouchStart
                         val touchMove = currentOnBoardTouchMove
                         val touchEnd = currentOnBoardTouchEnd
@@ -304,14 +342,25 @@ fun GameBoard(
                     for (r in 0 until Board.SIZE) {
                         for (c in 0 until Board.SIZE) {
                             val cell = board.get(r, c) ?: continue
+                            val left = c * cellSize + gap / 2f
+                            val top = r * cellSize + gap / 2f
                             drawBevelBlock(
-                                left = c * cellSize + gap / 2f,
-                                top = r * cellSize + gap / 2f,
+                                left = left,
+                                top = top,
                                 cellSize = tileSize,
                                 color = cell.color,
                                 blockStyle = blockStyle,
                                 boardPalette = boardPalette
                             )
+                            if (isHammerMode) {
+                                drawRoundRect(
+                                    color = AccentGold.copy(alpha = 0.85f),
+                                    topLeft = Offset(left + 1.5f, top + 1.5f),
+                                    size = Size((tileSize - 3f).coerceAtLeast(1f), (tileSize - 3f).coerceAtLeast(1f)),
+                                    cornerRadius = slotRadius,
+                                    style = Stroke(width = 2.2f)
+                                )
+                            }
                         }
                     }
                 }
@@ -524,5 +573,37 @@ fun GameBoard(
                 .align(Alignment.TopCenter)
                 .padding(top = 8.dp)
         )
+
+        if (isHammerMode && floatingBanner == null) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 8.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(Color(0xE6141A2E))
+                    .border(1.2.dp, AccentGold.copy(alpha = 0.85f), RoundedCornerShape(10.dp))
+                    .padding(horizontal = 10.dp, vertical = 5.dp)
+                    .testTag("hammer_mode_banner")
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Build,
+                    contentDescription = null,
+                    tint = AccentGold,
+                    modifier = Modifier.size(13.dp)
+                )
+                androidx.compose.foundation.layout.Spacer(Modifier.size(5.dp))
+                Text(
+                    text = "HAMMER READY · TAP ANY BLOCK",
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        fontWeight = FontWeight.ExtraBold,
+                        letterSpacing = 0.7.sp,
+                        fontSize = 10.5.sp
+                    ),
+                    color = AccentGold,
+                    maxLines = 1
+                )
+            }
+        }
     }
 }

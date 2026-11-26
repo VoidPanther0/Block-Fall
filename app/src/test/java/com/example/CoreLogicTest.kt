@@ -34,11 +34,20 @@ class CoreLogicTest {
         assertEquals(25, w2.cascadeBonus)
     }
 
-    @Test fun unavailableBoostersCannotBePurchased() {
+    @Test fun unlockedBoostersAndTrioBundleCanBePurchased() {
         val w = PlayerWallet(goldCoins = 10_000)
-        for (id in listOf("booster_hammer_1", "booster_refresh_1", "booster_trio_bundle")) {
-            assertTrue(EconomyEngine.purchaseShopItem(w, id, "t-$id") is EconomyMutationResult.Rejected)
-        }
+        val hammerOk = EconomyEngine.purchaseShopItem(w, "booster_hammer_1", "t-h") as EconomyMutationResult.Success
+        assertEquals(w.hammerCount + 1, hammerOk.updatedWallet.hammerCount)
+
+        val refreshOk = EconomyEngine.purchaseShopItem(w, "booster_refresh_1", "t-r") as EconomyMutationResult.Success
+        assertEquals(w.refreshCount + 1, refreshOk.updatedWallet.refreshCount)
+
+        val trioOk = EconomyEngine.purchaseShopItem(w, "booster_trio_bundle", "t-trio") as EconomyMutationResult.Success
+        assertEquals(w.hammerCount + 2, trioOk.updatedWallet.hammerCount)
+        assertEquals(w.refreshCount + 2, trioOk.updatedWallet.refreshCount)
+        assertEquals(w.shuffleCount + 2, trioOk.updatedWallet.shuffleCount)
+
+        assertTrue(EconomyEngine.purchaseShopItem(w, "unknown_item", "t-bad") is EconomyMutationResult.Rejected)
         assertTrue(ShopCatalog.items.none { it.available.not() })
     }
 

@@ -82,24 +82,24 @@ fun GameOverScreen(
             ) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 20.dp)
+                        .padding(horizontal = 18.dp, vertical = 14.dp)
                 ) {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         Box(
                             contentAlignment = Alignment.Center,
                             modifier = Modifier
-                                .size(56.dp)
+                                .size(44.dp)
                                 .clip(RoundedCornerShape(8.dp))
                                 .background(ObsidianBg)
                                 .border(1.dp, HairlineDark, RoundedCornerShape(8.dp))
                         ) {
-                            ArcadeBlockEmblem(size = 36.dp)
+                            ArcadeBlockEmblem(size = 28.dp)
                         }
                         GoldMetallicBanner(
                             text = stringResource(R.string.game_over_title).uppercase(),
@@ -126,13 +126,13 @@ fun GameOverScreen(
 
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(16.dp))
                             .background(BoardWellBg)
                             .border(1.dp, GlassBorder, RoundedCornerShape(16.dp))
-                            .padding(horizontal = 16.dp, vertical = 14.dp)
+                            .padding(horizontal = 14.dp, vertical = 10.dp)
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
@@ -148,7 +148,7 @@ fun GameOverScreen(
                                 style = MaterialTheme.typography.displaySmall.copy(
                                     fontFamily = JetBrainsMonoFontFamily,
                                     fontWeight = FontWeight.ExtraBold,
-                                    fontSize = 36.sp
+                                    fontSize = 32.sp
                                 ),
                                 color = AccentCyan,
                                 modifier = Modifier.testTag("game_over_score_value")
@@ -234,9 +234,9 @@ fun GameOverScreen(
                         icon = Icons.Filled.Refresh,
                         style = ArcadeButtonStyle.GREEN,
                         onClick = onRetry,
-                        height = 52.dp,
-                        cornerRadius = 26.dp,
-                        fontSize = 16.sp,
+                        height = 48.dp,
+                        cornerRadius = 16.dp,
+                        fontSize = 15.sp,
                         testTag = "game_over_retry_button",
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -247,7 +247,7 @@ fun GameOverScreen(
                         style = ArcadeButtonStyle.GOLD_BLUE,
                         onClick = onHome,
                         height = 48.dp,
-                        cornerRadius = 24.dp,
+                        cornerRadius = 16.dp,
                         fontSize = 15.sp,
                         testTag = "game_over_home_button",
                         modifier = Modifier.fillMaxWidth()

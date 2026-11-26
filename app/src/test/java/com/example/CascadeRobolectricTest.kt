@@ -1,6 +1,7 @@
 package com.example
 
 import android.content.Context
+import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -8,6 +9,7 @@ import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ApplicationProvider
 import com.example.data.GameRepository
 import com.example.game.BlockColor
@@ -247,6 +249,30 @@ class CascadeRobolectricTest {
         manager.playBlockDrop()
         manager.release()
         assertFalse(manager.isReady)
+    }
+
+    @Test
+    fun `16_settings_account_reset_button_and_dialog_work_cleanly`() {
+        navigatePastSplashToHome()
+        composeRule.onNodeWithTag("home_settings_button").performScrollTo().performClick()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag("settings_screen").assertIsDisplayed()
+
+        composeRule.onNodeWithTag("setting_reset_progress_button")
+            .performScrollTo()
+            .assertIsDisplayed()
+            .assertHeightIsAtLeast(48.dp)
+            .performClick()
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag("reset_progress_confirmation_dialog").assertIsDisplayed()
+        composeRule.onNodeWithTag("cancel_reset_button").assertIsDisplayed()
+        composeRule.onNodeWithTag("confirm_reset_button").assertIsDisplayed().performClick()
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag("settings_reset_confirmation_banner")
+            .performScrollTo()
+            .assertIsDisplayed()
     }
 
     private fun navigatePastSplashToHome() {

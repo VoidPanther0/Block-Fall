@@ -162,4 +162,82 @@ class CascadeLifecycleRobolectricTest {
         dispatcher.scheduler.runCurrent()
         assertEquals(before, vm.uiState.value.wallet)
     }
+
+    @Test
+    fun `refresh_booster_deals_three_new_pieces_and_consumes_charge`() {
+        mutateState {
+            it.copy(
+                traySlots = listOf(TraySlot(0, null), TraySlot(1, dot(901)), TraySlot(2, null)),
+                wallet = it.wallet.copy(refreshCount = 2)
+            )
+        }
+
+        vm.useRefreshBooster()
+        dispatcher.scheduler.runCurrent()
+
+        val s = vm.uiState.value
+        assertEquals(1, s.wallet.refreshCount)
+        assertEquals(3, s.traySlots.count { it.piece != null })
+        assertTrue(s.traySlots[1].piece?.instanceId != 901L)
+    }
+
+    @Test
+    fun `hammer_smashes_block_applies_gravity_and_ignores_empty_cells`() {
+        val rows = MutableList(8) { "........" }
+        rows[6] = "#......."
+        rows[7] = "#......."
+        mutateState {
+            it.copy(
+                board = Board.fromPattern(rows),
+                wallet = it.wallet.copy(hammerCount = 2)
+            )
+        }
+
+        vm.toggleHammerMode()
+        assertTrue(vm.uiState.value.isHammerMode)
+
+        // Tapping an empty cell keeps hammer mode active without spending a charge
+        vm.onBoardCellTapped(0, 0)
+        dispatcher.scheduler.runCurrent()
+        assertTrue(vm.uiState.value.isHammerMode)
+        assertEquals(2, vm.uiState.value.wallet.hammerCount)
+
+        // Tapping occupied bottom-left block smashes it and drops row 6 block down to row 7
+        vm.onBoardCellTapped(7, 0)
+        dispatcher.scheduler.advanceTimeBy(1_000)
+        dispatcher.scheduler.runCurrent()
+
+        val after = vm.uiState.value
+        assertEquals(1, after.wallet.hammerCount)
+        assertTrue(!after.isHammerMode)
+        assertEquals(GameStatus.PLAYING, after.status)
+        assertNull(after.board.get(6, 0))
+        assertTrue(after.board.get(7, 0) != null)
+    }
+
+    @Test
+    fun `reset_all_progress_clears_scores_wallet_hammer_mode_and_daily_flag`() {
+        mutateState {
+            it.copy(
+                isHammerMode = true,
+                isDailyChallenge = true,
+                score = 1234,
+                classicBestScore = 5678,
+                wallet = it.wallet.copy(goldCoins = 999, diamonds = 77, hammerCount = 4)
+            )
+        }
+
+        vm.resetAllProgress()
+        dispatcher.scheduler.advanceUntilIdle()
+
+        val after = vm.uiState.value
+        assertEquals(0, after.score)
+        assertEquals(0, after.classicBestScore)
+        assertEquals(0, after.wallet.goldCoins)
+        assertEquals(0, after.wallet.diamonds)
+        assertEquals(0, after.wallet.hammerCount)
+        assertTrue(!after.isHammerMode)
+        assertTrue(!after.isDailyChallenge)
+        assertEquals(0, vm.wheelSpinPoints.value)
+    }
 }

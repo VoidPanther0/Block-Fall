@@ -19,11 +19,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Diamond
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.MonetizationOn
 import androidx.compose.material.icons.filled.PlayCircle
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.WorkspacePremium
 import androidx.compose.material3.Icon
@@ -42,6 +44,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.game.BoosterType
 import com.example.game.ShopCatalog
 import com.example.game.ShopItem
 import com.example.ui.GameUiState
@@ -242,7 +245,10 @@ private fun ShopCatalogCard(
     }
 
     val icon: ImageVector = when {
-        item.rewardBooster != null -> Icons.Filled.Shuffle
+        item.rewardBooster == BoosterType.HAMMER -> Icons.Filled.Build
+        item.rewardBooster == BoosterType.REFRESH -> Icons.Filled.Refresh
+        item.rewardBooster == BoosterType.SHUFFLE -> Icons.Filled.Shuffle
+        item.id == "booster_trio_bundle" -> Icons.Filled.AutoAwesome
         item.rewardGold > 0 -> Icons.Filled.MonetizationOn
         item.grantEntitlementId == "cosmetic_prism_crown" -> Icons.Filled.WorkspacePremium
         else -> Icons.Filled.AutoAwesome

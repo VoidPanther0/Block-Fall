@@ -24,6 +24,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.VolumeUp
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.GridOn
 import androidx.compose.material.icons.filled.Info
@@ -42,6 +43,7 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -98,6 +100,7 @@ fun SettingsScreen(
     onToggleVisualEffects: (Boolean) -> Unit,
     onTogglePlacementPreview: (Boolean) -> Unit,
     onResetProgressConfirmed: () -> Unit,
+    isCloudSignedIn: Boolean = false,
     onSelectBlockStyle: (BlockStyle) -> Unit = {},
     onSelectBoardPalette: (BoardColorPalette) -> Unit = {},
     onSelectMusicTrack: (com.example.game.MusicTrack) -> Unit = {},
@@ -108,6 +111,14 @@ fun SettingsScreen(
     var showLanguageDialog by remember { mutableStateOf(false) }
     var policyDialogTitle by remember { mutableStateOf<String?>(null) }
     var policyDialogBody by remember { mutableStateOf<String?>(null) }
+    var resetConfirmationMessage by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(resetConfirmationMessage) {
+        if (resetConfirmationMessage != null) {
+            kotlinx.coroutines.delay(4000L)
+            resetConfirmationMessage = null
+        }
+    }
 
     CascadeScreenContainer(
         maxContentWidth = 640.dp,
@@ -404,46 +415,83 @@ fun SettingsScreen(
                 borderColor = AccentCoral.copy(alpha = 0.45f),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(14.dp),
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(16.dp)
                 ) {
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier
-                            .size(46.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(AccentCoral.copy(alpha = 0.16f))
-                            .border(1.dp, AccentCoral.copy(alpha = 0.45f), RoundedCornerShape(12.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(14.dp),
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Icon(Icons.Filled.DeleteForever, null, tint = AccentCoral, modifier = Modifier.size(24.dp))
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier
+                                .size(46.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(AccentCoral.copy(alpha = 0.16f))
+                                .border(1.dp, AccentCoral.copy(alpha = 0.45f), RoundedCornerShape(12.dp))
+                        ) {
+                            Icon(Icons.Filled.DeleteForever, null, tint = AccentCoral, modifier = Modifier.size(24.dp))
+                        }
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Reset All Progress",
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontFamily = OutfitFontFamily,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 15.sp
+                                ),
+                                color = TextPrimary
+                            )
+                            Text(
+                                text = if (isCloudSignedIn) {
+                                    "Signs out of Cloud Sync and clears local scores, wallet, and levels"
+                                } else {
+                                    "Clears local scores, wallet, levels, rewards, and starts fresh"
+                                },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = TextSecondary
+                            )
+                        }
                     }
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Reset All Progress",
-                            style = MaterialTheme.typography.titleMedium.copy(
-                                fontFamily = OutfitFontFamily,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 15.sp
-                            ),
-                            color = TextPrimary
-                        )
-                        Text(
-                            text = "Clears scores, levels, and starts fresh",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = TextSecondary
-                        )
+                    if (resetConfirmationMessage != null) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(AccentEmerald.copy(alpha = 0.15f))
+                                .border(1.dp, AccentEmerald.copy(alpha = 0.45f), RoundedCornerShape(12.dp))
+                                .padding(horizontal = 12.dp, vertical = 10.dp)
+                                .testTag("settings_reset_confirmation_banner")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.CheckCircle,
+                                contentDescription = null,
+                                tint = AccentEmerald,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Text(
+                                text = resetConfirmationMessage.orEmpty(),
+                                style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
+                                color = TextPrimary
+                            )
+                        }
                     }
                     GlossyArcadeButton(
-                        text = "Reset",
+                        text = "Reset All Progress",
+                        icon = Icons.Filled.DeleteForever,
                         style = ArcadeButtonStyle.RED,
                         onClick = { showResetDialog = true },
-                        height = 42.dp,
-                        cornerRadius = 12.dp,
-                        fontSize = 12.sp,
+                        height = 48.dp,
+                        cornerRadius = 14.dp,
+                        fontSize = 14.sp,
+                        horizontalPadding = 16.dp,
+                        modifier = Modifier.fillMaxWidth(),
                         testTag = "setting_reset_progress_button"
                     )
                 }
@@ -456,8 +504,14 @@ fun SettingsScreen(
     // Reset Progress Confirmation Dialog
     if (showResetDialog) {
         ResetProgressConfirmationDialog(
+            isCloudSignedIn = isCloudSignedIn,
             onConfirm = {
                 showResetDialog = false
+                resetConfirmationMessage = if (isCloudSignedIn) {
+                    "Signed out and all local progress reset."
+                } else {
+                    "All local progress has been reset."
+                }
                 onResetProgressConfirmed()
             },
             onDismiss = { showResetDialog = false }

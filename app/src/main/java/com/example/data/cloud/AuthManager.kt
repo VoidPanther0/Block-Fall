@@ -8,7 +8,6 @@ import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.GetCredentialCancellationException
-import com.example.R
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
@@ -30,8 +29,13 @@ import kotlinx.coroutines.withContext
 
 private const val AUTH_TAG = "Auth"
 
+@Suppress("DiscouragedApi")
 private fun webClientId(context: Context): String {
-    val clientId = context.getString(R.string.default_web_client_id)
+    val resId = context.resources.getIdentifier("default_web_client_id", "string", context.packageName)
+    if (resId == 0) {
+        error("default_web_client_id missing (add google-services.json)")
+    }
+    val clientId = context.getString(resId)
     require(clientId.isNotBlank()) { "default_web_client_id missing (add google-services.json)" }
     return clientId
 }

@@ -86,10 +86,18 @@ class EconomyEngineTest {
     }
 
     @Test
-    fun `disabled_boosters_cannot_be_consumed`() {
-        for (t in listOf(BoosterType.HAMMER, BoosterType.REFRESH)) {
-            assertTrue(EconomyEngine.consumeBooster(PlayerWallet(), t, "tx-$t") is EconomyMutationResult.Rejected)
-        }
+    fun `hammer_and_refresh_boosters_can_be_consumed_and_decrement_counts`() {
+        val hammerRes = requireSuccess(
+            EconomyEngine.consumeBooster(PlayerWallet(), BoosterType.HAMMER, "tx-hammer")
+        )
+        assertEquals(2, hammerRes.updatedWallet.hammerCount)
+        assertEquals(3, hammerRes.updatedWallet.refreshCount)
+
+        val refreshRes = requireSuccess(
+            EconomyEngine.consumeBooster(PlayerWallet(), BoosterType.REFRESH, "tx-refresh")
+        )
+        assertEquals(2, refreshRes.updatedWallet.refreshCount)
+        assertEquals(3, refreshRes.updatedWallet.hammerCount)
     }
 
     @Test

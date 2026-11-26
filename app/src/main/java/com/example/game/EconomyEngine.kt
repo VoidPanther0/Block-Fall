@@ -31,8 +31,8 @@ enum class BoosterType(
         starterCount = 3
     );
 
-    /** Only boosters with real gameplay behaviour may be bought or consumed. */
-    val isImplemented: Boolean get() = this == SHUFFLE
+    /** All three boosters (Hammer, Refresh, Shuffle) are live in gameplay. */
+    val isImplemented: Boolean get() = true
 
     companion object {
         fun fromId(id: String?): BoosterType? = entries.firstOrNull { it.id == id }
@@ -69,20 +69,18 @@ object ShopCatalog {
     private val allItems: List<ShopItem> = listOf(
         ShopItem(
             id = "booster_hammer_1",
-            available = false, // no gameplay implementation yet
             category = ShopCategory.BOOSTERS,
             title = "Hammer",
-            subtitle = "Remove any 1 block",
+            subtitle = "Smash any 1 block on the board",
             goldCost = 100,
             rewardBooster = BoosterType.HAMMER,
             rewardBoosterCount = 1
         ),
         ShopItem(
             id = "booster_refresh_1",
-            available = false, // no gameplay implementation yet
             category = ShopCategory.BOOSTERS,
             title = "Refresh",
-            subtitle = "Deal 3 new pieces",
+            subtitle = "Deal 3 brand new pieces",
             goldCost = 100,
             rewardBooster = BoosterType.REFRESH,
             rewardBoosterCount = 1
@@ -91,14 +89,13 @@ object ShopCatalog {
             id = "booster_shuffle_1",
             category = ShopCategory.BOOSTERS,
             title = "Shuffle",
-            subtitle = "Reroll active pieces",
+            subtitle = "Reroll remaining tray pieces",
             goldCost = 100,
             rewardBooster = BoosterType.SHUFFLE,
             rewardBoosterCount = 1
         ),
         ShopItem(
             id = "booster_trio_bundle",
-            available = false, // bundles Hammer/Refresh which are not implemented
             category = ShopCategory.BOOSTERS,
             title = "Tactician Trio",
             subtitle = "+2 Hammer, +2 Refresh, +2 Shuffle",

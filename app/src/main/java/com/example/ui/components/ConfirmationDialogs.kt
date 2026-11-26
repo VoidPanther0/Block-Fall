@@ -50,6 +50,7 @@ fun RestartConfirmationDialog(
 
 @Composable
 fun ResetProgressConfirmationDialog(
+    isCloudSignedIn: Boolean = false,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -57,7 +58,9 @@ fun ResetProgressConfirmationDialog(
         icon = Icons.Filled.DeleteForever,
         accent = AccentCoral,
         title = stringResource(R.string.confirm_reset_title),
-        message = stringResource(R.string.confirm_reset_body),
+        message = stringResource(
+            if (isCloudSignedIn) R.string.confirm_reset_body_signed_in else R.string.confirm_reset_body
+        ),
         confirmLabel = "Reset",
         confirmStyle = ArcadeButtonStyle.RED,
         dialogTag = "reset_progress_confirmation_dialog",

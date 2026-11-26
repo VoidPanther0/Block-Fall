@@ -368,6 +368,7 @@ fun GlossyArcadeButton(
     height: Dp = 52.dp,
     cornerRadius: Dp = 16.dp,
     fontSize: TextUnit = 16.sp,
+    horizontalPadding: Dp = 16.dp,
     testTag: String? = null
 ) {
     val (bgBrush, borderColor, contentColor, sideBase) = when (style) {
@@ -468,7 +469,7 @@ fun GlossyArcadeButton(
                 enabled = enabled,
                 onClick = onClick
             )
-            .padding(horizontal = 20.dp)
+            .padding(horizontal = horizontalPadding)
     ) {
         // Subtle, elegant top edge highlight rim for physical bevel reflection
         Box(
@@ -782,10 +783,3 @@ fun FloatingModalBadge(
         content = content
     )
 }
-
-private data class Quad<A, B, C, D>(
-    val first: A,
-    val second: B,
-    val third: C,
-    val fourth: D
-)

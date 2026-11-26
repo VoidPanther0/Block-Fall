@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -68,6 +69,7 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.example.ui.theme.AccentCyan
 import com.example.ui.theme.AccentDiamond
 import com.example.ui.theme.AccentGold
@@ -93,6 +95,7 @@ fun PremiumPrimaryButton(
     height: Dp = 52.dp,
     cornerRadius: Dp = 12.dp,
     fontSize: TextUnit = 16.sp,
+    horizontalPadding: Dp = 16.dp,
     testTag: String? = null
 ) {
     GlossyArcadeButton(
@@ -105,6 +108,7 @@ fun PremiumPrimaryButton(
         height = height,
         cornerRadius = cornerRadius,
         fontSize = fontSize,
+        horizontalPadding = horizontalPadding,
         testTag = testTag
     )
 }
@@ -472,13 +476,17 @@ fun ConfirmationDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    Dialog(onDismissRequest = onDismiss) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
         PremiumCard(
-            cornerRadius = 18.dp,
+            cornerRadius = 20.dp,
             borderColor = GlassBorder,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(4.dp)
+                .padding(horizontal = 20.dp)
+                .widthIn(max = 420.dp)
                 .testTag(dialogTag)
         ) {
             Column(
@@ -487,7 +495,7 @@ fun ConfirmationDialog(
                 modifier = Modifier
                     .heightIn(max = 560.dp)
                     .verticalScroll(rememberScrollState())
-                    .padding(22.dp)
+                    .padding(20.dp)
             ) {
                 Box(
                     contentAlignment = Alignment.Center,
@@ -529,7 +537,8 @@ fun ConfirmationDialog(
                         style = ArcadeButtonStyle.SLATE,
                         height = 48.dp,
                         cornerRadius = 14.dp,
-                        fontSize = 15.sp,
+                        fontSize = 14.sp,
+                        horizontalPadding = 12.dp,
                         testTag = cancelTag,
                         modifier = Modifier.weight(1f)
                     )
@@ -539,7 +548,8 @@ fun ConfirmationDialog(
                         style = confirmStyle,
                         height = 48.dp,
                         cornerRadius = 14.dp,
-                        fontSize = 15.sp,
+                        fontSize = 14.sp,
+                        horizontalPadding = 12.dp,
                         testTag = confirmTag,
                         modifier = Modifier.weight(1f)
                     )

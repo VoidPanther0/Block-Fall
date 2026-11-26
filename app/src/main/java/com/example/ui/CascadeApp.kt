@@ -222,6 +222,7 @@ private fun CascadeNavHost(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val adState by viewModel.adState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val activity = remember(context) { context.findActivity() }
     val lifecycleOwner = LocalLifecycleOwner.current
     val onboardingPrefs = remember(context) { com.example.data.OnboardingPrefs(context) }
@@ -611,8 +612,18 @@ private fun CascadeNavHost(
                     onTogglePlacementPreview = viewModel::togglePlacementPreview,
                     onResetProgressConfirmed = {
                         viewModel.playUiClick()
-                        viewModel.resetAllProgress()
+                        if (currentUser != null) {
+                            val credMgr = runCatching { CredentialManager.create(context) }.getOrNull()
+                            com.example.data.cloud.signOut(
+                                credentialManager = credMgr,
+                                scope = scope,
+                                onSignOutComplete = viewModel::onCloudSignedOut
+                            )
+                        } else {
+                            viewModel.resetAllProgress()
+                        }
                     },
+                    isCloudSignedIn = currentUser != null,
                     onSelectBlockStyle = viewModel::setBlockStyle,
                     onSelectBoardPalette = viewModel::setBoardPalette,
                     onSelectMusicTrack = viewModel::selectMusicTrack,

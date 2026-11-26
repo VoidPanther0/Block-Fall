@@ -17,6 +17,7 @@ import com.example.game.BlockStyle
 import com.example.game.Board
 import com.example.game.BoardColorPalette
 import com.example.game.BoosterType
+import com.example.game.CascadeResolver
 import com.example.game.ChallengeLevel
 import com.example.game.ChallengeLevelProgress
 import com.example.game.ChallengeLevels
@@ -35,6 +36,7 @@ import com.example.game.GameSessionEngine
 import com.example.game.GameSettings
 import com.example.game.GameStatistics
 import com.example.game.GameStatus
+import com.example.game.GravityEngine
 import com.example.game.GridCoord
 import com.example.game.MusicTrack
 import com.example.game.PieceGenerator
@@ -119,6 +121,7 @@ data class GameUiState(
     val board: Board = Board.empty(),
     val traySlots: List<TraySlot> = List(3) { TraySlot(it, null) },
     val selectedSlotIndex: Int? = null,
+    val isHammerMode: Boolean = false,
     val tapHoverAnchor: GridCoord? = null,
     val score: Int = 0,
     val classicBestScore: Int = 0,
@@ -231,6 +234,8 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     private var inFlightBlocksPlaced: Int = 0
     private var pendingPause: Boolean = false
     private var shuffleInFlight: Boolean = false
+    private var refreshInFlight: Boolean = false
+    private var hammerInFlight: Boolean = false
     private var isContinueAdShowing: Boolean = false
     private var adsPreloadJob: Job? = null
 
@@ -404,6 +409,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 board = emptyBoard,
                 traySlots = trayPieces.mapIndexed { i, p -> TraySlot(i, p) },
                 selectedSlotIndex = null,
+                isHammerMode = false,
                 tapHoverAnchor = null,
                 score = 0,
                 isNewBest = false,
@@ -447,6 +453,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                     board = snapshot.board,
                     traySlots = snapshot.trayPieces.mapIndexed { i, p -> TraySlot(i, p) },
                     selectedSlotIndex = null,
+                    isHammerMode = false,
                     tapHoverAnchor = null,
                     score = snapshot.score,
                     isNewBest = false,
@@ -513,6 +520,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 board = board,
                 traySlots = trayPieces.mapIndexed { i, p -> TraySlot(i, p) },
                 selectedSlotIndex = null,
+                isHammerMode = false,
                 tapHoverAnchor = null,
                 score = 0,
                 isNewBest = false,
@@ -554,10 +562,12 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                         _uiState.update {
                             it.copy(
                                 mode = GameMode.CLASSIC,
+                                isDailyChallenge = false,
                                 status = GameStatus.PLAYING,
                                 board = saved.board,
                                 traySlots = saved.trayPieces.mapIndexed { i, p -> TraySlot(i, p) },
                                 selectedSlotIndex = null,
+                                isHammerMode = false,
                                 score = saved.score,
                                 movesPlayed = saved.movesPlayed,
                                 bestCascadeDepth = saved.bestCascadeDepth,
@@ -598,7 +608,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         }
         _uiState.update {
             if (it.status == GameStatus.PLAYING && !it.showContinueOffer) {
-                it.copy(status = GameStatus.PAUSED, dragState = null)
+                it.copy(status = GameStatus.PAUSED, dragState = null, isHammerMode = false)
             } else it
         }
     }
@@ -629,6 +639,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             it.copy(
                 dragState = null,
                 selectedSlotIndex = null,
+                isHammerMode = false,
                 showContinueOffer = false,
                 status = if (it.status == GameStatus.PAUSED) GameStatus.PLAYING else it.status
             )
@@ -685,6 +696,22 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     fun resetAllProgress() {
         cancelContinueCountdown()
         cancelCascade()
+        pieceGenerator.reseed(null)
+        activeDailyKey = null
+        comboStreak = 0
+        inFlightTurn = null
+        inFlightBlocksPlaced = 0
+        pendingPause = false
+        shuffleInFlight = false
+        refreshInFlight = false
+        hammerInFlight = false
+        serverSpinPoints = 0
+        pendingServerSpinPoints = null
+        pendingLocalPrize = null
+        lastSpinLabel = ""
+        _isSpinning.value = false
+        _economyMessage.value = null
+        setLocalSpinPoints(0)
         viewModelScope.launch {
             repository.resetAllProgress()
             val emptyBoard = Board.empty()
@@ -696,10 +723,12 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             _uiState.update {
                 it.copy(
                     mode = GameMode.CLASSIC,
+                    isDailyChallenge = false,
                     status = GameStatus.PLAYING,
                     board = emptyBoard,
                     traySlots = trayPieces.mapIndexed { i, p -> TraySlot(i, p) },
                     selectedSlotIndex = null,
+                    isHammerMode = false,
                     tapHoverAnchor = null,
                     score = 0,
                     classicBestScore = 0,
@@ -934,20 +963,315 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 _uiState.update { st ->
                     st.copy(
                         selectedSlotIndex = null,
+                        isHammerMode = false,
                         traySlots = st.traySlots.map { slot ->
                             if (slot.piece != null) slot.copy(piece = fresh[i++ % fresh.size]) else slot
                         }
                     )
                 }
+                soundManager.playUiClick()
+                haptics.perform(com.example.audio.HapticEvent.TAP)
                 applyWalletMutation(result.updatedWallet)
+                persistClassicSnapshot()
             } finally {
                 shuffleInFlight = false
             }
         }
     }
 
+    /** Refresh booster: spends one charge and deals a brand-new set of 3 pieces into all tray slots. */
+    fun useRefreshBooster() {
+        val state = _uiState.value
+        if (!canRefresh(state) || refreshInFlight) return
+        refreshInFlight = true
+        viewModelScope.launch {
+            try {
+                if (!canRefresh(_uiState.value)) return@launch
+                val result = EconomyEngine.consumeBooster(
+                    wallet = _uiState.value.wallet,
+                    type = BoosterType.REFRESH,
+                    transactionId = UUID.randomUUID().toString()
+                )
+                if (result !is EconomyMutationResult.Success) return@launch
+                if (!canRefresh(_uiState.value)) return@launch
+                val (fresh, updatedId) = pieceGenerator.generateTray(_uiState.value.board, nextIdCounter)
+                nextIdCounter = updatedId
+                _uiState.update { st ->
+                    st.copy(
+                        selectedSlotIndex = null,
+                        tapHoverAnchor = null,
+                        isHammerMode = false,
+                        traySlots = List(3) { idx -> TraySlot(idx, fresh[idx]) }
+                    )
+                }
+                soundManager.playGreat()
+                haptics.perform(com.example.audio.HapticEvent.PLACE)
+                applyWalletMutation(result.updatedWallet)
+                persistClassicSnapshot()
+            } finally {
+                refreshInFlight = false
+            }
+        }
+    }
+
+    /** Toggles Hammer targeting mode so the player can tap any occupied block on the board to smash it. */
+    fun toggleHammerMode() {
+        val state = _uiState.value
+        if (hammerInFlight) return
+        if (state.isHammerMode) {
+            _uiState.update { it.copy(isHammerMode = false) }
+            soundManager.playUiClick()
+            return
+        }
+        if (!canEnterHammerMode(state)) return
+        _uiState.update {
+            it.copy(
+                isHammerMode = true,
+                selectedSlotIndex = null,
+                tapHoverAnchor = null
+            )
+        }
+        soundManager.playUiClick()
+        haptics.perform(com.example.audio.HapticEvent.TAP)
+    }
+
+    fun cancelHammerMode() {
+        if (_uiState.value.isHammerMode) {
+            _uiState.update { it.copy(isHammerMode = false) }
+        }
+    }
+
+    private fun useHammerAt(row: Int, col: Int) {
+        val state = _uiState.value
+        if (state.status != GameStatus.PLAYING || !state.isHammerMode || state.dragState != null || state.showContinueOffer) return
+        if (state.wallet.hammerCount <= 0 || hammerInFlight) return
+        val targetCell = state.board.get(row, col) ?: return
+
+        hammerInFlight = true
+        viewModelScope.launch {
+            try {
+                val cur = _uiState.value
+                if (cur.status != GameStatus.PLAYING || !cur.isHammerMode || cur.wallet.hammerCount <= 0) return@launch
+                val cellToSmash = cur.board.get(row, col) ?: return@launch
+                val result = EconomyEngine.consumeBooster(
+                    wallet = cur.wallet,
+                    type = BoosterType.HAMMER,
+                    transactionId = UUID.randomUUID().toString()
+                )
+                if (result !is EconomyMutationResult.Success) return@launch
+
+                applyWalletMutation(result.updatedWallet)
+                soundManager.playLineClear(linesCleared = 1)
+                haptics.perform(com.example.audio.HapticEvent.CLEAR)
+
+                val boardAfterSmash = cur.board.withCells(mapOf(GridCoord(row, col) to null))
+                val gravityAfterSmash = GravityEngine.applyGravity(boardAfterSmash)
+                val settledBoard = gravityAfterSmash.newBoard
+                val cascadeRes = CascadeResolver.resolve(settledBoard)
+
+                val smashParticle = if (cur.settings.visualEffectsEnabled) {
+                    listOf(
+                        ParticleBurst(
+                            id = System.nanoTime(),
+                            row = row + 0.5f,
+                            col = col + 0.5f,
+                            color = cellToSmash.color,
+                            isLandingDust = false
+                        )
+                    )
+                } else {
+                    emptyList()
+                }
+
+                if (!gravityAfterSmash.didBlocksMove && !cascadeRes.hasClears) {
+                    _uiState.update { st ->
+                        st.copy(
+                            board = settledBoard,
+                            isHammerMode = false,
+                            selectedSlotIndex = null,
+                            particleTriggerId = if (smashParticle.isNotEmpty()) st.particleTriggerId + 1 else st.particleTriggerId,
+                            latestParticles = smashParticle
+                        )
+                    }
+                    persistClassicSnapshot()
+                    return@launch
+                }
+
+                _uiState.update { st ->
+                    st.copy(
+                        board = boardAfterSmash,
+                        isHammerMode = false,
+                        selectedSlotIndex = null,
+                        status = GameStatus.RESOLVING_CASCADE,
+                        particleTriggerId = if (smashParticle.isNotEmpty()) st.particleTriggerId + 1 else st.particleTriggerId,
+                        latestParticles = smashParticle
+                    )
+                }
+
+                val startingScore = _uiState.value.score
+                cascadeJob?.cancel()
+                cascadeJob = viewModelScope.launch {
+                    try {
+                        if (gravityAfterSmash.didBlocksMove) {
+                            val maxDist = gravityAfterSmash.movements.maxOf { it.distance }
+                            val fallDuration = (160L + maxDist * 28L).coerceAtMost(320L)
+                            val steps = (fallDuration / 16L).coerceAtLeast(1L).toInt()
+                            for (step in 0..steps) {
+                                val progress = (step.toFloat() / steps.toFloat()).coerceIn(0f, 1f)
+                                _visualPhase.value = BoardVisualPhase.FallingGravity(
+                                    boardAfterClear = boardAfterSmash,
+                                    movements = gravityAfterSmash.movements,
+                                    waveIndex = 0,
+                                    progress = progress
+                                )
+                                if (step < steps) delay(16L)
+                            }
+                            soundManager.playBlockDrop(volume = 0.5f, rate = 0.88f)
+                            _uiState.update { it.copy(board = settledBoard) }
+                        }
+
+                        if (cascadeRes.hasClears) {
+                            animationRunner.runCascade(
+                                resolution = cascadeRes,
+                                startingScore = startingScore,
+                                visualEffectsEnabled = _uiState.value.settings.visualEffectsEnabled,
+                                onVisualPhase = { phase -> _visualPhase.value = phase },
+                                onWaveStarted = { waveIndex, banner, particleTrigger, particles ->
+                                    _uiState.update {
+                                        it.copy(
+                                            currentCascadeWave = waveIndex,
+                                            bestCascadeDepth = maxOf(it.bestCascadeDepth, waveIndex),
+                                            floatingBanner = banner,
+                                            particleTriggerId = particleTrigger ?: it.particleTriggerId,
+                                            latestParticles = particles
+                                        )
+                                    }
+                                },
+                                onWaveCleared = { boardAfterClear, runningScore, waveLines ->
+                                    _uiState.update { s ->
+                                        val updatedBest = if (s.mode == GameMode.CLASSIC && runningScore > s.classicBestScore) {
+                                            runningScore
+                                        } else {
+                                            s.classicBestScore
+                                        }
+                                        s.copy(
+                                            board = boardAfterClear,
+                                            score = runningScore,
+                                            classicBestScore = updatedBest,
+                                            isNewBest = s.mode == GameMode.CLASSIC && (s.isNewBest || runningScore > s.classicBestScore),
+                                            totalLinesCleared = s.totalLinesCleared + waveLines
+                                        )
+                                    }
+                                },
+                                onGravityLanded = { boardAfterGravity, particleTrigger, dustParticles ->
+                                    _uiState.update {
+                                        it.copy(
+                                            board = boardAfterGravity,
+                                            particleTriggerId = particleTrigger ?: it.particleTriggerId,
+                                            latestParticles = dustParticles
+                                        )
+                                    }
+                                }
+                            )
+                        }
+
+                        finalizeHammerResolution(cascadeRes, settledBoard)
+                    } finally {
+                        hammerInFlight = false
+                    }
+                }
+                cascadeJob?.join()
+            } finally {
+                hammerInFlight = false
+            }
+        }
+    }
+
+    private fun finalizeHammerResolution(cascadeRes: com.example.game.CascadeResolution, settledBoard: Board) {
+        val state = _uiState.value
+        val finalBoard = if (cascadeRes.hasClears) cascadeRes.finalBoard else settledBoard
+        val maxDepthInTurn = cascadeRes.maxCascadeDepth
+        val cascadesInTurn = if (maxDepthInTurn >= 2) 1 else 0
+        val fullClearAdded = if (cascadeRes.didFullClear) 1 else 0
+        val finalScore = state.score
+        val isChallengeWin = state.mode == GameMode.CHALLENGE &&
+            finalScore >= state.currentChallengeLevel.targetScore
+        val nextStatus = if (isChallengeWin) GameStatus.CHALLENGE_WON else GameStatus.PLAYING
+
+        val updatedStats = if (cascadeRes.hasClears) {
+            state.statistics.copy(
+                totalLinesCleared = state.statistics.totalLinesCleared + cascadeRes.totalLinesCleared,
+                totalCascadesTriggered = state.statistics.totalCascadesTriggered + cascadesInTurn,
+                maxCascadeDepth = maxOf(state.statistics.maxCascadeDepth, maxDepthInTurn),
+                fullBoardClears = state.statistics.fullBoardClears + fullClearAdded,
+                classicBestScore = maxOf(
+                    state.statistics.classicBestScore,
+                    if (state.mode == GameMode.CLASSIC) finalScore else 0
+                )
+            )
+        } else {
+            state.statistics
+        }
+
+        val lastBannerId = state.floatingBanner?.id
+        _visualPhase.value = BoardVisualPhase.Idle
+        _uiState.update {
+            it.copy(
+                board = finalBoard,
+                status = nextStatus,
+                visualPhase = BoardVisualPhase.Idle,
+                currentCascadeWave = 0,
+                isHammerMode = false,
+                statistics = updatedStats,
+                playerRank = computeProgression(updatedStats)
+            )
+        }
+
+        if (isChallengeWin) {
+            soundManager.playLevelComplete()
+        }
+        persistClassicSnapshot()
+
+        if (cascadeRes.hasClears) {
+            viewModelScope.launch {
+                repository.recordTurnStatistics(
+                    blocksPlaced = 0,
+                    linesCleared = cascadeRes.totalLinesCleared,
+                    cascadesTriggered = cascadesInTurn,
+                    maxDepthInTurn = maxDepthInTurn,
+                    fullClearAdded = fullClearAdded,
+                    dailyWonAdded = 0
+                )
+                if (state.mode == GameMode.CLASSIC) {
+                    repository.updateClassicBestScore(finalScore)
+                }
+            }
+        }
+
+        if (pendingPause) {
+            pendingPause = false
+            pauseGame()
+        }
+
+        if (lastBannerId != null) {
+            bannerDismissJob = viewModelScope.launch {
+                animationRunner.scheduleBannerDismiss(lastBannerId) { id ->
+                    _uiState.update { cur ->
+                        if (cur.floatingBanner?.id == id) cur.copy(floatingBanner = null) else cur
+                    }
+                }
+            }
+        }
+    }
+
     private fun canShuffle(s: GameUiState): Boolean =
         s.status == GameStatus.PLAYING && s.dragState == null && !s.showContinueOffer && s.wallet.shuffleCount > 0
+
+    private fun canRefresh(s: GameUiState): Boolean =
+        s.status == GameStatus.PLAYING && s.dragState == null && !s.showContinueOffer && s.wallet.refreshCount > 0
+
+    private fun canEnterHammerMode(s: GameUiState): Boolean =
+        s.status == GameStatus.PLAYING && s.dragState == null && !s.showContinueOffer && s.wallet.hammerCount > 0 && !s.board.isEmpty()
 
     fun claimAdReward(goldAmount: Int, transactionId: String) {
         viewModelScope.launch {
@@ -1345,13 +1669,17 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         bannerDismissJob = null
         inFlightTurn = null
         pendingPause = false
+        hammerInFlight = false
+        refreshInFlight = false
+        shuffleInFlight = false
         _visualPhase.value = BoardVisualPhase.Idle
         _uiState.update {
-            if (it.status == GameStatus.RESOLVING_CASCADE || it.floatingBanner != null || it.currentCascadeWave != 0) {
+            if (it.status == GameStatus.RESOLVING_CASCADE || it.floatingBanner != null || it.currentCascadeWave != 0 || it.isHammerMode) {
                 it.copy(
                     floatingBanner = null,
                     currentCascadeWave = 0,
                     latestParticles = emptyList(),
+                    isHammerMode = false,
                     visualPhase = BoardVisualPhase.Idle
                 )
             } else it
@@ -1369,13 +1697,17 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         if (state.traySlots.getOrNull(slotIndex)?.piece == null) return
         _uiState.update {
             val nextSelection = if (it.selectedSlotIndex == slotIndex) null else slotIndex
-            it.copy(selectedSlotIndex = nextSelection, tapHoverAnchor = null)
+            it.copy(selectedSlotIndex = nextSelection, tapHoverAnchor = null, isHammerMode = false)
         }
     }
 
     fun onBoardCellTapped(row: Int, col: Int) {
         val state = _uiState.value
         if (state.status != GameStatus.PLAYING) return
+        if (state.isHammerMode) {
+            useHammerAt(row, col)
+            return
+        }
         val slotIdx = state.selectedSlotIndex ?: return
         val piece = state.traySlots.getOrNull(slotIdx)?.piece ?: return
         val anchor = dragController.computeTapPlacementAnchor(state.board, piece, row, col) ?: return
@@ -1416,6 +1748,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update {
             it.copy(
                 selectedSlotIndex = slotIndex,
+                isHammerMode = false,
                 dragState = dragController.computeDragState(state.board, slotIndex, piece, pointerRootOffset)
             )
         }
