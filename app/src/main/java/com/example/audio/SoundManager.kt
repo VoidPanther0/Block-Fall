@@ -258,46 +258,37 @@ class SoundManager(context: Context) {
                 val stepMelody = melodyFreq / AMBIENT_SAMPLE_RATE
 
                 for (i in 0 until AMBIENT_CHUNK_SAMPLES) {
-                    if (sampleInStep < sustainSamples) {
-                        // Smooth attack & warm decay envelope
-                        val attackNorm = (sampleInStep.toFloat() / (AMBIENT_SAMPLE_RATE * 0.08f)).coerceIn(0f, 1f)
-                        val decayFactor = 1.0f - (sampleInStep.toFloat() / stepDurationSamples.toFloat()) * 0.45f
-                        val env = attackNorm * decayFactor
-
-                        // Harmonic overtone synthesis (warm Rhodes/electric pad emulation)
-                        val rootS = sampleOscillator(phaseRoot, activeTrack)
-                        val thirdS = sampleOscillator(phaseThird, activeTrack)
-                        val fifthS = sampleOscillator(phaseFifth, activeTrack)
-                        val melodyS = if (melodyFreq > 0f) sampleOscillator(phaseMelody, activeTrack) else 0f
-
-                        val mixed = when (activeTrack) {
-                            MusicTrack.LOFI_CHILL -> (0.38f * rootS + 0.28f * thirdS + 0.24f * fifthS + 0.16f * melodyS) * env * 0.048f
-                            MusicTrack.ARCADE_PULSE -> (0.40f * rootS + 0.30f * fifthS + 0.30f * melodyS) * env * 0.040f
-                            MusicTrack.ZEN_GARDEN -> (0.50f * rootS + 0.30f * fifthS + 0.20f * melodyS) * env * 0.038f
-                            MusicTrack.SYNTHWAVE_NEON -> (0.45f * rootS + 0.35f * thirdS + 0.20f * fifthS) * env * 0.045f
-                        }
-
-                        buffer[i] = (mixed * Short.MAX_VALUE)
-                            .toInt()
-                            .coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt())
-                            .toShort()
-
-                        phaseRoot = (phaseRoot + stepRoot) % 1f
-                        phaseThird = (phaseThird + stepThird) % 1f
-                        phaseFifth = (phaseFifth + stepFifth) % 1f
-                        if (stepMelody > 0f) phaseMelody = (phaseMelody + stepMelody) % 1f
+                    val env = if (sampleInStep < sustainSamples) {
+                        val attackNorm = (sampleInStep.toFloat() / (AMBIENT_SAMPLE_RATE * 0.09f)).coerceIn(0f, 1f)
+                        val decayFactor = 1.0f - (sampleInStep.toFloat() / stepDurationSamples.toFloat()) * 0.35f
+                        attackNorm * decayFactor
                     } else {
-                        // Smooth release
+                        val sustainEndFactor = 1.0f - (sustainSamples.toFloat() / stepDurationSamples.toFloat()) * 0.35f
                         val relProgress = (sampleInStep - sustainSamples).toFloat() / releaseSamples.coerceAtLeast(1).toFloat()
-                        val relEnv = (1f - relProgress).coerceIn(0f, 1f)
-                        val rootS = sampleOscillator(phaseRoot, activeTrack)
-                        val mixed = rootS * relEnv * 0.015f
-                        buffer[i] = (mixed * Short.MAX_VALUE)
-                            .toInt()
-                            .coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt())
-                            .toShort()
-                        phaseRoot = (phaseRoot + stepRoot) % 1f
+                        sustainEndFactor * (1f - relProgress).coerceIn(0f, 1f)
                     }
+
+                    val rootS = sampleOscillator(phaseRoot, activeTrack)
+                    val thirdS = sampleOscillator(phaseThird, activeTrack)
+                    val fifthS = sampleOscillator(phaseFifth, activeTrack)
+                    val melodyS = if (melodyFreq > 0f) sampleOscillator(phaseMelody, activeTrack) else 0f
+
+                    val mixed = when (activeTrack) {
+                        MusicTrack.LOFI_CHILL -> (0.36f * rootS + 0.26f * thirdS + 0.22f * fifthS + 0.16f * melodyS) * env * 0.048f
+                        MusicTrack.ARCADE_PULSE -> (0.38f * rootS + 0.24f * thirdS + 0.18f * fifthS + 0.28f * melodyS) * env * 0.038f
+                        MusicTrack.ZEN_GARDEN -> (0.46f * rootS + 0.24f * fifthS + 0.30f * melodyS) * env * 0.038f
+                        MusicTrack.SYNTHWAVE_NEON -> (0.42f * rootS + 0.30f * thirdS + 0.18f * fifthS + 0.14f * melodyS) * env * 0.044f
+                    }
+
+                    buffer[i] = (mixed * Short.MAX_VALUE)
+                        .toInt()
+                        .coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt())
+                        .toShort()
+
+                    phaseRoot = (phaseRoot + stepRoot) % 1f
+                    phaseThird = (phaseThird + stepThird) % 1f
+                    phaseFifth = (phaseFifth + stepFifth) % 1f
+                    if (stepMelody > 0f) phaseMelody = (phaseMelody + stepMelody) % 1f
 
                     sampleInStep++
                     if (sampleInStep >= stepDurationSamples) {
@@ -326,23 +317,26 @@ class SoundManager(context: Context) {
         val fundamental = SINE_LUT[idx]
         return when (track) {
             MusicTrack.LOFI_CHILL -> {
-                // Warm Rhodes harmonics: fundamental + soft 2nd harmonic + subtle 3rd
+                // Warm Rhodes electric piano tone: fundamental + soft 2nd harmonic
                 val secondHarm = SINE_LUT[(phase * 2f * LUT_SIZE).toInt() and LUT_MASK]
-                0.78f * fundamental + 0.22f * secondHarm
+                0.80f * fundamental + 0.20f * secondHarm
             }
             MusicTrack.ARCADE_PULSE -> {
-                // Softened chiptune pulse wave (triangle-softened square)
-                if (phase < 0.5f) 0.85f * fundamental else -0.85f * fundamental
+                // Warm retro triangle-ish wave (odd harmonics 1 + 3 + 5, zero DC offset)
+                val thirdHarm = SINE_LUT[(phase * 3f * LUT_SIZE).toInt() and LUT_MASK]
+                val fifthHarm = SINE_LUT[(phase * 5f * LUT_SIZE).toInt() and LUT_MASK]
+                0.72f * fundamental + 0.20f * thirdHarm + 0.08f * fifthHarm
             }
             MusicTrack.ZEN_GARDEN -> {
-                // Meditative bell chime with octaval overtone
-                val overtone = SINE_LUT[(phase * 3f * LUT_SIZE).toInt() and LUT_MASK]
-                0.82f * fundamental + 0.18f * overtone
+                // Pure meditative singing bowl tone with gentle 2nd overtone
+                val secondHarm = SINE_LUT[(phase * 2f * LUT_SIZE).toInt() and LUT_MASK]
+                0.88f * fundamental + 0.12f * secondHarm
             }
             MusicTrack.SYNTHWAVE_NEON -> {
-                // Analog detuned synth tone
-                val detune = SINE_LUT[((phase * 1.006f) * LUT_SIZE).toInt() and LUT_MASK]
-                0.55f * fundamental + 0.45f * detune
+                // Warm analog pad with sub-octave + soft 2nd & 3rd harmonics
+                val secondHarm = SINE_LUT[(phase * 2f * LUT_SIZE).toInt() and LUT_MASK]
+                val thirdHarm = SINE_LUT[(phase * 3f * LUT_SIZE).toInt() and LUT_MASK]
+                0.65f * fundamental + 0.25f * secondHarm + 0.10f * thirdHarm
             }
         }
     }
@@ -373,36 +367,50 @@ class SoundManager(context: Context) {
             sin(2.0 * PI * i.toDouble() / LUT_SIZE.toDouble()).toFloat()
         }
 
-        // Lo-Fi Chord Progression: Cmaj7 -> Am7 -> Fmaj7 -> Em7 (with gentle melody notes)
+        // Lo-Fi 8-Bar Progression: Cmaj7 -> Am7 -> Fmaj7 -> G6 -> Em7 -> Am7 -> Dm7 -> G13
         private val LOFI_PROGRESSION = listOf(
-            HarmonicChord(130.81f, 164.81f, 196.00f, 329.63f), // C3 + E3 + G3 + E4
-            HarmonicChord(110.00f, 130.81f, 164.81f, 261.63f), // A2 + C3 + E3 + C4
-            HarmonicChord(87.31f, 110.00f, 130.81f, 220.00f),  // F2 + A2 + C3 + A3
-            HarmonicChord(98.00f, 123.47f, 146.83f, 246.94f)   // G2 + B2 + D3 + B3
+            HarmonicChord(130.81f, 164.81f, 196.00f, 329.63f),
+            HarmonicChord(110.00f, 130.81f, 164.81f, 261.63f),
+            HarmonicChord(87.31f, 110.00f, 130.81f, 220.00f),
+            HarmonicChord(98.00f, 123.47f, 146.83f, 246.94f),
+            HarmonicChord(164.81f, 196.00f, 246.94f, 392.00f),
+            HarmonicChord(110.00f, 130.81f, 164.81f, 329.63f),
+            HarmonicChord(146.83f, 174.61f, 220.00f, 293.66f),
+            HarmonicChord(98.00f, 123.47f, 146.83f, 261.63f)
         )
 
-        // Arcade 8-Bit Upbeat Chiptune Pattern
+        // Arcade Pulse 8-Step Melodic Arpeggio
         private val ARCADE_PROGRESSION = listOf(
             HarmonicChord(130.81f, 164.81f, 196.00f, 261.63f),
-            HarmonicChord(146.83f, 174.61f, 220.00f, 293.66f),
-            HarmonicChord(164.81f, 196.00f, 246.94f, 329.63f),
+            HarmonicChord(130.81f, 164.81f, 196.00f, 329.63f),
+            HarmonicChord(146.83f, 174.61f, 220.00f, 349.23f),
+            HarmonicChord(146.83f, 174.61f, 220.00f, 440.00f),
+            HarmonicChord(164.81f, 196.00f, 246.94f, 392.00f),
+            HarmonicChord(110.00f, 130.81f, 164.81f, 329.63f),
+            HarmonicChord(98.00f, 123.47f, 146.83f, 293.66f),
             HarmonicChord(130.81f, 164.81f, 196.00f, 392.00f)
         )
 
-        // Zen Temple Singing Bowls & Chimes (deep meditative frequencies)
+        // Zen Garden Pentatonic Bowls (C - D - E - G - A)
         private val ZEN_PROGRESSION = listOf(
-            HarmonicChord(144.00f, 180.00f, 216.00f, 288.00f),
-            HarmonicChord(162.00f, 202.50f, 243.00f, 324.00f),
-            HarmonicChord(144.00f, 180.00f, 216.00f, 432.00f),
-            HarmonicChord(108.00f, 135.00f, 162.00f, 216.00f)
+            HarmonicChord(130.81f, 164.81f, 196.00f, 261.63f),
+            HarmonicChord(146.83f, 196.00f, 220.00f, 293.66f),
+            HarmonicChord(164.81f, 196.00f, 261.63f, 329.63f),
+            HarmonicChord(110.00f, 164.81f, 196.00f, 392.00f),
+            HarmonicChord(130.81f, 196.00f, 261.63f, 329.63f),
+            HarmonicChord(98.00f, 146.83f, 196.00f, 293.66f)
         )
 
-        // Synthwave Analog Pads (Dm -> Bb -> F -> C)
+        // Synthwave Analog Pads (Dm -> Bb -> F -> C -> Gm -> Dm -> Bb -> A7sus)
         private val SYNTHWAVE_PROGRESSION = listOf(
-            HarmonicChord(73.42f, 87.31f, 110.00f, 174.61f),  // D2
-            HarmonicChord(58.27f, 73.42f, 87.31f, 146.83f),   // Bb1
-            HarmonicChord(87.31f, 110.00f, 130.81f, 174.61f), // F2
-            HarmonicChord(65.41f, 82.41f, 98.00f, 130.81f)    // C2
+            HarmonicChord(73.42f, 110.00f, 146.83f, 220.00f),
+            HarmonicChord(58.27f, 87.31f, 116.54f, 174.61f),
+            HarmonicChord(87.31f, 130.81f, 174.61f, 261.63f),
+            HarmonicChord(65.41f, 98.00f, 130.81f, 196.00f),
+            HarmonicChord(98.00f, 116.54f, 146.83f, 293.66f),
+            HarmonicChord(73.42f, 110.00f, 146.83f, 261.63f),
+            HarmonicChord(58.27f, 87.31f, 116.54f, 220.00f),
+            HarmonicChord(110.00f, 146.83f, 164.81f, 246.94f)
         )
     }
 }

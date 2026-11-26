@@ -73,13 +73,8 @@ fun DailyRewardsScreen(
     val todayKey = DailyChallengeGenerator.todayDateKey()
     val progress = state.dailyRewardProgress
     val canClaim = progress.canClaimToday(todayKey)
-    val daysClaimedInCycle = if (progress.claimedDaysCount == 0) {
-        0
-    } else {
-        val mod = progress.claimedDaysCount % 7
-        if (mod == 0 && !canClaim) 7 else mod
-    }
-    val nextRewardDay = if (daysClaimedInCycle >= 7) 1 else daysClaimedInCycle + 1
+    val daysClaimedInCycle = progress.daysClaimedInCycle(todayKey)
+    val nextRewardDay = progress.nextRewardDay(todayKey)
 
     CascadeScreenContainer(
         maxContentWidth = 640.dp,

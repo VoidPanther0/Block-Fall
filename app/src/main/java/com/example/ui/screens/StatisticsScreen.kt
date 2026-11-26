@@ -323,60 +323,71 @@ private fun AvatarPickerCard(
                 accent = AccentCyan
             )
 
-            FlowRow(
+            Column(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                ProfileAvatar.entries.forEach { avatar ->
-                    val isSelected = selectedAvatarId == avatar.id
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(6.dp),
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(14.dp))
-                            .background(if (isSelected) AccentCyan.copy(alpha = 0.16f) else BoardWellBg)
-                            .border(
-                                width = if (isSelected) 2.dp else 1.dp,
-                                color = if (isSelected) AccentCyan else GlassBorder,
-                                shape = RoundedCornerShape(14.dp)
-                            )
-                            .clickable { onSelectAvatar(avatar.id) }
-                            .padding(horizontal = 10.dp, vertical = 10.dp)
-                            .testTag("avatar_option_${avatar.id}")
+                ProfileAvatar.entries.chunked(4).forEach { rowAvatars ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Box(contentAlignment = Alignment.BottomEnd) {
-                            PlayerAvatarBadge(
-                                avatarId = avatar.id,
-                                googlePhotoUrl = googlePhotoUrl,
-                                size = 50.dp,
-                                hasCrownCosmetic = isSelected && hasCrown
-                            )
-                            if (isSelected) {
-                                Icon(
-                                    imageVector = Icons.Filled.CheckCircle,
-                                    contentDescription = "Selected",
-                                    tint = AccentEmerald,
-                                    modifier = Modifier
-                                        .size(18.dp)
-                                        .clip(CircleShape)
-                                        .background(SurfaceCard)
+                        rowAvatars.forEach { avatar ->
+                            val isSelected = selectedAvatarId == avatar.id
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(6.dp),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(if (isSelected) AccentCyan.copy(alpha = 0.16f) else BoardWellBg)
+                                    .border(
+                                        width = if (isSelected) 2.dp else 1.dp,
+                                        color = if (isSelected) AccentCyan else GlassBorder,
+                                        shape = RoundedCornerShape(14.dp)
+                                    )
+                                    .clickable { onSelectAvatar(avatar.id) }
+                                    .padding(horizontal = 4.dp, vertical = 10.dp)
+                                    .testTag("avatar_option_${avatar.id}")
+                            ) {
+                                Box(contentAlignment = Alignment.BottomEnd) {
+                                    PlayerAvatarBadge(
+                                        avatarId = avatar.id,
+                                        googlePhotoUrl = googlePhotoUrl,
+                                        size = 44.dp,
+                                        hasCrownCosmetic = isSelected && hasCrown
+                                    )
+                                    if (isSelected) {
+                                        Icon(
+                                            imageVector = Icons.Filled.CheckCircle,
+                                            contentDescription = "Selected",
+                                            tint = AccentEmerald,
+                                            modifier = Modifier
+                                                .size(16.dp)
+                                                .clip(CircleShape)
+                                                .background(SurfaceCard)
+                                        )
+                                    }
+                                }
+                                Text(
+                                    text = if (avatar == ProfileAvatar.GOOGLE_PHOTO && googlePhotoUrl.isNullOrBlank()) {
+                                        "Google"
+                                    } else {
+                                        avatar.label
+                                    },
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                        fontSize = 11.sp
+                                    ),
+                                    color = if (isSelected) AccentCyan else TextSecondary,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                             }
                         }
-                        Text(
-                            text = if (avatar == ProfileAvatar.GOOGLE_PHOTO && googlePhotoUrl.isNullOrBlank()) {
-                                "Google"
-                            } else {
-                                avatar.label
-                            },
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                fontSize = 11.sp
-                            ),
-                            color = if (isSelected) AccentCyan else TextSecondary,
-                            maxLines = 1
-                        )
+                        repeat(4 - rowAvatars.size) {
+                            Spacer(Modifier.weight(1f))
+                        }
                     }
                 }
             }

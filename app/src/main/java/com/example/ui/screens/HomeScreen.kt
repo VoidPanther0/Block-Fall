@@ -15,12 +15,15 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -28,22 +31,28 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Leaderboard
+import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Replay
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.ShoppingBag
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.WorkspacePremium
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -70,6 +79,8 @@ import androidx.compose.ui.unit.sp
 import com.example.R
 import com.example.game.AchievementsCatalog
 import com.example.game.BlockColor
+import com.example.game.BlockStyle
+import com.example.game.BoardColorPalette
 import com.example.game.DailyChallengeGenerator
 import com.example.game.DailyMissionsCatalog
 import com.example.ui.GameUiState
@@ -80,6 +91,7 @@ import com.example.ui.components.BottomNavTab
 import com.example.ui.components.CascadeScreenContainer
 import com.example.ui.components.PlayerProfileHeader
 import com.example.ui.components.PremiumCard
+import com.example.ui.components.PremiumModalSheet
 import com.example.ui.components.PremiumPrimaryButton
 import com.example.ui.components.drawBevelBlock
 import com.example.ui.theme.AccentCoral
@@ -88,6 +100,7 @@ import com.example.ui.theme.AccentEmerald
 import com.example.ui.theme.AccentGold
 import com.example.ui.theme.AccentPurple
 import com.example.ui.theme.BoardWellBg
+import com.example.ui.theme.DividerSubtle
 import com.example.ui.theme.GlassBorder
 import com.example.ui.theme.JetBrainsMonoFontFamily
 import com.example.ui.theme.LocalBlockStyle
@@ -119,7 +132,9 @@ fun HomeScreen(
     onOpenDailyRewards: () -> Unit = {},
     onOpenAchievements: () -> Unit = {},
     onOpenDailyMissions: () -> Unit = {},
-    onOpenEvents: () -> Unit = {}
+    onOpenEvents: () -> Unit = {},
+    onSelectBoardPalette: (BoardColorPalette) -> Unit = {},
+    onSelectBlockStyle: (BlockStyle) -> Unit = {}
 ) {
     val savedSummary = state.savedClassicSummary
     val canContinue = savedSummary != null
@@ -138,6 +153,7 @@ fun HomeScreen(
             ach.id !in state.claimedAchievementIds && ach.progressProvider(state.statistics, state.challengeProgress) >= ach.target
         }
     }
+    var showThemeSheet by remember { mutableStateOf(false) }
 
     CascadeScreenContainer(
         maxContentWidth = 960.dp,
@@ -202,6 +218,8 @@ fun HomeScreen(
                                 canContinue = canContinue,
                                 savedScore = savedSummary?.score,
                                 savedMoves = savedSummary?.movesPlayed,
+                                currentPalette = state.settings.boardPalette,
+                                onOpenThemes = { showThemeSheet = true },
                                 onPlayNewClassic = onPlayNewClassic,
                                 onContinueClassic = onContinueClassic,
                                 modifier = Modifier.weight(1f)
@@ -226,8 +244,7 @@ fun HomeScreen(
                                     onOpenStatistics = onOpenStatistics,
                                     onOpenDailyRewards = onOpenDailyRewards,
                                     onOpenAchievements = onOpenAchievements,
-                                    onOpenDailyMissions = onOpenDailyMissions,
-                                    onOpenEvents = onOpenEvents
+                                    onOpenDailyMissions = onOpenDailyMissions
                                 )
                             }
                         }
@@ -237,6 +254,8 @@ fun HomeScreen(
                             canContinue = canContinue,
                             savedScore = savedSummary?.score,
                             savedMoves = savedSummary?.movesPlayed,
+                            currentPalette = state.settings.boardPalette,
+                            onOpenThemes = { showThemeSheet = true },
                             onPlayNewClassic = onPlayNewClassic,
                             onContinueClassic = onContinueClassic
                         )
@@ -256,8 +275,7 @@ fun HomeScreen(
                             onOpenStatistics = onOpenStatistics,
                             onOpenDailyRewards = onOpenDailyRewards,
                             onOpenAchievements = onOpenAchievements,
-                            onOpenDailyMissions = onOpenDailyMissions,
-                            onOpenEvents = onOpenEvents
+                            onOpenDailyMissions = onOpenDailyMissions
                         )
                     }
 
@@ -265,6 +283,16 @@ fun HomeScreen(
                 }
             }
         }
+    }
+
+    if (showThemeSheet) {
+        HomeThemePickerSheet(
+            selectedPalette = state.settings.boardPalette,
+            selectedStyle = state.settings.blockStyle,
+            onSelectPalette = onSelectBoardPalette,
+            onSelectStyle = onSelectBlockStyle,
+            onDismiss = { showThemeSheet = false }
+        )
     }
 }
 
@@ -382,15 +410,18 @@ private fun HomeHeroSection(
     canContinue: Boolean,
     savedScore: Int?,
     savedMoves: Int?,
+    currentPalette: BoardColorPalette,
+    onOpenThemes: () -> Unit,
     onPlayNewClassic: () -> Unit,
     onContinueClassic: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val boardWellColor = LocalBoardPalette.current.toBoardColors().wellTop
+    val paletteColors = currentPalette.toBoardColors()
+    val boardWellColor = paletteColors.wellTop
 
     PremiumCard(
-        cornerRadius = 8.dp,
-        borderColor = com.example.ui.theme.HairlineDark,
+        cornerRadius = 18.dp,
+        borderColor = GlassBorder.copy(alpha = 0.55f),
         modifier = modifier.fillMaxWidth()
     ) {
         Column(
@@ -407,43 +438,79 @@ private fun HomeHeroSection(
             ) {
                 HeroCascadeCluster(
                     modifier = Modifier
-                        .size(64.dp)
-                        .clip(RoundedCornerShape(8.dp))
+                        .size(62.dp)
+                        .clip(RoundedCornerShape(14.dp))
                         .background(boardWellColor)
-                        .border(1.dp, com.example.ui.theme.HairlineDark, RoundedCornerShape(8.dp))
+                        .border(1.dp, GlassBorder.copy(alpha = 0.5f), RoundedCornerShape(14.dp))
                         .padding(6.dp)
                 )
 
                 Column(
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
                     modifier = Modifier.weight(1f)
                 ) {
                     ArcadeTitleLogo(fontSize = 24.sp)
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(9999.dp))
-                            .background(com.example.ui.theme.SurfaceDarkElevated)
-                            .border(1.dp, com.example.ui.theme.HairlineDark, RoundedCornerShape(9999.dp))
-                            .padding(horizontal = 12.dp, vertical = 4.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Icon(
-                            imageVector = Icons.Filled.EmojiEvents,
-                            contentDescription = null,
-                            tint = AccentGold,
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Text(
-                            text = "Best: $bestScore",
-                            style = MaterialTheme.typography.labelMedium.copy(
-                                fontFamily = JetBrainsMonoFontFamily,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 12.sp
-                            ),
-                            color = TextPrimary,
-                            maxLines = 1
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(5.dp),
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(com.example.ui.theme.SurfaceDarkElevated)
+                                .border(1.dp, com.example.ui.theme.HairlineDark, RoundedCornerShape(10.dp))
+                                .padding(horizontal = 9.dp, vertical = 4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.EmojiEvents,
+                                contentDescription = null,
+                                tint = AccentGold,
+                                modifier = Modifier.size(13.dp)
+                            )
+                            Text(
+                                text = "Best: $bestScore",
+                                style = MaterialTheme.typography.labelMedium.copy(
+                                    fontFamily = JetBrainsMonoFontFamily,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 11.5.sp
+                                ),
+                                color = TextPrimary,
+                                maxLines = 1
+                            )
+                        }
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(5.dp),
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(paletteColors.rim.copy(alpha = 0.16f))
+                                .border(1.dp, paletteColors.rim.copy(alpha = 0.55f), RoundedCornerShape(10.dp))
+                                .clickable(onClick = onOpenThemes)
+                                .padding(horizontal = 9.dp, vertical = 4.dp)
+                                .testTag("home_theme_button")
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(10.dp)
+                                    .clip(CircleShape)
+                                    .background(paletteColors.rim)
+                            )
+                            Text(
+                                text = currentPalette.displayName,
+                                style = MaterialTheme.typography.labelMedium.copy(
+                                    fontFamily = OutfitFontFamily,
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 11.5.sp
+                                ),
+                                color = TextPrimary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
                     }
                 }
             }
@@ -519,7 +586,7 @@ private fun DailyRewardStrip(
     targetScore: Int,
     onClick: () -> Unit
 ) {
-    val shape = RoundedCornerShape(8.dp)
+    val shape = RoundedCornerShape(14.dp)
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -529,7 +596,6 @@ private fun DailyRewardStrip(
             .clickable(onClick = onClick)
             .testTag("home_daily_button")
     ) {
-        // PS Plus gold accent bar across the top
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -547,9 +613,9 @@ private fun DailyRewardStrip(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
                     .size(40.dp)
-                    .clip(RoundedCornerShape(8.dp))
+                    .clip(RoundedCornerShape(10.dp))
                     .background(com.example.ui.theme.PsGoldStart.copy(alpha = 0.14f))
-                    .border(1.dp, com.example.ui.theme.PsGoldStart.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
+                    .border(1.dp, com.example.ui.theme.PsGoldStart.copy(alpha = 0.4f), RoundedCornerShape(10.dp))
             ) {
                 Icon(
                     imageVector = Icons.Filled.CalendarToday,
@@ -563,7 +629,7 @@ private fun DailyRewardStrip(
                     text = "Daily Gravity Puzzle",
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontFamily = OutfitFontFamily,
-                        fontWeight = FontWeight.Medium,
+                        fontWeight = FontWeight.SemiBold,
                         fontSize = 15.sp
                     ),
                     color = TextPrimary,
@@ -600,11 +666,10 @@ private fun HomeActionHub(
     onOpenStatistics: () -> Unit,
     onOpenDailyRewards: () -> Unit,
     onOpenAchievements: () -> Unit,
-    onOpenDailyMissions: () -> Unit,
-    onOpenEvents: () -> Unit
+    onOpenDailyMissions: () -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        // Daily progression cards
+        // Streamlined 2x2 Primary Hub: spacious, balanced, zero text truncation
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -620,6 +685,21 @@ private fun HomeActionHub(
                 modifier = Modifier.weight(1f)
             )
             HomeHubTile(
+                title = "Challenges",
+                subtitle = "8 tactical boards",
+                icon = Icons.Filled.Star,
+                accent = AccentCyan,
+                onClick = onOpenChallenges,
+                testTag = "home_challenges_button",
+                modifier = Modifier.weight(1f)
+            )
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            HomeHubTile(
                 title = "Missions",
                 subtitle = "Daily goals & gems",
                 icon = Icons.Filled.Flag,
@@ -629,94 +709,56 @@ private fun HomeActionHub(
                 testTag = "home_missions_button",
                 modifier = Modifier.weight(1f)
             )
+            HomeHubTile(
+                title = "Achievements",
+                subtitle = "Trophies & medals",
+                icon = Icons.Filled.EmojiEvents,
+                accent = AccentPurple,
+                badgeCount = claimableAchievements,
+                onClick = onOpenAchievements,
+                testTag = "home_achievements_button",
+                modifier = Modifier.weight(1f)
+            )
         }
 
-        // Game Modes & Challenges
+        // Compact single-row quick utility strip
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            HomeHubTile(
-                title = "Game Modes",
-                subtitle = "Classic · Puzzle · Daily",
+            HomeQuickUtilityChip(
+                label = "Modes",
                 icon = Icons.Filled.GridView,
                 accent = AccentCyan,
                 onClick = onOpenModes,
                 testTag = "home_modes_button",
                 modifier = Modifier.weight(1f)
             )
-            HomeHubTile(
-                title = "Challenges",
-                subtitle = "8 tactical boards",
-                icon = Icons.Filled.Star,
-                accent = AccentGold,
-                onClick = onOpenChallenges,
-                testTag = "home_challenges_button",
-                modifier = Modifier.weight(1f)
-            )
-        }
-
-        // Achievements & Event
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            HomeHubTile(
-                title = "Achievements",
-                subtitle = "Trophies & medals",
-                icon = Icons.Filled.EmojiEvents,
-                accent = AccentGold,
-                badgeCount = claimableAchievements,
-                onClick = onOpenAchievements,
-                testTag = "home_achievements_button",
-                modifier = Modifier.weight(1f)
-            )
-            HomeHubTile(
-                title = "Crystal Event",
-                subtitle = "Limited rewards",
-                icon = Icons.Filled.AutoAwesome,
-                accent = AccentPurple,
-                onClick = onOpenEvents,
-                testTag = "home_events_button",
-                modifier = Modifier.weight(1f)
-            )
-        }
-
-        // Themes & Shop
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            HomeHubTile(
-                title = "Themes & Audio",
-                subtitle = "Colors, styles & music",
-                icon = Icons.Filled.Settings,
-                accent = AccentPurple,
-                onClick = onOpenSettings,
-                testTag = "home_settings_button",
-                modifier = Modifier.weight(1f)
-            )
-            HomeHubTile(
-                title = "Shop",
-                subtitle = "Boosters & coins",
+            HomeQuickUtilityChip(
+                label = "Shop",
                 icon = Icons.Filled.ShoppingBag,
                 accent = AccentEmerald,
                 onClick = onOpenShop,
                 testTag = "home_shop_button",
                 modifier = Modifier.weight(1f)
             )
+            HomeQuickUtilityChip(
+                label = "Profile",
+                icon = Icons.Filled.Person,
+                accent = AccentGold,
+                onClick = onOpenStatistics,
+                testTag = "home_statistics_button",
+                modifier = Modifier.weight(1f)
+            )
+            HomeQuickUtilityChip(
+                label = "Settings",
+                icon = Icons.Filled.Settings,
+                accent = AccentPurple,
+                onClick = onOpenSettings,
+                testTag = "home_settings_button",
+                modifier = Modifier.weight(1f)
+            )
         }
-
-        // Profile summary card
-        HomeHubTile(
-            title = "Player Profile",
-            subtitle = "Avatar · Rank progression · Best score",
-            icon = Icons.Filled.Leaderboard,
-            accent = AccentCyan,
-            onClick = onOpenStatistics,
-            testTag = "home_statistics_button",
-            modifier = Modifier.fillMaxWidth()
-        )
     }
 }
 
@@ -732,79 +774,274 @@ private fun HomeHubTile(
     badgeCount: Int = 0
 ) {
     val shape = RoundedCornerShape(14.dp)
-    Box(modifier = modifier) {
-        Column(
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(shape)
-                .background(com.example.ui.theme.SurfaceDarkCard)
-                .border(1.dp, com.example.ui.theme.HairlineDark, shape)
-                .clickable(onClick = onClick)
-                .padding(horizontal = 12.dp, vertical = 12.dp)
-                .testTag(testTag)
+    Column(
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = modifier
+            .clip(shape)
+            .background(com.example.ui.theme.SurfaceDarkCard)
+            .border(1.dp, com.example.ui.theme.HairlineDark, shape)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 13.dp, vertical = 12.dp)
+            .testTag(testTag)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+            modifier = Modifier.fillMaxWidth()
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxWidth()
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .size(32.dp)
+                    .clip(RoundedCornerShape(9.dp))
+                    .background(accent.copy(alpha = 0.14f))
+                    .border(1.dp, accent.copy(alpha = 0.35f), RoundedCornerShape(9.dp))
             ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = accent,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+            if (badgeCount > 0) {
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
-                        .size(32.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(accent.copy(alpha = 0.15f))
-                        .border(1.dp, accent.copy(alpha = 0.40f), RoundedCornerShape(8.dp))
+                        .size(20.dp)
+                        .clip(CircleShape)
+                        .background(com.example.ui.theme.WarningRed)
                 ) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        tint = accent,
-                        modifier = Modifier.size(18.dp)
+                    Text(
+                        text = "$badgeCount",
+                        color = Color.White,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold
                     )
                 }
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleSmall.copy(
-                        fontFamily = OutfitFontFamily,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 13.5.sp,
-                        letterSpacing = (-0.1).sp
-                    ),
-                    color = TextPrimary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f)
-                )
             }
+        }
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleSmall.copy(
+                    fontFamily = OutfitFontFamily,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 14.sp
+                ),
+                color = TextPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
             Text(
                 text = subtitle,
-                style = MaterialTheme.typography.bodySmall.copy(
-                    fontSize = 11.sp
-                ),
+                style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.5.sp),
                 color = TextSecondary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
         }
+    }
+}
 
-        if (badgeCount > 0) {
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(6.dp)
-                    .size(18.dp)
-                    .clip(CircleShape)
-                    .background(com.example.ui.theme.WarningRed)
+@Composable
+private fun HomeQuickUtilityChip(
+    label: String,
+    icon: ImageVector,
+    accent: Color,
+    onClick: () -> Unit,
+    testTag: String,
+    modifier: Modifier = Modifier
+) {
+    val shape = RoundedCornerShape(12.dp)
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
+        modifier = modifier
+            .defaultMinSize(minHeight = 48.dp)
+            .clip(shape)
+            .background(com.example.ui.theme.SurfaceDarkCard)
+            .border(1.dp, com.example.ui.theme.HairlineDark, shape)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 6.dp, vertical = 10.dp)
+            .testTag(testTag)
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = accent,
+            modifier = Modifier.size(16.dp)
+        )
+        Spacer(Modifier.width(5.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium.copy(
+                fontFamily = OutfitFontFamily,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 12.sp
+            ),
+            color = TextPrimary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+@Composable
+private fun HomeThemePickerSheet(
+    selectedPalette: BoardColorPalette,
+    selectedStyle: BlockStyle,
+    onSelectPalette: (BoardColorPalette) -> Unit,
+    onSelectStyle: (BlockStyle) -> Unit,
+    onDismiss: () -> Unit
+) {
+    PremiumModalSheet(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 28.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Text(
-                    text = "$badgeCount",
-                    color = Color.White,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold
+                Icon(
+                    imageVector = Icons.Filled.Palette,
+                    contentDescription = null,
+                    tint = AccentCyan,
+                    modifier = Modifier.size(24.dp)
                 )
+                Column {
+                    Text(
+                        text = "Background & Design Theme",
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            fontFamily = OutfitFontFamily,
+                            fontWeight = FontWeight.Bold
+                        ),
+                        color = TextPrimary
+                    )
+                    Text(
+                        text = "Switch background colors, glow & block style live",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextSecondary
+                    )
+                }
+            }
+
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                BoardColorPalette.entries.chunked(2).forEach { rowPalettes ->
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        rowPalettes.forEach { pal ->
+                            val isSelected = pal == selectedPalette
+                            val boardColors = pal.toBoardColors()
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .defaultMinSize(minHeight = 48.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(if (isSelected) AccentGold.copy(alpha = 0.16f) else BoardWellBg)
+                                    .border(
+                                        width = if (isSelected) 1.5.dp else 1.dp,
+                                        color = if (isSelected) AccentGold else GlassBorder,
+                                        shape = RoundedCornerShape(12.dp)
+                                    )
+                                    .clickable { onSelectPalette(pal) }
+                                    .padding(horizontal = 12.dp, vertical = 10.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(22.dp)
+                                        .clip(CircleShape)
+                                        .background(boardColors.rim)
+                                        .border(1.5.dp, Color.White.copy(alpha = 0.65f), CircleShape)
+                                )
+                                Text(
+                                    text = pal.themeTitle,
+                                    style = MaterialTheme.typography.labelMedium.copy(
+                                        fontFamily = OutfitFontFamily,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                        fontSize = 12.5.sp
+                                    ),
+                                    color = if (isSelected) AccentGold else TextPrimary,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                if (isSelected) {
+                                    Icon(
+                                        imageVector = Icons.Filled.Check,
+                                        contentDescription = "Selected",
+                                        tint = AccentGold,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                            }
+                        }
+                        if (rowPalettes.size == 1) {
+                            Spacer(Modifier.weight(1f))
+                        }
+                    }
+                }
+            }
+
+            HorizontalDivider(color = DividerSubtle.copy(alpha = 0.6f))
+
+            Text(
+                text = "BLOCK DESIGN",
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.sp
+                ),
+                color = AccentCyan
+            )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                BlockStyle.entries.forEach { style ->
+                    val isSelected = style == selectedStyle
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(if (isSelected) AccentCyan.copy(alpha = 0.16f) else BoardWellBg)
+                            .border(
+                                width = if (isSelected) 1.5.dp else 1.dp,
+                                color = if (isSelected) AccentCyan else GlassBorder,
+                                shape = RoundedCornerShape(12.dp)
+                            )
+                            .clickable { onSelectStyle(style) }
+                            .padding(vertical = 10.dp, horizontal = 6.dp)
+                    ) {
+                        Canvas(modifier = Modifier.size(24.dp)) {
+                            drawBevelBlock(
+                                left = 0f,
+                                top = 0f,
+                                cellSize = size.minDimension,
+                                color = BlockColor.CYAN,
+                                blockStyle = style,
+                                boardPalette = selectedPalette
+                            )
+                        }
+                        Text(
+                            text = style.displayName,
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                            ),
+                            color = if (isSelected) AccentCyan else TextSecondary
+                        )
+                    }
+                }
             }
         }
     }

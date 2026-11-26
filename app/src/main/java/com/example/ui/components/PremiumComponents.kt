@@ -125,9 +125,8 @@ fun SecondaryButton(
         onClick = onClick,
         enabled = enabled,
         shape = shape,
-        border = BorderStroke(1.dp, accent.copy(alpha = if (enabled) 0.55f else 0.25f)),
+        border = BorderStroke(1.2.dp, accent.copy(alpha = if (enabled) 0.55f else 0.25f)),
         modifier = modifier
-            .threeDFrame(shape = shape, depth = 5.dp, base = Color(0xFF05202E))
             .defaultMinSize(minHeight = height)
             .then(if (testTag != null) Modifier.testTag(testTag) else Modifier)
     ) {
@@ -176,13 +175,11 @@ fun IconActionButton(
             .graphicsLayer {
                 scaleX = scale
                 scaleY = scale
-                translationY = if (pressed) 2f else 0f
             }
-            .threeDFrame(shape = shape, depth = 5.dp, base = Color(0xFF03070F))
-            .shadow(4.dp, shape, clip = false)
+            .shadow(3.dp, shape, clip = false)
             .clip(shape)
-            .background(Brush.verticalGradient(listOf(SurfaceCardElevated, SurfaceCard)))
-            .border(1.2.dp, borderColor, shape)
+            .background(SurfaceCardElevated)
+            .border(1.dp, borderColor.copy(alpha = 0.7f), shape)
             .clickable(
                 interactionSource = interactionSource,
                 indication = ripple(color = AccentCyan),
@@ -269,20 +266,15 @@ private fun CurrencyPill(
     compact: Boolean,
     modifier: Modifier = Modifier
 ) {
-    val shape = RoundedCornerShape(14.dp)
+    val shape = RoundedCornerShape(12.dp)
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(if (compact) 5.dp else 7.dp),
         modifier = modifier
-            .threeDFrame(
-                shape = shape,
-                depth = 4.dp,
-                base = Color(0xFF050A14)
-            )
             .defaultMinSize(minHeight = if (compact) 32.dp else 36.dp)
             .clip(shape)
-            .background(Brush.verticalGradient(listOf(Color(0xFF282B31), SurfaceCard)))
-            .border(1.2.dp, borderAccent, shape)
+            .background(SurfaceCardElevated)
+            .border(1.dp, borderAccent.copy(alpha = 0.6f), shape)
             .padding(
                 horizontal = if (compact) 9.dp else 12.dp,
                 vertical = if (compact) 4.dp else 6.dp

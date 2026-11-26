@@ -97,18 +97,18 @@ fun PauseScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 PremiumCard(
-                    cornerRadius = 22.dp,
+                    cornerRadius = 20.dp,
                     borderColor = AccentGold.copy(alpha = 0.5f),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 34.dp)
+                        .padding(top = 28.dp)
                 ) {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(start = 22.dp, end = 22.dp, top = 48.dp, bottom = 22.dp)
+                            .padding(start = 18.dp, end = 18.dp, top = 38.dp, bottom = 16.dp)
                     ) {
                         GoldMetallicBanner(text = "PAUSED", isPurple = true)
 
@@ -118,17 +118,17 @@ fun PauseScreen(
                                 state.mode == GameMode.CLASSIC -> "Classic Endless"
                                 else -> "Level ${state.currentChallengeLevel.levelNumber} · ${state.currentChallengeLevel.title}"
                             },
-                            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
+                            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 12.5.sp),
                             color = TextSecondary
                         )
 
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(14.dp))
+                                .clip(RoundedCornerShape(12.dp))
                                 .background(BoardWellBg)
-                                .border(1.dp, GlassBorder, RoundedCornerShape(14.dp))
-                                .padding(vertical = 10.dp, horizontal = 8.dp),
+                                .border(1.dp, GlassBorder, RoundedCornerShape(12.dp))
+                                .padding(vertical = 8.dp, horizontal = 8.dp),
                             horizontalArrangement = Arrangement.SpaceEvenly
                         ) {
                             PauseStatChip("Score", "${state.score}")
@@ -161,16 +161,14 @@ fun PauseScreen(
                             )
                         }
 
-                        Spacer(Modifier.height(2.dp))
-
                         PremiumPrimaryButton(
                             text = stringResource(R.string.resume),
                             icon = Icons.Filled.PlayArrow,
                             style = ArcadeButtonStyle.GREEN,
                             onClick = onResume,
-                            height = 54.dp,
-                            cornerRadius = 27.dp,
-                            fontSize = 17.sp,
+                            height = 48.dp,
+                            cornerRadius = 14.dp,
+                            fontSize = 16.sp,
                             testTag = "pause_resume_button",
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -180,9 +178,9 @@ fun PauseScreen(
                             icon = Icons.Filled.Refresh,
                             style = ArcadeButtonStyle.GOLD,
                             onClick = { showRestartConfirm = true },
-                            height = 50.dp,
-                            cornerRadius = 25.dp,
-                            fontSize = 16.sp,
+                            height = 46.dp,
+                            cornerRadius = 14.dp,
+                            fontSize = 15.sp,
                             testTag = "pause_restart_button",
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -192,9 +190,9 @@ fun PauseScreen(
                             icon = Icons.Filled.Home,
                             style = ArcadeButtonStyle.GOLD_BLUE,
                             onClick = onExitToHomeConfirmed,
-                            height = 50.dp,
-                            cornerRadius = 25.dp,
-                            fontSize = 16.sp,
+                            height = 46.dp,
+                            cornerRadius = 14.dp,
+                            fontSize = 15.sp,
                             testTag = "pause_home_button",
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -202,14 +200,14 @@ fun PauseScreen(
                 }
 
                 FloatingModalBadge(
-                    size = 70.dp,
+                    size = 60.dp,
                     backgroundBrush = Brush.verticalGradient(listOf(BlueBtnTop, BlueBtnBottom))
                 ) {
                     Icon(
                         imageVector = Icons.Filled.Pause,
                         contentDescription = null,
                         tint = Color.White,
-                        modifier = Modifier.size(34.dp)
+                        modifier = Modifier.size(30.dp)
                     )
                 }
             }

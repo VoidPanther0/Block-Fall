@@ -250,7 +250,7 @@ private fun ShopCatalogCard(
     val accent = if (item.diamondCost > 0) AccentDiamond else AccentGold
 
     FrostedGlassCard(
-        cornerRadius = 8.dp,
+        cornerRadius = 14.dp,
         borderColor = if (isOwned) AccentEmerald.copy(alpha = 0.45f) else HairlineDark,
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -331,8 +331,8 @@ private fun ShopCatalogCard(
                         style = ArcadeButtonStyle.COMMERCE,
                         enabled = canAfford,
                         onClick = onBuy,
-                        height = 38.dp,
-                        cornerRadius = 9999.dp,
+                        height = 40.dp,
+                        cornerRadius = 12.dp,
                         fontSize = 12.sp,
                         modifier = Modifier.width(116.dp)
                     )
@@ -345,7 +345,7 @@ private fun ShopCatalogCard(
 @Composable
 private fun ComingSoonPackCard(badge: @Composable () -> Unit, accent: Color, pack: StorePack) {
     FrostedGlassCard(
-        cornerRadius = 8.dp,
+        cornerRadius = 14.dp,
         borderColor = HairlineDark,
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -390,8 +390,8 @@ private fun ComingSoonPackCard(badge: @Composable () -> Unit, accent: Color, pac
                 style = ArcadeButtonStyle.SLATE,
                 enabled = false,
                 onClick = {},
-                height = 38.dp,
-                cornerRadius = 9999.dp,
+                height = 40.dp,
+                cornerRadius = 12.dp,
                 fontSize = 11.sp,
                 modifier = Modifier.width(116.dp)
             )
@@ -412,7 +412,7 @@ private fun AdRewardCard(
 ) {
     FrostedGlassCard(
         modifier = Modifier.fillMaxWidth(),
-        cornerRadius = 8.dp,
+        cornerRadius = 14.dp,
         borderColor = HairlineDark
     ) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -445,8 +445,8 @@ private fun AdRewardCard(
                 style = ArcadeButtonStyle.BLUE,
                 enabled = enabled,
                 onClick = onClick,
-                height = 46.dp,
-                cornerRadius = 9999.dp,
+                height = 48.dp,
+                cornerRadius = 14.dp,
                 fontSize = 14.sp,
                 testTag = tag,
                 modifier = Modifier.fillMaxWidth()
@@ -464,7 +464,7 @@ private fun WalletTile(
     tag: String,
     modifier: Modifier = Modifier
 ) {
-    val shape = RoundedCornerShape(8.dp)
+    val shape = RoundedCornerShape(14.dp)
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp),

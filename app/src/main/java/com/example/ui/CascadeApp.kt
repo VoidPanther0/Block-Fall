@@ -419,7 +419,9 @@ private fun CascadeNavHost(
                     onOpenEvents = {
                         viewModel.playUiClick()
                         navController.navigate(EventsRoute) { launchSingleTop = true }
-                    }
+                    },
+                    onSelectBoardPalette = viewModel::setBoardPalette,
+                    onSelectBlockStyle = viewModel::setBlockStyle
                 )
             }
 

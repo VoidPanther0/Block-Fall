@@ -156,46 +156,46 @@ fun RoyalSkyBackdrop(
 
     val (bgGradient, driftColor, gridLineColor, glowPrimary, glowSecondary) = when (palette) {
         com.example.game.BoardColorPalette.ROYAL -> listOf(
-            listOf(CanvasDark, Color(0xFF070B16), Color(0xFF0F1B38)),
-            listOf(Color(0xFF0A1E4D).copy(alpha = 0.42f)),
-            listOf(Color(0xFF1D3B7A).copy(alpha = 0.16f)),
-            listOf(PsBlue),
-            listOf(Color(0xFF00D2FF))
+            listOf(Color(0xFF04091A), Color(0xFF0A1433), Color(0xFF132559)),
+            listOf(Color(0xFF1D4ED8).copy(alpha = 0.30f)),
+            listOf(Color(0xFF3B82F6).copy(alpha = 0.18f)),
+            listOf(Color(0xFF2563EB)),
+            listOf(Color(0xFF06B6D4))
         )
         com.example.game.BoardColorPalette.MIDNIGHT -> listOf(
-            listOf(Color(0xFF03050C), Color(0xFF060B1A), Color(0xFF0D1636)),
-            listOf(Color(0xFF00E5FF).copy(alpha = 0.22f)),
-            listOf(Color(0xFF0284C7).copy(alpha = 0.18f)),
+            listOf(Color(0xFF030510), Color(0xFF080D24), Color(0xFF111B47)),
+            listOf(Color(0xFF0EA5E9).copy(alpha = 0.25f)),
+            listOf(Color(0xFF38BDF8).copy(alpha = 0.16f)),
             listOf(Color(0xFF00E5FF)),
             listOf(Color(0xFF6366F1))
         )
         com.example.game.BoardColorPalette.AMETHYST -> listOf(
-            listOf(Color(0xFF080312), Color(0xFF110724), Color(0xFF1E0C40)),
-            listOf(Color(0xFF9333EA).copy(alpha = 0.28f)),
-            listOf(Color(0xFFA855F7).copy(alpha = 0.16f)),
+            listOf(Color(0xFF0C051C), Color(0xFF190A38), Color(0xFF2B125E)),
+            listOf(Color(0xFF9333EA).copy(alpha = 0.34f)),
+            listOf(Color(0xFFC084FC).copy(alpha = 0.18f)),
             listOf(Color(0xFFA855F7)),
             listOf(Color(0xFFEC4899))
         )
         com.example.game.BoardColorPalette.EMERALD -> listOf(
-            listOf(Color(0xFF020A05), Color(0xFF05170D), Color(0xFF0B2918)),
-            listOf(Color(0xFF059669).copy(alpha = 0.26f)),
-            listOf(Color(0xFF10B981).copy(alpha = 0.16f)),
+            listOf(Color(0xFF03120B), Color(0xFF072416), Color(0xFF0E3D27)),
+            listOf(Color(0xFF10B981).copy(alpha = 0.30f)),
+            listOf(Color(0xFF34D399).copy(alpha = 0.18f)),
             listOf(Color(0xFF10B981)),
             listOf(Color(0xFF06B6D4))
         )
         com.example.game.BoardColorPalette.SUNSET -> listOf(
-            listOf(Color(0xFF0E050B), Color(0xFF1A0A16), Color(0xFF2C1024)),
-            listOf(Color(0xFFEA580C).copy(alpha = 0.25f)),
-            listOf(Color(0xFFF97316).copy(alpha = 0.16f)),
+            listOf(Color(0xFF170712), Color(0xFF2A0E20), Color(0xFF42172C)),
+            listOf(Color(0xFFF97316).copy(alpha = 0.30f)),
+            listOf(Color(0xFFFB923C).copy(alpha = 0.18f)),
             listOf(Color(0xFFF59E0B)),
-            listOf(Color(0xFFEF4444))
+            listOf(Color(0xFFEC4899))
         )
         com.example.game.BoardColorPalette.OBSIDIAN -> listOf(
-            listOf(Color(0xFF000000), Color(0xFF060608), Color(0xFF101116)),
-            listOf(Color(0xFF64748B).copy(alpha = 0.15f)),
-            listOf(Color(0xFF334155).copy(alpha = 0.20f)),
+            listOf(Color(0xFF050507), Color(0xFF0D0E12), Color(0xFF171921)),
+            listOf(Color(0xFF64748B).copy(alpha = 0.18f)),
+            listOf(Color(0xFF475569).copy(alpha = 0.20f)),
             listOf(Color(0xFF94A3B8)),
-            listOf(Color(0xFFCBD5E1))
+            listOf(Color(0xFFE2E8F0))
         )
     }
 
@@ -259,14 +259,14 @@ fun RoyalSkyBackdrop(
             drawCircle(
                 brush = Brush.radialGradient(
                     colors = listOf(
-                        glow1.copy(alpha = 0.16f),
+                        glow1.copy(alpha = 0.24f),
                         Color.Transparent
                     ),
-                    center = Offset(w * 0.88f, h * 0.18f),
-                    radius = w * 0.70f
+                    center = Offset(w * 0.88f, h * 0.16f),
+                    radius = w * 0.72f
                 ),
-                radius = w * 0.70f,
-                center = Offset(w * 0.88f, h * 0.18f)
+                radius = w * 0.72f,
+                center = Offset(w * 0.88f, h * 0.16f)
             )
 
             // Secondary complementary glow at bottom-left
@@ -530,13 +530,12 @@ private data class Quadruple<A, B, C, D>(
 @Composable
 fun FrostedGlassCard(
     modifier: Modifier = Modifier,
-    cornerRadius: Dp = 8.dp, // rounded.md per DESIGN.md
+    cornerRadius: Dp = 18.dp,
     borderColor: Color = HairlineDark,
     backgroundBrush: Brush = Brush.verticalGradient(
         colors = listOf(
-            Color(0xFF24262B),
-            SurfaceDarkCard,
-            Color(0xFF111214)
+            Color(0xFF1D2233).copy(alpha = 0.88f),
+            Color(0xFF131724).copy(alpha = 0.94f)
         )
     ),
     content: @Composable ColumnScope.() -> Unit
@@ -544,7 +543,7 @@ fun FrostedGlassCard(
     val shape = RoundedCornerShape(cornerRadius)
     Column(
         modifier = modifier
-            .threeDFrame(shape = shape, depth = 8.dp)
+            .shadow(6.dp, shape, ambientColor = Color.Black.copy(alpha = 0.35f), spotColor = Color.Black.copy(alpha = 0.35f))
             .clip(shape)
             .background(backgroundBrush)
             .border(1.dp, borderColor, shape),
@@ -553,9 +552,7 @@ fun FrostedGlassCard(
 }
 
 /**
- * PlayStation Plus Tier Callout Banner (per DESIGN.md ps-plus-banner):
- * Background #121314 with a horizontal gold gradient accent bar (#ffce21 -> #ee8e00) across the top,
- * and 8px border radius (rounded.md).
+ * Clean editorial banner header for seasonal/reward screens.
  */
 @Composable
 fun GoldMetallicBanner(
@@ -563,9 +560,9 @@ fun GoldMetallicBanner(
     modifier: Modifier = Modifier,
     isPurple: Boolean = false
 ) {
-    val shape = RoundedCornerShape(8.dp)
+    val shape = RoundedCornerShape(14.dp)
     val accentBrush = if (isPurple) {
-        Brush.horizontalGradient(listOf(Color(0xFF9E4BFF), PsBlue))
+        Brush.horizontalGradient(listOf(Color(0xFF8B5CF6), Color(0xFF38BDF8)))
     } else {
         Brush.horizontalGradient(listOf(PsGoldStart, PsGoldMid, PsGoldEnd))
     }
@@ -573,10 +570,9 @@ fun GoldMetallicBanner(
     Column(
         modifier = modifier
             .clip(shape)
-            .background(SurfaceDarkElevated)
-            .border(1.dp, HairlineDark, shape)
+            .background(Color(0xFF151A2A).copy(alpha = 0.92f))
+            .border(1.dp, GlassBorder.copy(alpha = 0.55f), shape)
     ) {
-        // Horizontal accent bar
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -587,15 +583,15 @@ fun GoldMetallicBanner(
             contentAlignment = Alignment.Center,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 10.dp)
+                .padding(horizontal = 16.dp, vertical = 9.dp)
         ) {
             Text(
                 text = text,
                 style = MaterialTheme.typography.titleMedium.copy(
                     fontFamily = OutfitFontFamily,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 15.sp,
-                    letterSpacing = 0.5.sp
+                    fontSize = 14.sp,
+                    letterSpacing = 1.2.sp
                 ),
                 color = Color.White,
                 maxLines = 1,

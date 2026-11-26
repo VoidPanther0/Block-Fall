@@ -167,14 +167,44 @@ class NewFeaturesUnitTest {
         var prog = DailyRewardProgress()
         assertTrue(prog.canClaimToday("2026-11-24"))
         assertEquals(1, prog.currentCycleDay())
+        assertEquals(0, prog.daysClaimedInCycle("2026-11-24"))
+        assertEquals(1, prog.nextRewardDay("2026-11-24"))
 
+        // Claiming Day 1 marks ONLY Day 1 as claimed and sets tomorrow to Day 2 (never Day 3)
         prog = prog.copy(claimedDaysCount = 1, lastClaimedDateKey = "2026-11-24")
         assertFalse(prog.canClaimToday("2026-11-24"))
+        assertEquals(1, prog.daysClaimedInCycle("2026-11-24"))
+        assertEquals(2, prog.nextRewardDay("2026-11-24"))
         assertTrue(prog.canClaimToday("2026-11-25"))
         assertEquals(2, prog.currentCycleDay())
+        assertEquals(1, prog.daysClaimedInCycle("2026-11-25"))
+        assertEquals(2, prog.nextRewardDay("2026-11-25"))
 
+        // Claiming Day 7 shows all 7 days claimed today and resets to Day 1 tomorrow
         prog = prog.copy(claimedDaysCount = 7, lastClaimedDateKey = "2026-11-30")
         assertEquals(1, prog.currentCycleDay())
+        assertEquals(7, prog.daysClaimedInCycle("2026-11-30"))
+        assertEquals(1, prog.nextRewardDay("2026-11-30"))
+        assertEquals(0, prog.daysClaimedInCycle("2026-12-01"))
+        assertEquals(1, prog.nextRewardDay("2026-12-01"))
+    }
+
+    @Test
+    fun `music_tracks_and_board_themes_expose_variety_and_lookup`() {
+        assertTrue(com.example.game.MusicTrack.entries.size >= 4)
+        assertEquals(
+            com.example.game.MusicTrack.SYNTHWAVE_NEON,
+            com.example.game.MusicTrack.fromId("synthwave")
+        )
+        assertEquals(6, com.example.game.BoardColorPalette.entries.size)
+        assertEquals(
+            com.example.game.BoardColorPalette.AMETHYST,
+            com.example.game.BoardColorPalette.fromId("amethyst")
+        )
+        assertEquals(
+            com.example.game.BoardColorPalette.OBSIDIAN,
+            com.example.game.BoardColorPalette.fromId("obsidian")
+        )
     }
 
     @Test

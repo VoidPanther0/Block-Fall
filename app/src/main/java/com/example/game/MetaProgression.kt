@@ -20,6 +20,17 @@ data class DailyRewardProgress(
     fun canClaimToday(todayKey: String): Boolean = lastClaimedDateKey != todayKey
 
     fun currentCycleDay(): Int = (claimedDaysCount % 7) + 1
+
+    fun daysClaimedInCycle(todayKey: String): Int {
+        if (claimedDaysCount <= 0) return 0
+        val mod = claimedDaysCount % 7
+        return if (mod == 0 && !canClaimToday(todayKey)) 7 else mod
+    }
+
+    fun nextRewardDay(todayKey: String): Int {
+        val claimed = daysClaimedInCycle(todayKey)
+        return if (claimed >= 7) 1 else claimed + 1
+    }
 }
 
 object DailyRewardsCatalog {

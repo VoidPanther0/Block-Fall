@@ -99,22 +99,20 @@ fun ScreenTopBar(
     backTestTag: String = "screen_back_button",
     actions: @Composable RowScope.() -> Unit = {}
 ) {
-    Row(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(bottom = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+            .padding(bottom = 12.dp)
     ) {
         if (onBack != null) {
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
-                    .size(48.dp)
-                    .threeDFrame(shape = CircleShape, depth = 4.dp, base = Color(0xFF02040A))
-                    .clip(CircleShape)
-                    .background(Brush.verticalGradient(listOf(Color(0xFF26282D), Color(0xFF141518))))
-                    .border(1.dp, com.example.ui.theme.HairlineDark, CircleShape)
+                    .align(Alignment.CenterStart)
+                    .size(44.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(com.example.ui.theme.SurfaceDarkElevated)
+                    .border(1.dp, com.example.ui.theme.HairlineDark, RoundedCornerShape(14.dp))
                     .clickable(onClick = onBack)
                     .testTag(backTestTag)
             ) {
@@ -122,18 +120,16 @@ fun ScreenTopBar(
                     imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
                     contentDescription = stringResource(R.string.back_label),
                     tint = Color.White,
-                    modifier = Modifier.size(26.dp)
+                    modifier = Modifier.size(24.dp)
                 )
             }
-        } else {
-            Spacer(Modifier.size(48.dp))
         }
 
         Text(
             text = title,
             style = MaterialTheme.typography.headlineMedium.copy(
                 fontFamily = OutfitFontFamily,
-                fontWeight = FontWeight.Medium,
+                fontWeight = FontWeight.SemiBold,
                 fontSize = 20.sp,
                 letterSpacing = 0.2.sp
             ),
@@ -141,11 +137,14 @@ fun ScreenTopBar(
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center,
-            modifier = Modifier.weight(1f)
+            modifier = Modifier
+                .align(Alignment.Center)
+                .padding(horizontal = 56.dp)
         )
 
         Row(
             verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.align(Alignment.CenterEnd),
             content = actions
         )
     }

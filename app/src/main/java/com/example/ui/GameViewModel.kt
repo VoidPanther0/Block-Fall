@@ -739,46 +739,50 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch { repository.updateSelectedLanguage(language) }
     }
 
-    fun claimDailyReward() {
-        val state = _uiState.value
-        val todayKey = DailyChallengeGenerator.todayDateKey()
-        val progress = state.dailyRewardProgress
-        if (!progress.canClaimToday(todayKey)) return
+    private val dailyRewardClaimLock = Any()
 
-        val dayIndex = progress.currentCycleDay()
-        val tier = DailyRewardsCatalog.tiers.firstOrNull { it.day == dayIndex } ?: return
-        val txId = "daily_reward_${todayKey}_d${tier.day}_${UUID.randomUUID()}"
-        val baseWallet = if (tier.gold > 0 || tier.diamonds > 0) {
-            val res = EconomyEngine.creditReward(
-                wallet = state.wallet,
-                goldDelta = tier.gold,
-                diamondDelta = tier.diamonds,
-                transactionId = txId,
-                reason = "Daily Reward Day ${tier.day}"
+    fun claimDailyReward() {
+        synchronized(dailyRewardClaimLock) {
+            val state = _uiState.value
+            val todayKey = DailyChallengeGenerator.todayDateKey()
+            val progress = state.dailyRewardProgress
+            if (!progress.canClaimToday(todayKey)) return
+
+            val dayIndex = progress.currentCycleDay()
+            val tier = DailyRewardsCatalog.tiers.firstOrNull { it.day == dayIndex } ?: return
+            val txId = "daily_reward_${todayKey}_d${tier.day}_${UUID.randomUUID()}"
+            val baseWallet = if (tier.gold > 0 || tier.diamonds > 0) {
+                val res = EconomyEngine.creditReward(
+                    wallet = state.wallet,
+                    goldDelta = tier.gold,
+                    diamondDelta = tier.diamonds,
+                    transactionId = txId,
+                    reason = "Daily Reward Day ${tier.day}"
+                )
+                if (res is EconomyMutationResult.Success) res.updatedWallet else state.wallet
+            } else {
+                state.wallet
+            }
+            val updatedWallet = baseWallet.copy(
+                shuffleCount = (baseWallet.shuffleCount + tier.shuffleBoosters).coerceAtMost(PlayerWallet.MAX_BOOSTER_STACK)
             )
-            if (res is EconomyMutationResult.Success) res.updatedWallet else state.wallet
-        } else {
-            state.wallet
-        }
-        val updatedWallet = baseWallet.copy(
-            shuffleCount = (baseWallet.shuffleCount + tier.shuffleBoosters).coerceAtMost(PlayerWallet.MAX_BOOSTER_STACK)
-        )
-        val updatedProgress = progress.copy(
-            claimedDaysCount = progress.claimedDaysCount + 1,
-            lastClaimedDateKey = todayKey
-        )
-        soundManager.playLevelComplete()
-        haptics.perform(com.example.audio.HapticEvent.CLEAR)
-        _economyMessage.value = "Claimed Day ${tier.day}: ${tier.title}!"
-        _uiState.update {
-            it.copy(
-                wallet = updatedWallet,
-                dailyRewardProgress = updatedProgress
+            val updatedProgress = progress.copy(
+                claimedDaysCount = progress.claimedDaysCount + 1,
+                lastClaimedDateKey = todayKey
             )
-        }
-        viewModelScope.launch {
-            repository.updateWallet(updatedWallet)
-            repository.updateDailyRewardProgress(updatedProgress)
+            soundManager.playLevelComplete()
+            haptics.perform(com.example.audio.HapticEvent.CLEAR)
+            _economyMessage.value = "Claimed Day ${tier.day}: ${tier.title}!"
+            _uiState.update {
+                it.copy(
+                    wallet = updatedWallet,
+                    dailyRewardProgress = updatedProgress
+                )
+            }
+            viewModelScope.launch {
+                repository.updateWallet(updatedWallet)
+                repository.updateDailyRewardProgress(updatedProgress)
+            }
         }
     }
 

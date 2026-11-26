@@ -362,8 +362,8 @@ fun GameModeCard(
     secondaryStat: String? = null,
     enabled: Boolean = true
 ) {
-    PremiumCard(
-        cornerRadius = 8.dp,
+            PremiumCard(
+        cornerRadius = 16.dp,
         borderColor = HairlineDark,
         modifier = modifier.fillMaxWidth()
     ) {
@@ -379,11 +379,10 @@ fun GameModeCard(
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
-                        .size(56.dp)
-                        .threeDFrame(shape = RoundedCornerShape(8.dp), depth = 4.dp, base = Color(0xFF03060E))
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(Brush.verticalGradient(listOf(accent.copy(alpha = 0.22f), accent.copy(alpha = 0.06f))))
-                        .border(1.dp, accent.copy(alpha = 0.35f), RoundedCornerShape(8.dp))
+                        .size(52.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(accent.copy(alpha = 0.14f))
+                        .border(1.dp, accent.copy(alpha = 0.35f), RoundedCornerShape(14.dp))
                 ) {
                     if (artwork != null) {
                         artwork()
@@ -439,7 +438,7 @@ fun GameModeCard(
                 enabled = enabled,
                 onClick = onAction,
                 height = 48.dp,
-                cornerRadius = 9999.dp,
+                cornerRadius = 14.dp,
                 fontSize = 15.sp,
                 testTag = buttonTag,
                 modifier = Modifier.fillMaxWidth()
@@ -485,7 +484,6 @@ fun SkinCard(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
                     .size(56.dp)
-                    .threeDFrame(shape = RoundedCornerShape(12.dp), depth = 4.dp, base = Color(0xFF03060E))
                     .clip(RoundedCornerShape(12.dp))
                     .background(Brush.verticalGradient(listOf(boardWellColor, Color(0xFF060A16))))
                     .border(1.dp, accent.copy(alpha = 0.45f), RoundedCornerShape(12.dp))
@@ -604,33 +602,32 @@ fun BlockFallBottomNav(
     onSelectTab: (BottomNavTab) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val shape = RoundedCornerShape(9999.dp)
+    val shape = RoundedCornerShape(20.dp)
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceEvenly,
         modifier = modifier
             .fillMaxWidth()
-            .threeDFrame(shape = shape, depth = 7.dp, base = Color(0xFF02040A))
             .clip(shape)
-            .background(Brush.verticalGradient(listOf(Color(0xFF1D1F24), SurfaceDarkElevated)))
-            .border(1.dp, HairlineDark, shape)
+            .background(Color(0xFF131724).copy(alpha = 0.94f))
+            .border(1.dp, GlassBorder.copy(alpha = 0.45f), shape)
             .padding(horizontal = 6.dp, vertical = 6.dp)
             .testTag("block_fall_bottom_nav")
     ) {
         BottomNavTab.entries.forEach { tab ->
             val selected = tab == selectedTab
             val tint by animateColorAsState(
-                targetValue = if (selected) Color.White else MuteDark,
+                targetValue = if (selected) AccentCyan else MuteDark,
                 label = "nav_tint"
             )
-            val tabShape = RoundedCornerShape(9999.dp)
+            val tabShape = RoundedCornerShape(14.dp)
             val bgModifier = if (selected) {
                 Modifier
-                    .threeDFrame(shape = tabShape, depth = 4.dp, base = Color(0xFF002A52))
                     .clip(tabShape)
-                    .background(Brush.verticalGradient(listOf(Color(0xFF2A90FF), com.example.ui.theme.PsBlue)))
+                    .background(AccentCyan.copy(alpha = 0.14f))
+                    .border(1.dp, AccentCyan.copy(alpha = 0.35f), tabShape)
             } else {
-                Modifier.clip(RoundedCornerShape(9999.dp))
+                Modifier.clip(tabShape)
             }
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -651,16 +648,16 @@ fun BlockFallBottomNav(
                     imageVector = tab.icon,
                     contentDescription = tab.label,
                     tint = tint,
-                    modifier = Modifier.size(19.dp)
+                    modifier = Modifier.size(20.dp)
                 )
                 Spacer(Modifier.height(2.dp))
                 Text(
                     text = tab.label,
                     style = MaterialTheme.typography.labelSmall.copy(
                         fontFamily = OutfitFontFamily,
-                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-                        fontSize = 10.sp,
-                        letterSpacing = 0.3.sp
+                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                        fontSize = 10.5.sp,
+                        letterSpacing = 0.2.sp
                     ),
                     color = tint,
                     maxLines = 1,
