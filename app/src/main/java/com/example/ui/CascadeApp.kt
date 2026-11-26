@@ -613,6 +613,7 @@ private fun CascadeNavHost(
                     },
                     onSelectBlockStyle = viewModel::setBlockStyle,
                     onSelectBoardPalette = viewModel::setBoardPalette,
+                    onSelectMusicTrack = viewModel::selectMusicTrack,
                     onSelectLanguage = viewModel::setLanguage
                 )
             }

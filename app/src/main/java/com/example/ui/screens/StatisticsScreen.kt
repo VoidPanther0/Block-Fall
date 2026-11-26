@@ -177,17 +177,17 @@ private fun ProfileIdentityCard(
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(14.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 PlayerAvatarBadge(
                     avatarId = state.profileAvatarId,
                     googlePhotoUrl = googlePhotoUrl,
-                    size = 64.dp,
+                    size = 68.dp,
                     hasCrownCosmetic = hasCrown
                 )
                 Column(
-                    verticalArrangement = Arrangement.spacedBy(3.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
                     modifier = Modifier.weight(1f)
                 ) {
                     Text(
@@ -195,46 +195,85 @@ private fun ProfileIdentityCard(
                         style = MaterialTheme.typography.titleLarge.copy(
                             fontFamily = OutfitFontFamily,
                             fontWeight = FontWeight.ExtraBold,
-                            fontSize = 20.sp
+                            fontSize = 22.sp
                         ),
                         color = TextPrimary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.testTag("profile_display_name_text")
                     )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(if (hasCrown) AccentGold.copy(alpha = 0.15f) else AccentCyan.copy(alpha = 0.15f))
+                                .border(1.dp, if (hasCrown) AccentGold.copy(alpha = 0.45f) else AccentCyan.copy(alpha = 0.45f), RoundedCornerShape(8.dp))
+                                .padding(horizontal = 8.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = "TIER ${rank.tierNumber} · ${rank.title}",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontFamily = JetBrainsMonoFontFamily,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 11.sp,
+                                    letterSpacing = 0.2.sp
+                                ),
+                                color = if (hasCrown) AccentGold else AccentCyan
+                            )
+                        }
+                    }
+                }
+            }
+
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Text(
-                        text = "TIER ${rank.tierNumber} · ${rank.title}",
-                        style = CascadeTextStyles.SectionKicker,
-                        color = if (hasCrown) AccentGold else AccentCyan
+                        text = "Rank Mastery",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontFamily = OutfitFontFamily,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 12.sp
+                        ),
+                        color = TextSecondary
                     )
                     Text(
                         text = "${rank.xp} XP",
-                        style = MaterialTheme.typography.labelLarge.copy(
+                        style = MaterialTheme.typography.labelSmall.copy(
                             fontFamily = JetBrainsMonoFontFamily,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp
                         ),
                         color = AccentGold
                     )
                 }
-            }
-
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(10.dp)
-                    .clip(CircleShape)
-                    .background(BoardWellBg)
-                    .border(1.dp, GlassBorder.copy(alpha = 0.45f), CircleShape)
-                    .padding(2.dp)
-            ) {
-                if (rank.progressToNext > 0f) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxHeight()
-                            .fillMaxWidth(rank.progressToNext.coerceIn(0.05f, 1f))
-                            .clip(CircleShape)
-                            .background(Brush.horizontalGradient(listOf(AccentCyan, AccentEmerald)))
-                    )
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(10.dp)
+                        .clip(CircleShape)
+                        .background(BoardWellBg)
+                        .border(1.dp, GlassBorder.copy(alpha = 0.45f), CircleShape)
+                        .padding(2.dp)
+                ) {
+                    if (rank.progressToNext > 0f) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxHeight()
+                                .fillMaxWidth(rank.progressToNext.coerceIn(0.05f, 1f))
+                                .clip(CircleShape)
+                                .background(Brush.horizontalGradient(listOf(AccentCyan, AccentEmerald)))
+                        )
+                    }
                 }
             }
 
@@ -243,7 +282,7 @@ private fun ProfileIdentityCard(
                 icon = Icons.Filled.Edit,
                 style = ArcadeButtonStyle.BLUE,
                 onClick = onOpenRename,
-                height = 46.dp,
+                height = 48.dp,
                 cornerRadius = 14.dp,
                 fontSize = 14.sp,
                 testTag = "profile_rename_button",

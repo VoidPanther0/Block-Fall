@@ -100,6 +100,7 @@ fun SettingsScreen(
     onResetProgressConfirmed: () -> Unit,
     onSelectBlockStyle: (BlockStyle) -> Unit = {},
     onSelectBoardPalette: (BoardColorPalette) -> Unit = {},
+    onSelectMusicTrack: (com.example.game.MusicTrack) -> Unit = {},
     onSelectLanguage: (String) -> Unit = {}
 ) {
     val settings = state.settings
@@ -136,6 +137,65 @@ fun SettingsScreen(
                         onCheckedChange = onToggleMusic,
                         switchTag = "setting_music_switch"
                     )
+                    if (settings.musicEnabled) {
+                        HorizontalDivider(color = DividerSubtle.copy(alpha = 0.5f))
+                        Column(
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = "SOUNDTRACK VARIETY",
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, letterSpacing = 1.sp),
+                                color = AccentCyan
+                            )
+                            com.example.game.MusicTrack.entries.forEach { track ->
+                                val isSelected = track == settings.musicTrack
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(if (isSelected) AccentCyan.copy(alpha = 0.16f) else BoardWellBg)
+                                        .border(if (isSelected) 1.5.dp else 1.dp, if (isSelected) AccentCyan else GlassBorder, RoundedCornerShape(12.dp))
+                                        .clickable { onSelectMusicTrack(track) }
+                                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    Box(
+                                        contentAlignment = Alignment.Center,
+                                        modifier = Modifier
+                                            .size(28.dp)
+                                            .clip(CircleShape)
+                                            .background(if (isSelected) AccentCyan else BoardWellBg)
+                                            .border(1.dp, if (isSelected) AccentCyan else GlassBorder, CircleShape)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Filled.MusicNote,
+                                            contentDescription = null,
+                                            tint = if (isSelected) Color(0xFF001A3D) else TextSecondary,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = track.displayName,
+                                            style = MaterialTheme.typography.titleSmall.copy(
+                                                fontFamily = OutfitFontFamily,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 14.sp
+                                            ),
+                                            color = if (isSelected) AccentCyan else TextPrimary
+                                        )
+                                        Text(
+                                            text = track.subtitle,
+                                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                                            color = TextSecondary
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
                     HorizontalDivider(color = DividerSubtle.copy(alpha = 0.6f))
                     SettingToggleRow(
                         title = "Sound Effects",
@@ -186,9 +246,69 @@ fun SettingsScreen(
             }
 
             // Customization Themes
-            SectionHeader(kicker = "Themes & Appearance", title = "Block & Board Style", accent = AccentCyan)
+            SectionHeader(kicker = "Themes & Atmosphere", title = "Background & Board Design", accent = AccentCyan)
             FrostedGlassCard(cornerRadius = 20.dp, modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    Text(
+                        text = "BACKGROUND & ATMOSPHERE THEME",
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, letterSpacing = 1.sp),
+                        color = AccentGold
+                    )
+                    Text(
+                        text = "Choose your favorite background colors, atmospheric glow, and board theme.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextSecondary
+                    )
+                    // Grid of 6 themes (2 columns of 3)
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        BoardColorPalette.entries.chunked(2).forEach { rowPalettes ->
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                rowPalettes.forEach { pal ->
+                                    val isSelected = pal == settings.boardPalette
+                                    val boardColors = pal.toBoardColors()
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .background(if (isSelected) AccentGold.copy(alpha = 0.18f) else BoardWellBg)
+                                            .border(if (isSelected) 1.5.dp else 1.dp, if (isSelected) AccentGold else GlassBorder, RoundedCornerShape(12.dp))
+                                            .clickable { onSelectBoardPalette(pal) }
+                                            .padding(vertical = 10.dp, horizontal = 10.dp)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(24.dp)
+                                                .clip(CircleShape)
+                                                .background(boardColors.rim)
+                                                .border(1.5.dp, Color.White.copy(alpha = 0.6f), CircleShape)
+                                        )
+                                        Text(
+                                            text = pal.themeTitle,
+                                            style = MaterialTheme.typography.labelSmall.copy(
+                                                fontFamily = OutfitFontFamily,
+                                                fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Medium,
+                                                fontSize = 12.sp
+                                            ),
+                                            color = if (isSelected) AccentGold else TextPrimary,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                }
+                                if (rowPalettes.size == 1) {
+                                    Spacer(Modifier.weight(1f))
+                                }
+                            }
+                        }
+                    }
+
+                    HorizontalDivider(color = DividerSubtle.copy(alpha = 0.6f))
+
                     Text(
                         text = "BLOCK SHADING",
                         style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, letterSpacing = 1.sp),
@@ -227,49 +347,6 @@ fun SettingsScreen(
                                         fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Medium
                                     ),
                                     color = if (isSelected) AccentCyan else TextSecondary
-                                )
-                            }
-                        }
-                    }
-
-                    HorizontalDivider(color = DividerSubtle.copy(alpha = 0.6f))
-
-                    Text(
-                        text = "CAVERN PALETTE",
-                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, letterSpacing = 1.sp),
-                        color = AccentGold
-                    )
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        BoardColorPalette.entries.forEach { pal ->
-                            val isSelected = pal == settings.boardPalette
-                            val boardColors = pal.toBoardColors()
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(6.dp),
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(if (isSelected) AccentGold.copy(alpha = 0.18f) else BoardWellBg)
-                                    .border(if (isSelected) 1.5.dp else 1.dp, if (isSelected) AccentGold else GlassBorder, RoundedCornerShape(12.dp))
-                                    .clickable { onSelectBoardPalette(pal) }
-                                    .padding(vertical = 10.dp, horizontal = 4.dp)
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(24.dp)
-                                        .clip(CircleShape)
-                                        .background(boardColors.rim)
-                                        .border(1.dp, Color.White.copy(alpha = 0.5f), CircleShape)
-                                )
-                                Text(
-                                    text = pal.displayName,
-                                    style = MaterialTheme.typography.labelSmall.copy(
-                                        fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Medium
-                                    ),
-                                    color = if (isSelected) AccentGold else TextSecondary
                                 )
                             }
                         }

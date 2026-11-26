@@ -448,29 +448,29 @@ private fun HomeHeroSection(
                 }
             }
 
-            // Universal primary CTA pill in PlayStation Blue per DESIGN.md button-primary
+            // Primary Play CTA button with tactile 16dp rounded rectangle
             PremiumPrimaryButton(
                 text = stringResource(R.string.nav_play),
                 icon = Icons.Filled.PlayArrow,
                 style = ArcadeButtonStyle.BLUE,
                 onClick = onPlayNewClassic,
-                height = 50.dp,
-                cornerRadius = 9999.dp,
-                fontSize = 16.sp,
+                height = 52.dp,
+                cornerRadius = 16.dp,
+                fontSize = 16.5.sp,
                 testTag = "home_play_button",
                 modifier = Modifier.fillMaxWidth()
             )
 
             if (canContinue) {
-                // Secondary dark outline pill per DESIGN.md button-secondary-dark
+                // Secondary Continue button
                 PremiumPrimaryButton(
                     text = "Continue · ${savedScore ?: 0} pts (${savedMoves ?: 0} moves)",
                     icon = Icons.Filled.Replay,
                     style = ArcadeButtonStyle.SLATE,
                     onClick = onContinueClassic,
-                    height = 46.dp,
-                    cornerRadius = 9999.dp,
-                    fontSize = 13.5.sp,
+                    height = 48.dp,
+                    cornerRadius = 16.dp,
+                    fontSize = 14.sp,
                     testTag = "home_continue_button",
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -604,6 +604,7 @@ private fun HomeActionHub(
     onOpenEvents: () -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        // Daily progression cards
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -620,7 +621,7 @@ private fun HomeActionHub(
             )
             HomeHubTile(
                 title = "Missions",
-                subtitle = "Daily goals & bonuses",
+                subtitle = "Daily goals & gems",
                 icon = Icons.Filled.Flag,
                 accent = AccentEmerald,
                 badgeCount = claimableMissions,
@@ -630,6 +631,32 @@ private fun HomeActionHub(
             )
         }
 
+        // Game Modes & Challenges
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            HomeHubTile(
+                title = "Game Modes",
+                subtitle = "Classic · Puzzle · Daily",
+                icon = Icons.Filled.GridView,
+                accent = AccentCyan,
+                onClick = onOpenModes,
+                testTag = "home_modes_button",
+                modifier = Modifier.weight(1f)
+            )
+            HomeHubTile(
+                title = "Challenges",
+                subtitle = "8 tactical boards",
+                icon = Icons.Filled.Star,
+                accent = AccentGold,
+                onClick = onOpenChallenges,
+                testTag = "home_challenges_button",
+                modifier = Modifier.weight(1f)
+            )
+        }
+
+        // Achievements & Event
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -646,7 +673,7 @@ private fun HomeActionHub(
             )
             HomeHubTile(
                 title = "Crystal Event",
-                subtitle = "Limited-time rewards",
+                subtitle = "Limited rewards",
                 icon = Icons.Filled.AutoAwesome,
                 accent = AccentPurple,
                 onClick = onOpenEvents,
@@ -655,34 +682,20 @@ private fun HomeActionHub(
             )
         }
 
+        // Themes & Shop
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             HomeHubTile(
-                title = "Game Modes",
-                subtitle = "Classic · Challenge · Daily",
-                icon = Icons.Filled.GridView,
-                accent = AccentCyan,
-                onClick = onOpenModes,
-                testTag = "home_modes_button",
+                title = "Themes & Audio",
+                subtitle = "Colors, styles & music",
+                icon = Icons.Filled.Settings,
+                accent = AccentPurple,
+                onClick = onOpenSettings,
+                testTag = "home_settings_button",
                 modifier = Modifier.weight(1f)
             )
-            HomeHubTile(
-                title = stringResource(R.string.nav_challenges),
-                subtitle = "8 tactical puzzle boards",
-                icon = Icons.Filled.Star,
-                accent = AccentGold,
-                onClick = onOpenChallenges,
-                testTag = "home_challenges_button",
-                modifier = Modifier.weight(1f)
-            )
-        }
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
             HomeHubTile(
                 title = "Shop",
                 subtitle = "Boosters & coins",
@@ -692,20 +705,12 @@ private fun HomeActionHub(
                 testTag = "home_shop_button",
                 modifier = Modifier.weight(1f)
             )
-            HomeHubTile(
-                title = stringResource(R.string.nav_settings),
-                subtitle = "Sound & board theme",
-                icon = Icons.Filled.Settings,
-                accent = AccentPurple,
-                onClick = onOpenSettings,
-                testTag = "home_settings_button",
-                modifier = Modifier.weight(1f)
-            )
         }
 
+        // Profile summary card
         HomeHubTile(
-            title = "Profile",
-            subtitle = "Avatar · rank · best score",
+            title = "Player Profile",
+            subtitle = "Avatar · Rank progression · Best score",
             icon = Icons.Filled.Leaderboard,
             accent = AccentCyan,
             onClick = onOpenStatistics,
@@ -726,53 +731,58 @@ private fun HomeHubTile(
     modifier: Modifier = Modifier,
     badgeCount: Int = 0
 ) {
-    val shape = RoundedCornerShape(8.dp) // rounded.md per DESIGN.md
+    val shape = RoundedCornerShape(14.dp)
     Box(modifier = modifier) {
         Column(
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(shape)
                 .background(com.example.ui.theme.SurfaceDarkCard)
                 .border(1.dp, com.example.ui.theme.HairlineDark, shape)
                 .clickable(onClick = onClick)
-                .padding(14.dp)
+                .padding(horizontal = 12.dp, vertical = 12.dp)
                 .testTag(testTag)
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth()
             ) {
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
-                        .size(36.dp)
+                        .size(32.dp)
                         .clip(RoundedCornerShape(8.dp))
-                        .background(accent.copy(alpha = 0.12f))
-                        .border(1.dp, accent.copy(alpha = 0.35f), RoundedCornerShape(8.dp))
+                        .background(accent.copy(alpha = 0.15f))
+                        .border(1.dp, accent.copy(alpha = 0.40f), RoundedCornerShape(8.dp))
                 ) {
                     Icon(
                         imageVector = icon,
                         contentDescription = null,
                         tint = accent,
-                        modifier = Modifier.size(19.dp)
+                        modifier = Modifier.size(18.dp)
                     )
                 }
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.titleMedium.copy(
+                    style = MaterialTheme.typography.titleSmall.copy(
                         fontFamily = OutfitFontFamily,
-                        fontWeight = FontWeight.Medium,
-                        fontSize = 15.sp
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.5.sp,
+                        letterSpacing = (-0.1).sp
                     ),
                     color = TextPrimary,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
                 )
             }
             Text(
                 text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.bodySmall.copy(
+                    fontSize = 11.sp
+                ),
                 color = TextSecondary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
@@ -785,7 +795,7 @@ private fun HomeHubTile(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .padding(6.dp)
-                    .size(20.dp)
+                    .size(18.dp)
                     .clip(CircleShape)
                     .background(com.example.ui.theme.WarningRed)
             ) {

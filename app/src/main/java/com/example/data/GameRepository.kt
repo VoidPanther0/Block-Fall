@@ -89,6 +89,7 @@ class GameRepository(
         val PLACEMENT_PREVIEW_ENABLED = booleanPreferencesKey("placement_preview_enabled")
         val BLOCK_STYLE = stringPreferencesKey("block_style")
         val BOARD_PALETTE = stringPreferencesKey("board_palette")
+        val MUSIC_TRACK = stringPreferencesKey("music_track")
 
         val TOTAL_GAMES_PLAYED = intPreferencesKey("total_games_played")
         val TOTAL_LINES_CLEARED = intPreferencesKey("total_lines_cleared")
@@ -119,7 +120,8 @@ class GameRepository(
             visualEffectsEnabled = prefs[Keys.VISUAL_EFFECTS_ENABLED] ?: true,
             placementPreviewEnabled = prefs[Keys.PLACEMENT_PREVIEW_ENABLED] ?: true,
             blockStyle = BlockStyle.fromId(prefs[Keys.BLOCK_STYLE]),
-            boardPalette = BoardColorPalette.fromId(prefs[Keys.BOARD_PALETTE])
+            boardPalette = BoardColorPalette.fromId(prefs[Keys.BOARD_PALETTE]),
+            musicTrack = com.example.game.MusicTrack.fromId(prefs[Keys.MUSIC_TRACK])
         )
 
         val protectedState = readProtectedProgressState(prefs)
@@ -243,6 +245,7 @@ class GameRepository(
             prefs[Keys.PLACEMENT_PREVIEW_ENABLED] = settings.placementPreviewEnabled
             prefs[Keys.BLOCK_STYLE] = settings.blockStyle.id
             prefs[Keys.BOARD_PALETTE] = settings.boardPalette.id
+            prefs[Keys.MUSIC_TRACK] = settings.musicTrack.id
         }
     }
 

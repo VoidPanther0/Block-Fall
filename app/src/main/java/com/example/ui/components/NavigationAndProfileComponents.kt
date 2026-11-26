@@ -210,10 +210,10 @@ fun PlayerProfileHeader(
 ) {
     val accent = if (hasCrownCosmetic) AccentGold else AccentCyan
     Column(
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
         modifier = modifier.fillMaxWidth()
     ) {
-        // Identity row — avatar + name + rank on the left, quick actions on the right.
+        // Top Row: Player Avatar, Name, Tier, plus Leaderboard and Settings
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
@@ -231,33 +231,42 @@ fun PlayerProfileHeader(
                 PlayerAvatarBadge(
                     avatarId = avatarId,
                     googlePhotoUrl = googlePhotoUrl,
-                    size = 48.dp,
+                    size = 46.dp,
                     hasCrownCosmetic = hasCrownCosmetic
                 )
 
-                Column(modifier = Modifier.weight(1f)) {
+                Column(
+                    verticalArrangement = Arrangement.Center,
+                    modifier = Modifier.weight(1f)
+                ) {
                     Text(
                         text = playerName?.takeIf { it.isNotBlank() } ?: "Player",
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontFamily = OutfitFontFamily,
                             fontWeight = FontWeight.Bold,
-                            fontSize = 15.sp
+                            fontSize = 16.sp
                         ),
                         color = TextPrimary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-                    Text(
-                        text = "Tier ${rank.tierNumber} · ${rank.title}",
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            fontFamily = JetBrainsMonoFontFamily,
-                            fontSize = 10.5.sp,
-                            letterSpacing = 0.1.sp
-                        ),
-                        color = accent,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            text = "Tier ${rank.tierNumber} · ${rank.title}",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontFamily = JetBrainsMonoFontFamily,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                letterSpacing = 0.2.sp
+                            ),
+                            color = accent,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
             }
 
@@ -265,10 +274,13 @@ fun PlayerProfileHeader(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                if (trailingWalletAction != null) {
+                    trailingWalletAction()
+                }
                 IconActionButton(
                     icon = Icons.Filled.Leaderboard,
                     contentDescription = "Leaderboard & Cloud",
-                    size = 48.dp,
+                    size = 42.dp,
                     tint = if (isCloudSignedIn) AccentEmerald else AccentCyan,
                     borderColor = GlassBorder,
                     onClick = onOpenLeaderboard,
@@ -277,45 +289,58 @@ fun PlayerProfileHeader(
                 IconActionButton(
                     icon = Icons.Filled.Settings,
                     contentDescription = "Settings",
-                    size = 48.dp,
+                    size = 42.dp,
                     onClick = onOpenSettings,
                     testTag = "home_top_settings_button"
                 )
             }
         }
 
-        // Wallet row — dedicated line so gold and diamond values never overlap the name, plus optional Lucky Wheel shortcut.
+        // Bottom Row: Clean Currency Wallet & XP Progress Pill
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(14.dp))
+                    .clip(RoundedCornerShape(12.dp))
                     .clickable(onClick = onOpenWallet)
             ) {
                 CurrencyWallet(
                     goldCoins = goldCoins,
                     diamonds = diamonds,
-                    compact = true,
-                    modifier = Modifier.weight(1f)
+                    compact = true
+                )
+            }
+
+            // Compact XP pill that is neatly contained and aligned
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = Modifier
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(com.example.ui.theme.SurfaceDarkElevated)
+                    .border(1.dp, GlassBorder.copy(alpha = 0.45f), RoundedCornerShape(10.dp))
+                    .padding(horizontal = 10.dp, vertical = 5.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .clip(CircleShape)
+                        .background(AccentGold)
                 )
                 Text(
                     text = "${rank.xp} XP",
-                    style = MaterialTheme.typography.labelMedium.copy(
+                    style = MaterialTheme.typography.labelSmall.copy(
                         fontFamily = JetBrainsMonoFontFamily,
-                        fontSize = 10.sp
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 11.sp
                     ),
-                    color = TextMuted,
-                    maxLines = 1
+                    color = TextPrimary
                 )
-            }
-            if (trailingWalletAction != null) {
-                trailingWalletAction()
             }
         }
     }

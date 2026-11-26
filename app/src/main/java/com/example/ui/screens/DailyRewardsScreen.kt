@@ -73,7 +73,13 @@ fun DailyRewardsScreen(
     val todayKey = DailyChallengeGenerator.todayDateKey()
     val progress = state.dailyRewardProgress
     val canClaim = progress.canClaimToday(todayKey)
-    val currentCycleDay = progress.currentCycleDay()
+    val daysClaimedInCycle = if (progress.claimedDaysCount == 0) {
+        0
+    } else {
+        val mod = progress.claimedDaysCount % 7
+        if (mod == 0 && !canClaim) 7 else mod
+    }
+    val nextRewardDay = if (daysClaimedInCycle >= 7) 1 else daysClaimedInCycle + 1
 
     CascadeScreenContainer(
         maxContentWidth = 640.dp,
@@ -101,7 +107,7 @@ fun DailyRewardsScreen(
 
             Text(
                 text = if (canClaim) "Log in daily to claim crystals, gold, and power-up chests!"
-                else "Today's reward is claimed! Return tomorrow for Day ${(currentCycleDay % 7) + 1}.",
+                else "Today's reward is claimed! Return tomorrow for Day $nextRewardDay.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = TextSecondary,
                 textAlign = TextAlign.Center,
@@ -121,8 +127,8 @@ fun DailyRewardsScreen(
                     normalTiers.take(3).forEach { tier ->
                         DailyRewardTile(
                             tier = tier,
-                            currentCycleDay = currentCycleDay,
-                            canClaimToday = canClaim,
+                            isClaimed = tier.day <= daysClaimedInCycle,
+                            isReadyToday = canClaim && tier.day == nextRewardDay,
                             modifier = Modifier.weight(1f)
                         )
                     }
@@ -134,8 +140,8 @@ fun DailyRewardsScreen(
                     normalTiers.drop(3).take(3).forEach { tier ->
                         DailyRewardTile(
                             tier = tier,
-                            currentCycleDay = currentCycleDay,
-                            canClaimToday = canClaim,
+                            isClaimed = tier.day <= daysClaimedInCycle,
+                            isReadyToday = canClaim && tier.day == nextRewardDay,
                             modifier = Modifier.weight(1f)
                         )
                     }
@@ -147,8 +153,8 @@ fun DailyRewardsScreen(
             if (grandTier != null) {
                 GrandPrizeCard(
                     tier = grandTier,
-                    currentCycleDay = currentCycleDay,
-                    canClaimToday = canClaim
+                    isClaimed = grandTier.day <= daysClaimedInCycle,
+                    isReadyToday = canClaim && grandTier.day == nextRewardDay
                 )
             }
 
@@ -156,14 +162,14 @@ fun DailyRewardsScreen(
 
             // Claim Button
             GlossyArcadeButton(
-                text = if (canClaim) "CLAIM DAY $currentCycleDay REWARD" else "COME BACK TOMORROW",
+                text = if (canClaim) "CLAIM DAY $nextRewardDay REWARD" else "COME BACK TOMORROW",
                 icon = if (canClaim) Icons.Filled.CardGiftcard else Icons.Filled.Check,
                 style = if (canClaim) ArcadeButtonStyle.GOLD else ArcadeButtonStyle.SLATE,
                 enabled = canClaim,
                 onClick = onClaimReward,
-                height = 56.dp,
+                height = 54.dp,
                 cornerRadius = 16.dp,
-                fontSize = 17.sp,
+                fontSize = 16.sp,
                 testTag = "daily_reward_claim_button",
                 modifier = Modifier.fillMaxWidth()
             )
@@ -176,17 +182,15 @@ fun DailyRewardsScreen(
 @Composable
 private fun DailyRewardTile(
     tier: DailyRewardTier,
-    currentCycleDay: Int,
-    canClaimToday: Boolean,
+    isClaimed: Boolean,
+    isReadyToday: Boolean,
     modifier: Modifier = Modifier
 ) {
-    val isPast = tier.day < currentCycleDay || (tier.day == currentCycleDay && !canClaimToday)
-    val isToday = tier.day == currentCycleDay && canClaimToday
-    val isLocked = tier.day > currentCycleDay
+    val isLocked = !isClaimed && !isReadyToday
 
     val borderColor = when {
-        isToday -> AccentGold
-        isPast -> AccentEmerald.copy(alpha = 0.5f)
+        isReadyToday -> AccentGold
+        isClaimed -> AccentEmerald.copy(alpha = 0.5f)
         else -> GlassBorder.copy(alpha = 0.35f)
     }
 
@@ -210,7 +214,7 @@ private fun DailyRewardTile(
                     fontSize = 11.sp,
                     letterSpacing = 0.5.sp
                 ),
-                color = if (isToday) AccentGold else TextSecondary
+                color = if (isReadyToday) AccentGold else TextSecondary
             )
 
             Box(
@@ -222,7 +226,7 @@ private fun DailyRewardTile(
                     .border(1.dp, borderColor, CircleShape)
             ) {
                 when {
-                    isPast -> Icon(Icons.Filled.Check, null, tint = AccentEmerald, modifier = Modifier.size(22.dp))
+                    isClaimed -> Icon(Icons.Filled.Check, null, tint = AccentEmerald, modifier = Modifier.size(22.dp))
                     isLocked -> Icon(Icons.Filled.Lock, null, tint = TextMuted, modifier = Modifier.size(18.dp))
                     tier.diamonds > 0 -> CrystalDiamondBadge(size = 24.dp)
                     else -> CrystalCoinBadge(size = 24.dp)
@@ -235,12 +239,12 @@ private fun DailyRewardTile(
                     fontWeight = FontWeight.Bold,
                     fontSize = 11.sp
                 ),
-                color = if (isToday) Color.White else TextSecondary,
+                color = if (isReadyToday) Color.White else TextSecondary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
 
-            if (isToday) {
+            if (isReadyToday) {
                 Text(
                     text = "READY",
                     style = MaterialTheme.typography.labelSmall.copy(
@@ -257,15 +261,12 @@ private fun DailyRewardTile(
 @Composable
 private fun GrandPrizeCard(
     tier: DailyRewardTier,
-    currentCycleDay: Int,
-    canClaimToday: Boolean
+    isClaimed: Boolean,
+    isReadyToday: Boolean
 ) {
-    val isPast = tier.day < currentCycleDay || (tier.day == currentCycleDay && !canClaimToday)
-    val isToday = tier.day == currentCycleDay && canClaimToday
-
     FrostedGlassCard(
         cornerRadius = 20.dp,
-        borderColor = if (isToday) AccentGoldBright else AccentGold.copy(alpha = 0.55f),
+        borderColor = if (isReadyToday) AccentGoldBright else AccentGold.copy(alpha = 0.55f),
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
@@ -321,9 +322,9 @@ private fun GrandPrizeCard(
                     color = TextPrimary
                 )
                 Text(
-                    text = if (isPast) "Claimed this cycle" else if (isToday) "Ready to unlock right now!" else "Complete Day 6 to unlock",
+                    text = if (isClaimed) "Claimed this cycle" else if (isReadyToday) "Ready to unlock right now!" else "Complete Day 6 to unlock",
                     style = MaterialTheme.typography.bodySmall,
-                    color = if (isToday) AccentGold else TextSecondary
+                    color = if (isReadyToday) AccentGold else TextSecondary
                 )
             }
         }

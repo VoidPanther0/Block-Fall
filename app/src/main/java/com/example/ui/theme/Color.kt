@@ -209,6 +209,44 @@ fun BoardColorPalette.toBoardColors(): BoardThemeColors = when (this) {
         swatchPrimary = Color(0xFFFF9E2C),
         swatchSecondary = Color(0xFF100724)
     )
+    BoardColorPalette.AMETHYST -> BoardThemeColors(
+        studioTop = Color(0xFF0C071C),
+        studioMid = Color(0xFF170D33),
+        studioBottom = Color(0xFF281452),
+        studioGlowPrimary = Color(0xFF9E4BFF),
+        studioGlowSecondary = Color(0xFFE045FF),
+        wellTop = Color(0xFF140B2E),
+        wellBottom = Color(0xFF0C071C),
+        rim = Color(0xFFA855F7),
+        slotFill = Color(0xFF1E1042),
+        slotBorder = Color(0xFF3B1E78),
+        trayTop = Color(0xFF1E0F42),
+        trayBottom = Color(0xFF120928),
+        trayBorder = Color(0xFF5527A8),
+        selectedSlotBg = Color(0xFF2F176B),
+        slotBg = Color(0xFF100724),
+        swatchPrimary = Color(0xFFA855F7),
+        swatchSecondary = Color(0xFF140B2E)
+    )
+    BoardColorPalette.OBSIDIAN -> BoardThemeColors(
+        studioTop = Color(0xFF000000),
+        studioMid = Color(0xFF09090C),
+        studioBottom = Color(0xFF14151B),
+        studioGlowPrimary = Color(0xFF94A3B8),
+        studioGlowSecondary = Color(0xFFE2E8F0),
+        wellTop = Color(0xFF08090C),
+        wellBottom = Color(0xFF000000),
+        rim = Color(0xFFE2E8F0),
+        slotFill = Color(0xFF101217),
+        slotBorder = Color(0xFF242733),
+        trayTop = Color(0xFF12141B),
+        trayBottom = Color(0xFF090A0E),
+        trayBorder = Color(0xFF333847),
+        selectedSlotBg = Color(0xFF1E212B),
+        slotBg = Color(0xFF060709),
+        swatchPrimary = Color(0xFFE2E8F0),
+        swatchSecondary = Color(0xFF08090C)
+    )
 }
 
 fun BlockColor.toPalette(
@@ -392,5 +430,25 @@ fun BlockColor.toPalette(
             shadow = Color(0xFF2038BA),
             glow = Color(0xFF859CFF)
         )
+    }
+
+    BoardColorPalette.AMETHYST -> when (this) {
+        BlockColor.CYAN -> BlockPalette(fill = Color(0xFF38BDF8), highlight = Color(0xFFBAE6FD), shadow = Color(0xFF0284C7), glow = Color(0xFF7DD3FC))
+        BlockColor.AMBER -> BlockPalette(fill = Color(0xFFFBBF24), highlight = Color(0xFFFDE68A), shadow = Color(0xFFD97706), glow = Color(0xFFFCD34D))
+        BlockColor.CORAL -> BlockPalette(fill = Color(0xFFF43F5E), highlight = Color(0xFFFECDD3), shadow = Color(0xFFBE123C), glow = Color(0xFFFB7185))
+        BlockColor.EMERALD -> BlockPalette(fill = Color(0xFF10B981), highlight = Color(0xFFA7F3D0), shadow = Color(0xFF047857), glow = Color(0xFF34D399))
+        BlockColor.VIOLET -> BlockPalette(fill = Color(0xFFA855F7), highlight = Color(0xFFE9D5FF), shadow = Color(0xFF7E22CE), glow = Color(0xFFC084FC))
+        BlockColor.TANGERINE -> BlockPalette(fill = Color(0xFFFB923C), highlight = Color(0xFFFED7AA), shadow = Color(0xFFC2410C), glow = Color(0xFFFDBA74))
+        BlockColor.COBALT -> BlockPalette(fill = Color(0xFF6366F1), highlight = Color(0xFFC7D2FE), shadow = Color(0xFF4338CA), glow = Color(0xFF818CF8))
+    }
+
+    BoardColorPalette.OBSIDIAN -> when (this) {
+        BlockColor.CYAN -> BlockPalette(fill = Color(0xFF00E5FF), highlight = Color(0xFFB2EBF2), shadow = Color(0xFF00838F), glow = Color(0xFF80DEEA))
+        BlockColor.AMBER -> BlockPalette(fill = Color(0xFFFFD600), highlight = Color(0xFFFFF9C4), shadow = Color(0xFFF57F17), glow = Color(0xFFFFF59D))
+        BlockColor.CORAL -> BlockPalette(fill = Color(0xFFFF1744), highlight = Color(0xFFFFCDD2), shadow = Color(0xFFB71C1C), glow = Color(0xFFEF9A9A))
+        BlockColor.EMERALD -> BlockPalette(fill = Color(0xFF00E676), highlight = Color(0xFFB9F6CA), shadow = Color(0xFF007E33), glow = Color(0xFF69F0AE))
+        BlockColor.VIOLET -> BlockPalette(fill = Color(0xFFD500F9), highlight = Color(0xFFEA80FC), shadow = Color(0xFF4A148C), glow = Color(0xFFE040FB))
+        BlockColor.TANGERINE -> BlockPalette(fill = Color(0xFFFF6D00), highlight = Color(0xFFFFE0B2), shadow = Color(0xFFBF360C), glow = Color(0xFFFFAB40))
+        BlockColor.COBALT -> BlockPalette(fill = Color(0xFF2979FF), highlight = Color(0xFFBBDEFB), shadow = Color(0xFF0D47A1), glow = Color(0xFF82B1FF))
     }
 }

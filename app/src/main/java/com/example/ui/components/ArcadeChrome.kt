@@ -123,12 +123,14 @@ enum class ArcadeButtonStyle {
 }
 
 /**
- * PlayStation editorial canvas backdrop (per DESIGN.md):
- * Alternating chapter contrast starting with Canvas Dark (#000000)
- * and deep graphite elevation (#121314) with subtle PlayStation Blue ambient accent.
+ * Themed canvas backdrop responding to the user's selected [BoardColorPalette] theme:
+ * Supports Royal Cobalt, Midnight Nebula, Royal Amethyst, Emerald Aurora, Sunset Horizon, and Obsidian Stealth.
  */
 @Composable
-fun RoyalSkyBackdrop(modifier: Modifier = Modifier) {
+fun RoyalSkyBackdrop(
+    modifier: Modifier = Modifier,
+    palette: com.example.game.BoardColorPalette = LocalBoardPalette.current
+) {
     // GPU-only drift: the gradient layer is translated on the compositor, never recomposed.
     val drift by rememberInfiniteTransition(label = "skyDrift").animateFloat(
         initialValue = -16f,
@@ -152,18 +154,55 @@ fun RoyalSkyBackdrop(modifier: Modifier = Modifier) {
         }
     }
 
+    val (bgGradient, driftColor, gridLineColor, glowPrimary, glowSecondary) = when (palette) {
+        com.example.game.BoardColorPalette.ROYAL -> listOf(
+            listOf(CanvasDark, Color(0xFF070B16), Color(0xFF0F1B38)),
+            listOf(Color(0xFF0A1E4D).copy(alpha = 0.42f)),
+            listOf(Color(0xFF1D3B7A).copy(alpha = 0.16f)),
+            listOf(PsBlue),
+            listOf(Color(0xFF00D2FF))
+        )
+        com.example.game.BoardColorPalette.MIDNIGHT -> listOf(
+            listOf(Color(0xFF03050C), Color(0xFF060B1A), Color(0xFF0D1636)),
+            listOf(Color(0xFF00E5FF).copy(alpha = 0.22f)),
+            listOf(Color(0xFF0284C7).copy(alpha = 0.18f)),
+            listOf(Color(0xFF00E5FF)),
+            listOf(Color(0xFF6366F1))
+        )
+        com.example.game.BoardColorPalette.AMETHYST -> listOf(
+            listOf(Color(0xFF080312), Color(0xFF110724), Color(0xFF1E0C40)),
+            listOf(Color(0xFF9333EA).copy(alpha = 0.28f)),
+            listOf(Color(0xFFA855F7).copy(alpha = 0.16f)),
+            listOf(Color(0xFFA855F7)),
+            listOf(Color(0xFFEC4899))
+        )
+        com.example.game.BoardColorPalette.EMERALD -> listOf(
+            listOf(Color(0xFF020A05), Color(0xFF05170D), Color(0xFF0B2918)),
+            listOf(Color(0xFF059669).copy(alpha = 0.26f)),
+            listOf(Color(0xFF10B981).copy(alpha = 0.16f)),
+            listOf(Color(0xFF10B981)),
+            listOf(Color(0xFF06B6D4))
+        )
+        com.example.game.BoardColorPalette.SUNSET -> listOf(
+            listOf(Color(0xFF0E050B), Color(0xFF1A0A16), Color(0xFF2C1024)),
+            listOf(Color(0xFFEA580C).copy(alpha = 0.25f)),
+            listOf(Color(0xFFF97316).copy(alpha = 0.16f)),
+            listOf(Color(0xFFF59E0B)),
+            listOf(Color(0xFFEF4444))
+        )
+        com.example.game.BoardColorPalette.OBSIDIAN -> listOf(
+            listOf(Color(0xFF000000), Color(0xFF060608), Color(0xFF101116)),
+            listOf(Color(0xFF64748B).copy(alpha = 0.15f)),
+            listOf(Color(0xFF334155).copy(alpha = 0.20f)),
+            listOf(Color(0xFF94A3B8)),
+            listOf(Color(0xFFCBD5E1))
+        )
+    }
+
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        CanvasDark,
-                        Color(0xFF08090C),
-                        SurfaceDarkElevated
-                    )
-                )
-            )
+            .background(Brush.verticalGradient(bgGradient as List<Color>))
     ) {
         Box(
             modifier = Modifier
@@ -173,7 +212,7 @@ fun RoyalSkyBackdrop(modifier: Modifier = Modifier) {
                     Brush.linearGradient(
                         colors = listOf(
                             Color.Transparent,
-                            Color(0xFF0A1738).copy(alpha = 0.42f),
+                            (driftColor as List<Color>).first(),
                             Color.Transparent
                         )
                     )
@@ -182,6 +221,9 @@ fun RoyalSkyBackdrop(modifier: Modifier = Modifier) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             val w = size.width
             val h = size.height
+            val lineClr = (gridLineColor as List<Color>).first()
+            val glow1 = (glowPrimary as List<Color>).first()
+            val glow2 = (glowSecondary as List<Color>).first()
 
             // Parallax star dust with depth-scaled radius.
             stars.forEach { (sx, sy, radius) ->
@@ -192,12 +234,12 @@ fun RoyalSkyBackdrop(modifier: Modifier = Modifier) {
                 )
             }
 
-            // Perspective floor grid: a cheap way to add a 3D stage to every screen.
+            // Perspective floor grid: clean arcade stage floor
             for (i in 0..8) {
                 val t = i / 8f
                 val y = h * (0.72f + 0.28f * t * t)
                 drawLine(
-                    color = Color(0xFF1D3B7A).copy(alpha = 0.16f * (1f - t)),
+                    color = lineClr.copy(alpha = lineClr.alpha * (1f - t)),
                     start = Offset(0f, y),
                     end = Offset(w, y),
                     strokeWidth = 1f
@@ -206,18 +248,18 @@ fun RoyalSkyBackdrop(modifier: Modifier = Modifier) {
             for (i in -4..4) {
                 val x = w / 2f + i * w * 0.13f
                 drawLine(
-                    color = Color(0xFF1D3B7A).copy(alpha = 0.10f),
+                    color = lineClr.copy(alpha = lineClr.alpha * 0.7f),
                     start = Offset(w / 2f + i * w * 0.028f, h * 0.72f),
                     end = Offset(x, h),
                     strokeWidth = 1f
                 )
             }
 
-            // Quiet, cinematic PlayStation Blue atmospheric ambient glow at top-right
+            // Cinematic thematic ambient glow at top-right
             drawCircle(
                 brush = Brush.radialGradient(
                     colors = listOf(
-                        PsBlue.copy(alpha = 0.16f),
+                        glow1.copy(alpha = 0.16f),
                         Color.Transparent
                     ),
                     center = Offset(w * 0.88f, h * 0.18f),
@@ -227,11 +269,11 @@ fun RoyalSkyBackdrop(modifier: Modifier = Modifier) {
                 center = Offset(w * 0.88f, h * 0.18f)
             )
 
-            // Subtle lower-left dim glow
+            // Secondary complementary glow at bottom-left
             drawCircle(
                 brush = Brush.radialGradient(
                     colors = listOf(
-                        PsGoldStart.copy(alpha = 0.05f),
+                        glow2.copy(alpha = 0.08f),
                         Color.Transparent
                     ),
                     center = Offset(w * 0.12f, h * 0.75f),
@@ -266,8 +308,8 @@ fun ArcadeBlockEmblem(
 }
 
 /**
- * Editorial PlayStation SST style BLOCK FALL title logo (per DESIGN.md):
- * Clean white display tier at light/airy weight paired with signature PlayStation Blue.
+ * Editorial BLOCK FALL title logo:
+ * Clean white display tier paired with signature PlayStation Blue.
  */
 @Composable
 fun ArcadeTitleLogo(
@@ -286,7 +328,7 @@ fun ArcadeTitleLogo(
                 fontWeight = FontWeight.Light,
                 fontSize = fontSize,
                 letterSpacing = 1.2.sp,
-                shadow = Shadow(color = Color(0xFF00285C), offset = Offset(0f, 5f), blurRadius = 0f)
+                shadow = Shadow(color = Color(0xFF00285C), offset = Offset(0f, 4f), blurRadius = 0f)
             ),
             color = Color.White,
             textAlign = TextAlign.Center
@@ -299,7 +341,7 @@ fun ArcadeTitleLogo(
                 fontWeight = FontWeight.Bold,
                 fontSize = fontSize,
                 letterSpacing = 1.6.sp,
-                shadow = Shadow(color = Color(0xFF001A3D), offset = Offset(0f, 5f), blurRadius = 0f)
+                shadow = Shadow(color = Color(0xFF001A3D), offset = Offset(0f, 4f), blurRadius = 0f)
             ),
             color = PsBlue,
             textAlign = TextAlign.Center
@@ -308,11 +350,12 @@ fun ArcadeTitleLogo(
 }
 
 /**
- * PlayStation CTA Button (per DESIGN.md button-primary / button-commerce / button-secondary-dark):
- * - Primary: PlayStation Blue (#0070d1), fully-rounded pill (rounded.full), height ~48-52dp.
- * - Commerce: Orange (#d53b00) reserved for store/buy actions.
- * - Secondary: Sleek outline on dark canvas with hairline border.
- * - Type: Bold 700 with +0.45sp tracking.
+ * Human-crafted Tactile Arcade Button:
+ * - Form: Balanced rounded rectangle (16dp radius), avoiding artificial generic stretched capsules.
+ * - Tactile depth: Real 4dp-5dp physical extruded bottom lip matching the button's deeper tone.
+ * - Press physics: Compresses into its base (translationY = 3.5dp) on press.
+ * - Highlight: Subtle, crisp 1.5dp inner top highlight without cheap plastic diagonal streaks.
+ * - Typography: Bold Outfit typography with clean contrast and subtle text depth.
  */
 @Composable
 fun GlossyArcadeButton(
@@ -322,56 +365,65 @@ fun GlossyArcadeButton(
     style: ArcadeButtonStyle = ArcadeButtonStyle.BLUE,
     icon: ImageVector? = null,
     enabled: Boolean = true,
-    height: Dp = 50.dp,
-    cornerRadius: Dp = 9999.dp, // Fully rounded pill per DESIGN.md rounded.full
+    height: Dp = 52.dp,
+    cornerRadius: Dp = 16.dp,
     fontSize: TextUnit = 16.sp,
     testTag: String? = null
 ) {
-    val (bgBrush, borderColor, contentColor) = when (style) {
-        ArcadeButtonStyle.BLUE -> Triple(
-            Brush.verticalGradient(listOf(PsBlue, PsBluePressed)),
-            Color.Transparent,
-            Color.White
+    val (bgBrush, borderColor, contentColor, sideBase) = when (style) {
+        ArcadeButtonStyle.BLUE -> Quadruple(
+            Brush.verticalGradient(listOf(Color(0xFF2575FC), Color(0xFF1A56DB))),
+            Color(0xFF60A5FA).copy(alpha = 0.35f),
+            Color.White,
+            Color(0xFF0F3B9E)
         )
-        ArcadeButtonStyle.COMMERCE -> Triple(
-            Brush.verticalGradient(listOf(PsCommerce, PsCommercePressed)),
-            Color.Transparent,
-            Color.White
+        ArcadeButtonStyle.COMMERCE -> Quadruple(
+            Brush.verticalGradient(listOf(Color(0xFFFF5722), Color(0xFFD84315))),
+            Color(0xFFFFAB91).copy(alpha = 0.35f),
+            Color.White,
+            Color(0xFF8C2607)
         )
-        ArcadeButtonStyle.GOLD -> Triple(
-            Brush.horizontalGradient(listOf(PsGoldStart, PsGoldMid, PsGoldEnd)),
-            Color.Transparent,
-            Color(0xFF121314)
+        ArcadeButtonStyle.GOLD -> Quadruple(
+            Brush.verticalGradient(listOf(Color(0xFFFFC107), Color(0xFFFFA000))),
+            Color(0xFFFFE082).copy(alpha = 0.50f),
+            Color(0xFF1B1300),
+            Color(0xFF9E5C00)
         )
-        ArcadeButtonStyle.GOLD_BLUE -> Triple(
-            Brush.verticalGradient(listOf(PsBlue, PsBluePressed)),
-            PsGoldStart.copy(alpha = 0.85f),
-            Color.White
+        ArcadeButtonStyle.GOLD_BLUE -> Quadruple(
+            Brush.verticalGradient(listOf(Color(0xFF2575FC), Color(0xFF1A56DB))),
+            Color(0xFFFFC107),
+            Color.White,
+            Color(0xFF0F3B9E)
         )
-        ArcadeButtonStyle.GOLD_PURPLE -> Triple(
-            Brush.verticalGradient(listOf(Color(0xFF7040E6), Color(0xFF5020B0))),
-            PsGoldStart.copy(alpha = 0.85f),
-            Color.White
+        ArcadeButtonStyle.GOLD_PURPLE -> Quadruple(
+            Brush.verticalGradient(listOf(Color(0xFF8B5CF6), Color(0xFF6D28D9))),
+            Color(0xFFFFC107),
+            Color.White,
+            Color(0xFF4C1D95)
         )
-        ArcadeButtonStyle.PURPLE -> Triple(
-            Brush.verticalGradient(listOf(Color(0xFF7040E6), Color(0xFF5020B0))),
-            Color.Transparent,
-            Color.White
+        ArcadeButtonStyle.PURPLE -> Quadruple(
+            Brush.verticalGradient(listOf(Color(0xFF8B5CF6), Color(0xFF6D28D9))),
+            Color(0xFFC4B5FD).copy(alpha = 0.35f),
+            Color.White,
+            Color(0xFF4C1D95)
         )
-        ArcadeButtonStyle.GREEN -> Triple(
-            Brush.verticalGradient(listOf(Color(0xFF0CA34A), Color(0xFF087A36))),
-            Color.Transparent,
-            Color.White
+        ArcadeButtonStyle.GREEN -> Quadruple(
+            Brush.verticalGradient(listOf(Color(0xFF10B981), Color(0xFF059669))),
+            Color(0xFFA7F3D0).copy(alpha = 0.35f),
+            Color.White,
+            Color(0xFF065F46)
         )
-        ArcadeButtonStyle.RED -> Triple(
-            Brush.verticalGradient(listOf(Color(0xFFD9163B), Color(0xFFA60C2A))),
-            Color.Transparent,
-            Color.White
+        ArcadeButtonStyle.RED -> Quadruple(
+            Brush.verticalGradient(listOf(Color(0xFFEF4444), Color(0xFFDC2626))),
+            Color(0xFFFECACA).copy(alpha = 0.35f),
+            Color.White,
+            Color(0xFF991B1B)
         )
-        ArcadeButtonStyle.SLATE -> Triple(
-            Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent)),
-            HairlineDark,
-            Color.White
+        ArcadeButtonStyle.SLATE -> Quadruple(
+            Brush.verticalGradient(listOf(Color(0xFF242938), Color(0xFF181C26))),
+            Color(0xFF475569).copy(alpha = 0.55f),
+            Color(0xFFE2E8F0),
+            Color(0xFF0F131C)
         )
     }
 
@@ -382,23 +434,14 @@ fun GlossyArcadeButton(
         animationSpec = spring(dampingRatio = 0.78f, stiffness = 550f),
         label = "ps_btn_press"
     )
-    // Pressing sinks the button into its 3D base instead of only shrinking it.
     val pressDrop by animateFloatAsState(
-        targetValue = if (isPressed && enabled) 4f else 0f,
+        targetValue = if (isPressed && enabled) 3.5f else 0f,
         animationSpec = spring(dampingRatio = 0.70f, stiffness = 520f),
         label = "ps_btn_depth"
     )
 
-    val pillShape = RoundedCornerShape(9999.dp)
-    val depth = if (style == ArcadeButtonStyle.SLATE) 4.dp else 7.dp
-    val sideBase = when (style) {
-        ArcadeButtonStyle.COMMERCE -> Color(0xFF3D0E00)
-        ArcadeButtonStyle.GOLD, ArcadeButtonStyle.GOLD_BLUE, ArcadeButtonStyle.GOLD_PURPLE -> Color(0xFF5A3700)
-        ArcadeButtonStyle.GREEN -> Color(0xFF03331A)
-        ArcadeButtonStyle.RED -> Color(0xFF3A020E)
-        ArcadeButtonStyle.PURPLE -> Color(0xFF1E0846)
-        else -> Color(0xFF00315E)
-    }
+    val buttonShape = RoundedCornerShape(cornerRadius)
+    val depth = if (style == ArcadeButtonStyle.SLATE) 3.5.dp else 5.dp
 
     Box(
         contentAlignment = Alignment.Center,
@@ -411,12 +454,12 @@ fun GlossyArcadeButton(
             }
             .then(if (testTag != null) Modifier.testTag(testTag) else Modifier)
             .alpha(if (enabled) 1f else 0.40f)
-            .threeDFrame(shape = pillShape, depth = depth, base = sideBase)
-            .clip(pillShape)
+            .threeDFrame(shape = buttonShape, depth = depth, base = sideBase)
+            .clip(buttonShape)
             .background(if (enabled) bgBrush else Brush.verticalGradient(listOf(Charcoal, SurfaceDarkCard)))
             .then(
                 if (borderColor != Color.Transparent) {
-                    Modifier.border(1.2.dp, borderColor, pillShape)
+                    Modifier.border(1.dp, borderColor, buttonShape)
                 } else Modifier
             )
             .clickable(
@@ -425,23 +468,18 @@ fun GlossyArcadeButton(
                 enabled = enabled,
                 onClick = onClick
             )
-            .padding(horizontal = 24.dp)
+            .padding(horizontal = 20.dp)
     ) {
-        // Curved specular sheen sells the glossy 3D face (pure draw, no recomposition).
+        // Subtle, elegant top edge highlight rim for physical bevel reflection
         Box(
             modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            Color.White.copy(alpha = 0.22f),
-                            Color.White.copy(alpha = 0.04f),
-                            Color.Transparent,
-                            Color.Black.copy(alpha = 0.16f)
-                        )
-                    )
-                )
+                .fillMaxWidth()
+                .height(1.5.dp)
+                .align(Alignment.TopCenter)
+                .padding(horizontal = 4.dp)
+                .background(Color.White.copy(alpha = 0.28f), CircleShape)
         )
+
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center
@@ -451,7 +489,7 @@ fun GlossyArcadeButton(
                     imageVector = icon,
                     contentDescription = null,
                     tint = contentColor,
-                    modifier = Modifier.size(19.dp)
+                    modifier = Modifier.size(20.dp)
                 )
                 Spacer(Modifier.width(8.dp))
             }
@@ -459,17 +497,28 @@ fun GlossyArcadeButton(
                 text = text,
                 style = MaterialTheme.typography.labelLarge.copy(
                     fontFamily = OutfitFontFamily,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.ExtraBold,
                     fontSize = fontSize,
-                    letterSpacing = 0.45.sp
+                    letterSpacing = 0.5.sp,
+                    shadow = if (contentColor == Color.White) {
+                        Shadow(color = Color.Black.copy(alpha = 0.45f), offset = Offset(0f, 2f), blurRadius = 2f)
+                    } else null
                 ),
                 color = contentColor,
+                textAlign = TextAlign.Center,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
         }
     }
 }
+
+private data class Quadruple<A, B, C, D>(
+    val first: A,
+    val second: B,
+    val third: C,
+    val fourth: D
+)
 
 /**
  * PlayStation Dark Card (per DESIGN.md product-card-dark / game-tile):

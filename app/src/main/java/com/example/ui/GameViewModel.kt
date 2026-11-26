@@ -36,6 +36,7 @@ import com.example.game.GameSettings
 import com.example.game.GameStatistics
 import com.example.game.GameStatus
 import com.example.game.GridCoord
+import com.example.game.MusicTrack
 import com.example.game.PieceGenerator
 import com.example.game.PlayerRankCalculator
 import com.example.game.PlayerRankInfo
@@ -284,6 +285,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 .getOrElse { com.example.data.PersistedProgress() }
             soundManager.soundEnabled = saved.settings.soundEnabled
             soundManager.musicEnabled = saved.settings.musicEnabled
+            soundManager.setMusicTrack(saved.settings.musicTrack)
             haptics.enabled = saved.settings.hapticsEnabled
 
             val restored = saved.savedClassicGame
@@ -667,6 +669,11 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setBoardPalette(boardPalette: BoardColorPalette) {
         updateSettings { it.copy(boardPalette = boardPalette) }
+    }
+
+    fun selectMusicTrack(track: MusicTrack) {
+        soundManager.setMusicTrack(track)
+        updateSettings { it.copy(musicTrack = track) }
     }
 
     private fun updateSettings(transform: (GameSettings) -> GameSettings) {

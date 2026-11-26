@@ -6,6 +6,7 @@ import android.media.AudioFormat
 import android.media.AudioTrack
 import android.media.SoundPool
 import com.example.R
+import com.example.game.MusicTrack
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -20,8 +21,9 @@ import kotlin.math.sin
 /**
  * SoundPool-backed sound manager for low-latency triggerable game SFX
  * (block drops, line clears, combo completions, level clear, game over, UI clicks)
- * plus low-overhead streaming ambient background music using a precomputed sine LUT
- * and a single reused AudioTrack buffer (zero per-cycle allocations or blocking sleep).
+ * plus multi-track streaming procedural soundtrack (Lo-Fi Chill, Arcade Pulse,
+ * Zen Garden, Synthwave) designed with warm harmonic synthesis and gentle envelopes
+ * to prevent audio fatigue.
  */
 class SoundManager(context: Context) {
 
@@ -53,6 +55,10 @@ class SoundManager(context: Context) {
                 startMusicLoop()
             }
         }
+
+    @Volatile
+    var currentTrack: MusicTrack = MusicTrack.LOFI_CHILL
+        private set
 
     val isReady: Boolean
         get() = soundPool != null
@@ -92,6 +98,15 @@ class SoundManager(context: Context) {
             startMusicLoop()
         } else {
             stopMusicLoop()
+        }
+    }
+
+    fun setMusicTrack(track: MusicTrack) {
+        if (currentTrack == track) return
+        currentTrack = track
+        if (musicEnabled && musicShouldPlay) {
+            stopMusicLoop()
+            startMusicLoop()
         }
     }
 
@@ -158,7 +173,7 @@ class SoundManager(context: Context) {
     private fun startMusicLoop() {
         if (musicJob?.isActive == true) return
         musicJob = scope.launch {
-            streamAmbientChordPad()
+            streamHarmonicSoundtrack()
         }
     }
 
@@ -167,7 +182,11 @@ class SoundManager(context: Context) {
         musicJob = null
     }
 
-    private fun kotlinx.coroutines.CoroutineScope.streamAmbientChordPad() {
+    /**
+     * Generates rich, soothing polyphonic procedural music with soft envelopes
+     * and warm harmonic overtones based on the user's selected [currentTrack].
+     */
+    private fun kotlinx.coroutines.CoroutineScope.streamHarmonicSoundtrack() {
         var track: AudioTrack? = null
         try {
             val minBufBytes = AudioTrack.getMinBufferSize(
@@ -203,44 +222,87 @@ class SoundManager(context: Context) {
             created.play()
 
             val buffer = ShortArray(AMBIENT_CHUNK_SAMPLES)
-            var chordIndex = 0
-            var sampleInChord = 0
+            var patternStep = 0
+            var sampleInStep = 0
             var phaseRoot = 0f
+            var phaseThird = 0f
             var phaseFifth = 0f
+            var phaseMelody = 0f
 
             while (isActive && musicEnabled && musicShouldPlay) {
-                val rootFreq = CHORD_ROOTS[chordIndex]
-                val fifthFreq = rootFreq * 1.498f
+                val activeTrack = currentTrack
+                val chordProgression = when (activeTrack) {
+                    MusicTrack.LOFI_CHILL -> LOFI_PROGRESSION
+                    MusicTrack.ARCADE_PULSE -> ARCADE_PROGRESSION
+                    MusicTrack.ZEN_GARDEN -> ZEN_PROGRESSION
+                    MusicTrack.SYNTHWAVE_NEON -> SYNTHWAVE_PROGRESSION
+                }
+
+                val currentChord = chordProgression[patternStep % chordProgression.size]
+                val stepDurationSamples = when (activeTrack) {
+                    MusicTrack.ARCADE_PULSE -> (AMBIENT_SAMPLE_RATE * 850) / 1000
+                    MusicTrack.ZEN_GARDEN -> (AMBIENT_SAMPLE_RATE * 2400) / 1000
+                    else -> (AMBIENT_SAMPLE_RATE * 1600) / 1000
+                }
+                val releaseSamples = (stepDurationSamples * 0.18f).toInt()
+                val sustainSamples = stepDurationSamples - releaseSamples
+
+                val rootFreq = currentChord.root
+                val thirdFreq = currentChord.third
+                val fifthFreq = currentChord.fifth
+                val melodyFreq = currentChord.melodyNote
+
                 val stepRoot = rootFreq / AMBIENT_SAMPLE_RATE
+                val stepThird = thirdFreq / AMBIENT_SAMPLE_RATE
                 val stepFifth = fifthFreq / AMBIENT_SAMPLE_RATE
+                val stepMelody = melodyFreq / AMBIENT_SAMPLE_RATE
 
                 for (i in 0 until AMBIENT_CHUNK_SAMPLES) {
-                    if (sampleInChord < SAMPLES_PER_CHORD) {
-                        val envNorm = sampleInChord.toFloat() / SAMPLES_PER_CHORD.toFloat()
-                        val envIdx = (envNorm * HALF_LUT_LIMIT).toInt().coerceIn(0, HALF_LUT_LIMIT)
-                        val env = SINE_LUT[envIdx]
+                    if (sampleInStep < sustainSamples) {
+                        // Smooth attack & warm decay envelope
+                        val attackNorm = (sampleInStep.toFloat() / (AMBIENT_SAMPLE_RATE * 0.08f)).coerceIn(0f, 1f)
+                        val decayFactor = 1.0f - (sampleInStep.toFloat() / stepDurationSamples.toFloat()) * 0.45f
+                        val env = attackNorm * decayFactor
 
-                        val rootSample = SINE_LUT[(phaseRoot * LUT_SIZE).toInt() and LUT_MASK]
-                        val fifthSample = SINE_LUT[(phaseFifth * LUT_SIZE).toInt() and LUT_MASK]
-                        val mixed = (0.65f * rootSample + 0.35f * fifthSample) * env * AMBIENT_GAIN
+                        // Harmonic overtone synthesis (warm Rhodes/electric pad emulation)
+                        val rootS = sampleOscillator(phaseRoot, activeTrack)
+                        val thirdS = sampleOscillator(phaseThird, activeTrack)
+                        val fifthS = sampleOscillator(phaseFifth, activeTrack)
+                        val melodyS = if (melodyFreq > 0f) sampleOscillator(phaseMelody, activeTrack) else 0f
+
+                        val mixed = when (activeTrack) {
+                            MusicTrack.LOFI_CHILL -> (0.38f * rootS + 0.28f * thirdS + 0.24f * fifthS + 0.16f * melodyS) * env * 0.048f
+                            MusicTrack.ARCADE_PULSE -> (0.40f * rootS + 0.30f * fifthS + 0.30f * melodyS) * env * 0.040f
+                            MusicTrack.ZEN_GARDEN -> (0.50f * rootS + 0.30f * fifthS + 0.20f * melodyS) * env * 0.038f
+                            MusicTrack.SYNTHWAVE_NEON -> (0.45f * rootS + 0.35f * thirdS + 0.20f * fifthS) * env * 0.045f
+                        }
 
                         buffer[i] = (mixed * Short.MAX_VALUE)
                             .toInt()
                             .coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt())
                             .toShort()
 
-                        phaseRoot += stepRoot
-                        if (phaseRoot >= 1f) phaseRoot -= 1f
-                        phaseFifth += stepFifth
-                        if (phaseFifth >= 1f) phaseFifth -= 1f
+                        phaseRoot = (phaseRoot + stepRoot) % 1f
+                        phaseThird = (phaseThird + stepThird) % 1f
+                        phaseFifth = (phaseFifth + stepFifth) % 1f
+                        if (stepMelody > 0f) phaseMelody = (phaseMelody + stepMelody) % 1f
                     } else {
-                        buffer[i] = 0
+                        // Smooth release
+                        val relProgress = (sampleInStep - sustainSamples).toFloat() / releaseSamples.coerceAtLeast(1).toFloat()
+                        val relEnv = (1f - relProgress).coerceIn(0f, 1f)
+                        val rootS = sampleOscillator(phaseRoot, activeTrack)
+                        val mixed = rootS * relEnv * 0.015f
+                        buffer[i] = (mixed * Short.MAX_VALUE)
+                            .toInt()
+                            .coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt())
+                            .toShort()
+                        phaseRoot = (phaseRoot + stepRoot) % 1f
                     }
 
-                    sampleInChord++
-                    if (sampleInChord >= TOTAL_CYCLE_SAMPLES) {
-                        sampleInChord = 0
-                        chordIndex = (chordIndex + 1) % CHORD_ROOTS.size
+                    sampleInStep++
+                    if (sampleInStep >= stepDurationSamples) {
+                        sampleInStep = 0
+                        patternStep = (patternStep + 1) % chordProgression.size
                     }
                 }
 
@@ -248,13 +310,39 @@ class SoundManager(context: Context) {
                 if (written < 0) break
             }
         } catch (_: Throwable) {
-            // AudioTrack unavailable on headless JVM/Robolectric
+            // Headless JVM/Robolectric fallback
         } finally {
             runCatching {
                 track?.pause()
                 track?.flush()
                 track?.stop()
                 track?.release()
+            }
+        }
+    }
+
+    private fun sampleOscillator(phase: Float, track: MusicTrack): Float {
+        val idx = (phase * LUT_SIZE).toInt() and LUT_MASK
+        val fundamental = SINE_LUT[idx]
+        return when (track) {
+            MusicTrack.LOFI_CHILL -> {
+                // Warm Rhodes harmonics: fundamental + soft 2nd harmonic + subtle 3rd
+                val secondHarm = SINE_LUT[(phase * 2f * LUT_SIZE).toInt() and LUT_MASK]
+                0.78f * fundamental + 0.22f * secondHarm
+            }
+            MusicTrack.ARCADE_PULSE -> {
+                // Softened chiptune pulse wave (triangle-softened square)
+                if (phase < 0.5f) 0.85f * fundamental else -0.85f * fundamental
+            }
+            MusicTrack.ZEN_GARDEN -> {
+                // Meditative bell chime with octaval overtone
+                val overtone = SINE_LUT[(phase * 3f * LUT_SIZE).toInt() and LUT_MASK]
+                0.82f * fundamental + 0.18f * overtone
+            }
+            MusicTrack.SYNTHWAVE_NEON -> {
+                // Analog detuned synth tone
+                val detune = SINE_LUT[((phase * 1.006f) * LUT_SIZE).toInt() and LUT_MASK]
+                0.55f * fundamental + 0.45f * detune
             }
         }
     }
@@ -267,19 +355,54 @@ class SoundManager(context: Context) {
         soundPool = null
     }
 
+    private data class HarmonicChord(
+        val root: Float,
+        val third: Float,
+        val fifth: Float,
+        val melodyNote: Float = 0f
+    )
+
     companion object {
         private const val MAX_STREAMS = 6
         private const val AMBIENT_SAMPLE_RATE = 16000
         private const val AMBIENT_CHUNK_SAMPLES = 1024
-        private const val SAMPLES_PER_CHORD = (AMBIENT_SAMPLE_RATE * 1400) / 1000
-        private const val TOTAL_CYCLE_SAMPLES = SAMPLES_PER_CHORD + (AMBIENT_SAMPLE_RATE * 180) / 1000
-        private const val AMBIENT_GAIN = 0.05f
         private const val LUT_SIZE = 512
         private const val LUT_MASK = LUT_SIZE - 1
-        private const val HALF_LUT_LIMIT = (LUT_SIZE / 2) - 1
-        private val CHORD_ROOTS = floatArrayOf(220f, 261.63f, 196f, 174.61f)
+
         private val SINE_LUT = FloatArray(LUT_SIZE) { i ->
             sin(2.0 * PI * i.toDouble() / LUT_SIZE.toDouble()).toFloat()
         }
+
+        // Lo-Fi Chord Progression: Cmaj7 -> Am7 -> Fmaj7 -> Em7 (with gentle melody notes)
+        private val LOFI_PROGRESSION = listOf(
+            HarmonicChord(130.81f, 164.81f, 196.00f, 329.63f), // C3 + E3 + G3 + E4
+            HarmonicChord(110.00f, 130.81f, 164.81f, 261.63f), // A2 + C3 + E3 + C4
+            HarmonicChord(87.31f, 110.00f, 130.81f, 220.00f),  // F2 + A2 + C3 + A3
+            HarmonicChord(98.00f, 123.47f, 146.83f, 246.94f)   // G2 + B2 + D3 + B3
+        )
+
+        // Arcade 8-Bit Upbeat Chiptune Pattern
+        private val ARCADE_PROGRESSION = listOf(
+            HarmonicChord(130.81f, 164.81f, 196.00f, 261.63f),
+            HarmonicChord(146.83f, 174.61f, 220.00f, 293.66f),
+            HarmonicChord(164.81f, 196.00f, 246.94f, 329.63f),
+            HarmonicChord(130.81f, 164.81f, 196.00f, 392.00f)
+        )
+
+        // Zen Temple Singing Bowls & Chimes (deep meditative frequencies)
+        private val ZEN_PROGRESSION = listOf(
+            HarmonicChord(144.00f, 180.00f, 216.00f, 288.00f),
+            HarmonicChord(162.00f, 202.50f, 243.00f, 324.00f),
+            HarmonicChord(144.00f, 180.00f, 216.00f, 432.00f),
+            HarmonicChord(108.00f, 135.00f, 162.00f, 216.00f)
+        )
+
+        // Synthwave Analog Pads (Dm -> Bb -> F -> C)
+        private val SYNTHWAVE_PROGRESSION = listOf(
+            HarmonicChord(73.42f, 87.31f, 110.00f, 174.61f),  // D2
+            HarmonicChord(58.27f, 73.42f, 87.31f, 146.83f),   // Bb1
+            HarmonicChord(87.31f, 110.00f, 130.81f, 174.61f), // F2
+            HarmonicChord(65.41f, 82.41f, 98.00f, 130.81f)    // C2
+        )
     }
 }
