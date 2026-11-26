@@ -1,7 +1,7 @@
 # R8 optimization & hardening rules for Block Falls release builds
 
 # Clean crash stack trace mapping without revealing original source paths
--keepattributes SourceFile,LineNumberTable
+-keepattributes SourceFile,LineNumberTable,Signature,RuntimeVisibleAnnotations,AnnotationDefault,EnclosingMethod,InnerClasses
 -renamesourcefileattribute SourceFile
 
 # Strip verbose, debug, and info logs in release builds
@@ -25,8 +25,16 @@
     @androidx.annotation.Keep <init>(...);
 }
 
-# kotlinx.serialization (required for type-safe @Serializable Navigation Compose routes)
--keepattributes *Annotation*,InnerClasses
+# Keep all project packages (game, ui, data, ads, security) intact to prevent release crashes
+-keep class com.example.game.** { *; }
+-keep class com.example.ui.** { *; }
+-keep class com.example.data.** { *; }
+-keep class com.example.ads.** { *; }
+-keep class com.example.security.** { *; }
+-keep class com.example.MainActivity { *; }
+
+# kotlinx.serialization (required for type-safe @Serializable Navigation Compose routes & DataStore models)
+-keepattributes *Annotation*,InnerClasses,Signature
 -dontnote kotlinx.serialization.AnnotationsKt
 -keepclassmembers class kotlinx.serialization.json.** {
     *** Companion;
@@ -34,11 +42,11 @@
 -keepclasseswithmembers class kotlinx.serialization.json.** {
     kotlinx.serialization.KSerializer serializer(...);
 }
--keep,includedescriptorclasses class com.example.ui.navigation.**$$serializer { *; }
--keepclassmembers class com.example.ui.navigation.** {
+-keep,includedescriptorclasses class com.example.**$$serializer { *; }
+-keepclassmembers class com.example.** {
     *** Companion;
 }
--keepclasseswithmembers class com.example.ui.navigation.** {
+-keepclasseswithmembers class com.example.** {
     kotlinx.serialization.KSerializer serializer(...);
 }
 
@@ -55,30 +63,11 @@
 # Firebase Firestore custom class mapping & Play Integrity safety
 -keepclassmembers class com.example.data.cloud.** { *; }
 -keepnames class com.example.data.cloud.**
--keepattributes Signature,RuntimeVisibleAnnotations,AnnotationDefault
 -dontwarn org.codehaus.mojo.animal_sniffer.IgnoreJRERequirement
 
 # AdMob / Google Mobile Ads
 -keep class com.google.android.gms.ads.** { *; }
 -keep class com.google.ads.** { *; }
-
-# Keep Economy models for serialization
--keep class com.example.game.PlayerWallet { *; }
--keep class com.example.game.ShopItem { *; }
--keep class com.example.game.EconomyMutationResult { *; }
-
-# kotlinx.serialization generated serializers for the persisted wallet
--keep,includedescriptorclasses class com.example.game.**$$serializer { *; }
--keepclassmembers class com.example.game.** {
-    *** Companion;
-}
--keepclasseswithmembers class com.example.game.** {
-    kotlinx.serialization.KSerializer serializer(...);
-}
-
-# Keep AdState sealed class
--keep class com.example.ads.AdState { *; }
--keep class com.example.ads.AdState$* { *; }
 
 # Keep ViewModel / AndroidViewModel reflective constructors used by ViewModelProvider
 -keepclassmembers class * extends androidx.lifecycle.AndroidViewModel {
